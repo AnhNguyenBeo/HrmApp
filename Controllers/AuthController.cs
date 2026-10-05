@@ -3,6 +3,9 @@ using HrmApp.Api.DTOs.Auth;
 using HrmApp.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using System;
+using System.Threading.Tasks;
 
 namespace HrmApp.Api.Controllers;
 
@@ -21,31 +24,31 @@ public class AuthController : ControllerBase
         _config = config;
     }
 
-    /// <summary>�ang nh?p v� nh?n JWT token.</summary>
+    /// <summary>Đăng nhập và nhận JWT token.</summary>
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginRequestDto request)
     {
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
 
-        // 1. T�m t�i kho?n theo TenDangNhap, include Navigation properties
+        // 1. Tìm tài khoản theo TenDangNhap, include Navigation properties
         var taiKhoan = await _context.TaiKhoans
             .Include(t => t.MaNhanVienNavigation)   // NhanVien
             .Include(t => t.MaVaiTroNavigation)     // VaiTro
             .FirstOrDefaultAsync(t => t.TenDangNhap == request.TenDangNhap);
 
-        // 2. Ki?m tra t�i kho?n t?n t?i
+        // 2. Kiểm tra tài khoản tồn tại
         if (taiKhoan is null)
-            return Unauthorized(new { message = "T�n dang nh?p ho?c m?t kh?u kh�ng d�ng." });
+            return Unauthorized(new { message = "Tên đăng nhập hoặc mật khẩu không đúng." });
 
-        // 3. Ki?m tra tr?ng th�i t�i kho?n
-        if (taiKhoan.TrangThai != "Ho?t d?ng")
-            return Unauthorized(new { message = "T�i kho?n d� b? kho� ho?c v� hi?u ho�." });
+        // 3. Kiểm tra trạng thái tài khoản
+        if (taiKhoan.TrangThai != "Hoạt động")
+            return Unauthorized(new { message = "Tài khoản đã bị khoá hoặc vô hiệu hoá." });
 
-        // 4. Verify m?t kh?u BCrypt
+        // 4. Verify mật khẩu BCrypt
         bool isPasswordValid = BCrypt.Net.BCrypt.Verify(request.MatKhau, taiKhoan.MatKhauHash);
         if (!isPasswordValid)
-            return Unauthorized(new { message = "T�n dang nh?p ho?c m?t kh?u kh�ng d�ng." });
+            return Unauthorized(new { message = "Tên đăng nhập hoặc mật khẩu không đúng." });
 
         // 5. Sinh JWT token
         var token = _jwtService.GenerateToken(taiKhoan);
