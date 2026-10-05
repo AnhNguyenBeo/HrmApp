@@ -41,7 +41,7 @@ namespace HrmApp.Api.Controllers
                     chamCong.SoGioTangCa = 0;
                 }
                 
-                chamCong.TrangThai = chamCong.TrangThai == "Thi?u gi? v‡o" ? "Thi?u gi? v‡o (–„ ra)" : "Ho‡n th‡nh";
+                chamCong.TrangThai = chamCong.TrangThai == "Thi·∫øu gi·ªù v√†o" ? "Thi·∫øu gi·ªù v√†o (ƒê√£ ra)" : "Ho√†n th√†nh";
                 _context.ChamCongs.Update(chamCong);
             }
             else
@@ -56,15 +56,15 @@ namespace HrmApp.Api.Controllers
                 };
                 
                 if (nowTime.Hour >= 12) {
-                    newChamCong.TrangThai = "Thi?u gi? v‡o";
+                    newChamCong.TrangThai = "Thi·∫øu gi·ªù v√†o";
                 } else {
-                    newChamCong.TrangThai = "–„ check-in";
+                    newChamCong.TrangThai = "ƒê√£ check-in";
                 }
                 await _context.ChamCongs.AddAsync(newChamCong);
             }
 
             await _context.SaveChangesAsync();
-            return Ok(new { message = "Ghi nh?n ch?m cÙng th‡nh cÙng." });
+            return Ok(new { message = "Ghi nh·∫≠n ch·∫•m c√¥ng th√†nh c√¥ng." });
         }
 
         [HttpGet("cua-toi")]
@@ -87,7 +87,7 @@ namespace HrmApp.Api.Controllers
         }
 
         [HttpGet]
-        [Authorize(Roles = "Qu?n l˝, K? to·n")]
+        [Authorize(Roles = "Qu·∫£n l√Ω, K·∫ø to√°n")]
         public async Task<IActionResult> GetAllAttendance()
         {
             var result = await _context.ChamCongs.Include(c => c.MaNhanVienNavigation).Select(c => new ChamCongResponseDto {

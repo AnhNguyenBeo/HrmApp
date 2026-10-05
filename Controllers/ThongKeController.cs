@@ -12,7 +12,7 @@ namespace HrmApp.Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles = "Qu?n tr? vi�n, Qu?n l�")]
+    [Authorize(Roles = "Quản trị viên, Quản lý")]
     public class ThongKeController : ControllerBase
     {
         private readonly QuanLyNhanSuDbContext _context;
@@ -24,31 +24,31 @@ namespace HrmApp.Api.Controllers
             var now = DateTime.UtcNow;
             var currentMonthStr = $"{now.Month:D2}/{now.Year}";
 
-            var allActive = await _context.NhanViens.Where(nv => nv.TrangThaiLamViec != "�� ngh? vi?c").ToListAsync();
+            var allActive = await _context.NhanViens.Where(nv => nv.TrangThaiLamViec != "Đã nghỉ việc").ToListAsync();
 
             var response = new DashboardResponseDto
             {
                 TongSoNhanVien = allActive.Count,
                 NhanVienMoiTrongThang = allActive.Count(nv => nv.NgayVaoLam.Month == now.Month && nv.NgayVaoLam.Year == now.Year),
-                DonTuChoDuyet = await _context.DonTus.CountAsync(d => d.TrangThai == "Ch? duy?t"),
+                DonTuChoDuyet = await _context.DonTus.CountAsync(d => d.TrangThai == "Chờ duyệt"),
                 TongQuyLuongThang = await _context.BangLuongs.Where(b => b.ThoiGian == currentMonthStr).SumAsync(b => b.ThucLinh ?? 0),
                 
                 NhanVienTheoPhongBan = await _context.PhongBans.Select(pb => new ThongKePhongBanDto {
                     TenPhongBan = pb.TenPhongBan,
-                    SoLuongNhanVien = pb.NhanViens.Count(nv => nv.TrangThaiLamViec != "�� ngh? vi?c")
+                    SoLuongNhanVien = pb.NhanViens.Count(nv => nv.TrangThaiLamViec != "Đã nghỉ việc")
                 }).ToListAsync(),
 
-                NhanVienTheoTrinhDo = allActive.GroupBy(nv => string.IsNullOrEmpty(nv.TrinhDoHocVan) ? "Chua c?p nh?t" : nv.TrinhDoHocVan)
+                NhanVienTheoTrinhDo = allActive.GroupBy(nv => string.IsNullOrEmpty(nv.TrinhDoHocVan) ? "Chưa cập nhật" : nv.TrinhDoHocVan)
                     .Select(g => new ThongKeTrinhDoDto { TrinhDo = g.Key, SoLuong = g.Count() }).ToList(),
 
                 NhanVienTheoThamNien = new List<ThongKeThamNienDto>
                 {
-                    new ThongKeThamNienDto { NhomThamNien = "Du?i 1 nam", SoLuong = allActive.Count(nv => (now.Year - nv.NgayVaoLam.Year) * 12 + now.Month - nv.NgayVaoLam.Month < 12) },
-                    new ThongKeThamNienDto { NhomThamNien = "1 - 3 nam", SoLuong = allActive.Count(nv => {
+                    new ThongKeThamNienDto { NhomThamNien = "Dưới 1 năm", SoLuong = allActive.Count(nv => (now.Year - nv.NgayVaoLam.Year) * 12 + now.Month - nv.NgayVaoLam.Month < 12) },
+                    new ThongKeThamNienDto { NhomThamNien = "1 - 3 năm", SoLuong = allActive.Count(nv => {
                         var m = (now.Year - nv.NgayVaoLam.Year) * 12 + now.Month - nv.NgayVaoLam.Month;
                         return m >= 12 && m <= 36;
                     })},
-                    new ThongKeThamNienDto { NhomThamNien = "Tr�n 3 nam", SoLuong = allActive.Count(nv => (now.Year - nv.NgayVaoLam.Year) * 12 + now.Month - nv.NgayVaoLam.Month > 36) }
+                    new ThongKeThamNienDto { NhomThamNien = "Trên 3 năm", SoLuong = allActive.Count(nv => (now.Year - nv.NgayVaoLam.Year) * 12 + now.Month - nv.NgayVaoLam.Month > 36) }
                 }
             };
             return Ok(response);

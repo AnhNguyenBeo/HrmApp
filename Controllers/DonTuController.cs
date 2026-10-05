@@ -25,7 +25,7 @@ namespace HrmApp.Api.Controllers
             if (string.IsNullOrEmpty(maNhanVienStr) || !Guid.TryParse(maNhanVienStr, out var maNhanVien)) return Unauthorized();
 
             var nhanVien = await _context.NhanViens.FindAsync(maNhanVien);
-            if (nhanVien == null) return NotFound(new { message = "Kh�ng t�m th?y nh�n vi�n." });
+            if (nhanVien == null) return NotFound(new { message = "Không tìm thấy nhân viên." });
 
             // Count business days
             int days = 0;
@@ -35,18 +35,18 @@ namespace HrmApp.Api.Controllers
                     days++;
                 }
             }
-            if (days <= 0) return BadRequest(new { message = "Kho?ng th?i gian ngh? kh�ng h?p l? (tr�ng ng�y cu?i tu?n)." });
+            if (days <= 0) return BadRequest(new { message = "Khoảng thời gian nghỉ không hợp lệ (trùng ngày cuối tuần)." });
 
             // Validate Leave Balance (12 days/year)
-            if (request.LoaiDon == "Ngh? ph�p")
+            if (request.LoaiDon == "Nghỉ phép")
             {
                 var year = request.NgayBatDau.Year;
                 var usedLeaves = await _context.DonTus
-                    .Where(d => d.MaNhanVien == maNhanVien && d.LoaiDon == "Ngh? ph�p" && d.TrangThai == "�� duy?t" && d.NgayBatDau.Year == year)
+                    .Where(d => d.MaNhanVien == maNhanVien && d.LoaiDon == "Nghỉ phép" && d.TrangThai == "Đã duyệt" && d.NgayBatDau.Year == year)
                     .SumAsync(d => d.SoNgayNghi);
                 
                 if (usedLeaves + days > 12) {
-                    return BadRequest(new { message = $"B?n d� s? d?ng {usedLeaves}/12 ng�y ph�p. Kh�ng d? d? ngh? th�m {days} ng�y n?a." });
+                    return BadRequest(new { message = $"Bạn đã sử dụng {usedLeaves}/12 ngày phép. Không đủ để nghỉ thêm {days} ngày nữa." });
                 }
             }
 
@@ -54,12 +54,12 @@ namespace HrmApp.Api.Controllers
                 MaDon = Guid.NewGuid(), MaNhanVien = maNhanVien, HoTen = nhanVien.HoTen,
                 LoaiDon = request.LoaiDon, LoaiNghi = request.LoaiNghi,
                 NgayBatDau = request.NgayBatDau, NgayKetThuc = request.NgayKetThuc,
-                SoNgayNghi = days, LyDo = request.LyDo, TrangThai = "Ch? duy?t"
+                SoNgayNghi = days, LyDo = request.LyDo, TrangThai = "Chờ duyệt"
             };
 
             await _context.DonTus.AddAsync(donTu);
             await _context.SaveChangesAsync();
-            return Ok(new { message = "N?p don th�nh c�ng", maDon = donTu.MaDon, soNgayNghiTinhToan = days });
+            return Ok(new { message = "Nộp đơn thành công", maDon = donTu.MaDon, soNgayNghiTinhToan = days });
         }
 
         [HttpGet("cua-toi")]
@@ -82,7 +82,7 @@ namespace HrmApp.Api.Controllers
         }
 
         [HttpGet]
-        [Authorize(Roles = "Qu?n tr? vi�n, Qu?n l�")]
+        [Authorize(Roles = "Quản trị viên, Quản lý")]
         public async Task<IActionResult> GetAllDonTu()
         {
             var donTus = await _context.DonTus.Include(d => d.NguoiDuyetMaNavigation).OrderByDescending(d => d.NgayBatDau)
@@ -96,11 +96,11 @@ namespace HrmApp.Api.Controllers
         }
 
         [HttpPut("{id}/duyet")]
-        [Authorize(Roles = "Qu?n tr? vi�n, Qu?n l�")]
+        [Authorize(Roles = "Quản trị viên, Quản lý")]
         public async Task<IActionResult> DuyetDonTu(Guid id, [FromBody] DuyetDonTuDto request)
         {
             var donTu = await _context.DonTus.FindAsync(id);
-            if (donTu == null) return NotFound(new { message = "Kh�ng t�m th?y don t?." });
+            if (donTu == null) return NotFound(new { message = "Không tìm thấy đơn từ." });
 
             var maNguoiDuyetStr = User.FindFirst("MaNhanVien")?.Value;
             if (!Guid.TryParse(maNguoiDuyetStr, out var nguoiDuyetMa)) return Unauthorized();
@@ -112,7 +112,7 @@ namespace HrmApp.Api.Controllers
 
             _context.DonTus.Update(donTu);
             await _context.SaveChangesAsync();
-            return Ok(new { message = $"�� {request.TrangThai.ToLower()} don t?." });
+            return Ok(new { message = $"Đã {request.TrangThai.ToLower()} đơn từ." });
         }
 
         [HttpDelete("{id}")]
@@ -120,14 +120,14 @@ namespace HrmApp.Api.Controllers
         public async Task<IActionResult> CancelDonTu(Guid id)
         {
             var donTu = await _context.DonTus.FindAsync(id);
-            if (donTu == null) return NotFound(new { message = "Kh�ng t�m th?y don t?." });
+            if (donTu == null) return NotFound(new { message = "Không tìm thấy đơn từ." });
             var maNhanVienStr = User.FindFirst("MaNhanVien")?.Value;
-            if (donTu.MaNhanVien.ToString() != maNhanVienStr) return StatusCode(403, new { message = "B?n kh�ng c� quy?n hu? don c?a ngu?i kh�c." });
-            if (donTu.TrangThai != "Ch? duy?t") return BadRequest(new { message = "Ch? c� th? hu? don khi dang ? tr?ng th�i Ch? duy?t." });
+            if (donTu.MaNhanVien.ToString() != maNhanVienStr) return StatusCode(403, new { message = "Bạn không có quyền huỷ đơn của người khác." });
+            if (donTu.TrangThai != "Chờ duyệt") return BadRequest(new { message = "Chỉ có thể huỷ đơn khi đang ở trạng thái Chờ duyệt." });
 
             _context.DonTus.Remove(donTu);
             await _context.SaveChangesAsync();
-            return Ok(new { message = "�� hu? don th�nh c�ng." });
+            return Ok(new { message = "Đã huỷ đơn thành công." });
         }
     }
 }

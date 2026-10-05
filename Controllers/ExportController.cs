@@ -28,8 +28,8 @@ namespace HrmApp.Api.Controllers
 
             var query = _context.BangLuongs.Include(b => b.MaNhanVienNavigation).AsQueryable();
 
-            // Ph�n quy?n
-            if (role != "Qu?n tr? vi�n" && role != "K? to�n" && role != "Qu?n l�") {
+            // Phân quyền
+            if (role != "Quản trị viên" && role != "Kế toán" && role != "Quản lý") {
                 query = query.Where(b => b.MaNhanVien == maNhanVien);
             }
 
@@ -43,7 +43,7 @@ namespace HrmApp.Api.Controllers
             var data = await query.ToListAsync();
 
             var sb = new StringBuilder();
-            sb.AppendLine("M� B?ng Luong,H? T�n,Th?i Gian,Ng�y C�ng,Gi? OT,Luong Co B?n,Luong OT,B?o Hi?m X� H?i,Thu? TNCN,Th?c Linh");
+            sb.AppendLine("Mã Bảng Lương,Họ Tên,Thời Gian,Ngày Công,Giờ OT,Lương Cơ Bản,Lương OT,Bảo Hiểm Xã Hội,Thuế TNCN,Thực Lĩnh");
 
             foreach (var item in data)
             {

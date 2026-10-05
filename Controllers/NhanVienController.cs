@@ -1,4 +1,4 @@
-using System;
+Ôªøusing System;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
@@ -276,7 +276,8 @@ namespace HrmApp.Api.Controllers
             await _context.SaveChangesAsync();
 
             return NoContent();
-        }        [HttpPut("ho-so-cua-toi")]
+        }        
+                [HttpPut("ho-so-cua-toi")]
         [Authorize]
         public async Task<IActionResult> UpdateHoSoCuaToi([FromBody] UpdateHoSoCuaToiDto request)
         {
@@ -284,7 +285,7 @@ namespace HrmApp.Api.Controllers
             if (!Guid.TryParse(maNhanVienStr, out var maNhanVien)) return Unauthorized();
 
             var nhanVien = await _context.NhanViens.FindAsync(maNhanVien);
-            if (nhanVien == null) return NotFound("KhÙng tÏm th?y nh‚n viÍn.");
+            if (nhanVien == null) return NotFound(new { message = "Kh√¥ng t√¨m th·∫•y nh√¢n vi√™n." });
 
             if (!string.IsNullOrEmpty(request.SoDienThoai)) nhanVien.SoDienThoai = request.SoDienThoai;
             if (!string.IsNullOrEmpty(request.Email)) nhanVien.Email = request.Email;
@@ -292,7 +293,7 @@ namespace HrmApp.Api.Controllers
 
             _context.NhanViens.Update(nhanVien);
             await _context.SaveChangesAsync();
-            return Ok(new { message = "C?p nh?t h? so c· nh‚n th‡nh cÙng." });
+            return Ok(new { message = "C·∫≠p nh·∫≠t h·ªõs∆° c√° nh√¢n th√†nh#√¥ng." });
         }
     }
 }

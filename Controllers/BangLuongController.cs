@@ -18,7 +18,7 @@ namespace HrmApp.Api.Controllers
         public BangLuongController(QuanLyNhanSuDbContext context) { _context = context; }
 
         [HttpPost("tinh-luong")]
-        [Authorize(Roles = "K? to�n")]
+        [Authorize(Roles = "Kế toán")]
         public async Task<IActionResult> CalculateSalary([FromBody] TinhLuongRequestDto request)
         {
             if (string.IsNullOrEmpty(request.ThoiGian)) return BadRequest("ThoiGian is required");
@@ -37,7 +37,7 @@ namespace HrmApp.Api.Controllers
                 var soNgayCong = await _context.ChamCongs.Where(c => c.MaNhanVien == nv.MaNhanVien && c.Ngay.Month == month && c.Ngay.Year == year).CountAsync();
                 var tongGioOt = await _context.ChamCongs.Where(c => c.MaNhanVien == nv.MaNhanVien && c.Ngay.Month == month && c.Ngay.Year == year).SumAsync(c => c.SoGioTangCa ?? 0);
 
-                var hopDong = await _context.HopDongLaoDongs.Where(h => h.MaNhanVien == nv.MaNhanVien && h.TrangThai == "C� hi?u l?c").OrderByDescending(h => h.NgayBatDau).FirstOrDefaultAsync();
+                var hopDong = await _context.HopDongLaoDongs.Where(h => h.MaNhanVien == nv.MaNhanVien && h.TrangThai == "Có hiệu lực").OrderByDescending(h => h.NgayBatDau).FirstOrDefaultAsync();
                 decimal luongCoBan = hopDong != null ? hopDong.LuongCoBan : 0;
                 
                 // Gross & OT
@@ -83,13 +83,13 @@ namespace HrmApp.Api.Controllers
                         MaBangLuong = Guid.NewGuid(), MaNhanVien = nv.MaNhanVien, ThoiGian = request.ThoiGian,
                         NgayCongChuan = ngayCongChuan, SoNgayCong = soNgayCong, TongGioOt = tongGioOt,
                         LuongCoBan = luongCoBan, LuongOt = luongOt, BaoHiemXaHoi = baoHiem, ThueTncn = thue,
-                        ThucLinh = thucLinh, TrangThaiChiTra = "Ch? duy?t"
+                        ThucLinh = thucLinh, TrangThaiChiTra = "Chờ duyệt"
                     };
                     await _context.BangLuongs.AddAsync(newBangLuong);
                 }
             }
             await _context.SaveChangesAsync();
-            return Ok(new { message = "T�nh luong h�ng lo?t ho�n t?t." });
+            return Ok(new { message = "Tính lương hàng loạt hoàn tất." });
         }
 
         [HttpGet("cua-toi")]
@@ -109,7 +109,7 @@ namespace HrmApp.Api.Controllers
         }
 
         [HttpGet]
-        [Authorize(Roles = "K? to�n, Qu?n l�")]
+        [Authorize(Roles = "Kế toán, Quản lý")]
         public async Task<IActionResult> GetAllSalaries()
         {
             var bangLuongs = await _context.BangLuongs.Include(b => b.MaNhanVienNavigation)
