@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ConfigProvider } from 'antd';
 import viVN from 'antd/locale/vi_VN';
@@ -8,6 +8,11 @@ import { ChamCongPage } from './pages/ChamCong';
 import { DonTuPage } from './pages/DonTu';
 import { BangLuongPage } from './pages/BangLuong';
 import { DashboardPage } from './pages/Dashboard';
+import { NhanVienPage } from './pages/NhanVien';
+import { DuyetDonTuPage } from './pages/DuyetDonTu';
+import { ChamCongQuanLyPage } from './pages/ChamCongQuanLy';
+import { TinhLuongPage } from './pages/TinhLuong';
+import { TaiKhoanPage } from './pages/TaiKhoan';
 import { AppLayout } from './components/AppLayout';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
@@ -28,16 +33,18 @@ export const App: React.FC = () => {
               <Route path="/don-tu" element={<DonTuPage />} />
               <Route path="/bang-luong" element={<BangLuongPage />} />
 
-              {/* Manager & Admin Only */}
-              <Route element={<ProtectedRoute allowedRoles={['Quản trị viên', 'Quản lý']} />}>
+              {/* Quản lý Only */}
+              <Route element={<ProtectedRoute allowedRoles={['Quản lý']} />}>
                 <Route path="/dashboard" element={<DashboardPage />} />
-                <Route path="/nhan-vien" element={<div style={{ padding: 20 }}><h3>Trang Quản lý Nhân sự (Đang phát triển)</h3></div>} />
-                <Route path="/don-tu/quan-ly" element={<div style={{ padding: 20 }}><h3>Trang Duyệt đơn từ (Đang phát triển)</h3></div>} />
+                <Route path="/nhan-vien" element={<NhanVienPage />} />
+                <Route path="/don-tu/quan-ly" element={<DuyetDonTuPage />} />
+                <Route path="/cham-cong-quan-ly" element={<ChamCongQuanLyPage />} />
+                <Route path="/tinh-luong" element={<TinhLuongPage />} />
               </Route>
 
-              {/* Accountant Only */}
-              <Route element={<ProtectedRoute allowedRoles={['Kế toán']} />}>
-                <Route path="/tinh-luong" element={<div style={{ padding: 20 }}><h3>Trang Tính & Chốt lương (Đang phát triển)</h3></div>} />
+              {/* Quản trị viên (Admin) Only */}
+              <Route element={<ProtectedRoute allowedRoles={['Quản trị viên']} />}>
+                <Route path="/tai-khoan" element={<TaiKhoanPage />} />
               </Route>
             </Route>
           </Route>
