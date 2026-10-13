@@ -28,7 +28,7 @@ namespace HrmApp.Api.Controllers
 
             var query = _context.BangLuongs.Include(b => b.MaNhanVienNavigation).AsQueryable();
 
-            // Phân quyền
+            // Phân quyền: Nhân viên chỉ xuất của chính mình
             if (role != "Quản trị viên" && role != "Kế toán" && role != "Quản lý") {
                 query = query.Where(b => b.MaNhanVien == maNhanVien);
             }

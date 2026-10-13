@@ -18,7 +18,7 @@ namespace HrmApp.Api.Controllers
         public BangLuongController(QuanLyNhanSuDbContext context) { _context = context; }
 
         [HttpPost("tinh-luong")]
-        [Authorize(Roles = "Kế toán")]
+        [Authorize(Roles = "Quản lý, Kế toán, Quản trị viên")]
         public async Task<IActionResult> CalculateSalary([FromBody] TinhLuongRequestDto request)
         {
             if (string.IsNullOrEmpty(request.ThoiGian)) return BadRequest("ThoiGian is required");
@@ -50,7 +50,7 @@ namespace HrmApp.Api.Controllers
                 
                 // Progressive Tax calculation
                 decimal thuNhapChiuThue = grossSalary - baoHiem;
-                decimal thuNhapTinhThue = thuNhapChiuThue - 11000000m; // Personal deduction
+                decimal thuNhapTinhThue = thuNhapChiuThue - 11000000m; // Gia canh 11M
                 decimal thue = 0;
                 if (thuNhapTinhThue > 0) {
                     if (thuNhapTinhThue <= 5000000) thue = thuNhapTinhThue * 0.05m;
@@ -102,22 +102,31 @@ namespace HrmApp.Api.Controllers
             var bangLuongs = await _context.BangLuongs.Include(b => b.MaNhanVienNavigation).Where(b => b.MaNhanVien == maNhanVien)
                 .Select(b => new BangLuongResponseDto {
                     MaBangLuong = b.MaBangLuong, MaNhanVien = b.MaNhanVien,
-                    HoTen = b.MaNhanVienNavigation != null ? b.MaNhanVienNavigation.HoTen : null,
-                    ThoiGian = b.ThoiGian, LuongCoBan = b.LuongCoBan, PhuCap = b.PhuCap, ThucLinh = b.ThucLinh
-                }).ToListAsync();
+                    HoTen = b.MaNhanVienNavigation != null ? b.MaNhanVienNavigation.HoTen : null!,
+                    ThoiGian = b.ThoiGian, LuongCoBan = b.LuongCoBan, PhuCap = b.PhuCap,
+                    NgayCongChuan = b.NgayCongChuan, SoNgayCong = b.SoNgayCong, TongGioOt = b.TongGioOt,
+                    LuongOt = b.LuongOt, BaoHiemXaHoi = b.BaoHiemXaHoi, ThueTncn = b.ThueTncn,
+                    ThucLinh = b.ThucLinh, TrangThaiChiTra = b.TrangThaiChiTra
+                }).OrderByDescending(b => b.ThoiGian).ToListAsync();
             return Ok(bangLuongs);
         }
 
         [HttpGet]
-        [Authorize(Roles = "Kế toán, Quản lý")]
-        public async Task<IActionResult> GetAllSalaries()
+        [Authorize(Roles = "Quản lý, Kế toán, Quản trị viên")]
+        public async Task<IActionResult> GetAllSalaries([FromQuery] string? thoiGian)
         {
-            var bangLuongs = await _context.BangLuongs.Include(b => b.MaNhanVienNavigation)
+            var query = _context.BangLuongs.Include(b => b.MaNhanVienNavigation).AsQueryable();
+            if (!string.IsNullOrEmpty(thoiGian)) query = query.Where(b => b.ThoiGian == thoiGian);
+
+            var bangLuongs = await query
                 .Select(b => new BangLuongResponseDto {
                     MaBangLuong = b.MaBangLuong, MaNhanVien = b.MaNhanVien,
-                    HoTen = b.MaNhanVienNavigation != null ? b.MaNhanVienNavigation.HoTen : null,
-                    ThoiGian = b.ThoiGian, LuongCoBan = b.LuongCoBan, PhuCap = b.PhuCap, ThucLinh = b.ThucLinh
-                }).ToListAsync();
+                    HoTen = b.MaNhanVienNavigation != null ? b.MaNhanVienNavigation.HoTen : null!,
+                    ThoiGian = b.ThoiGian, LuongCoBan = b.LuongCoBan, PhuCap = b.PhuCap,
+                    NgayCongChuan = b.NgayCongChuan, SoNgayCong = b.SoNgayCong, TongGioOt = b.TongGioOt,
+                    LuongOt = b.LuongOt, BaoHiemXaHoi = b.BaoHiemXaHoi, ThueTncn = b.ThueTncn,
+                    ThucLinh = b.ThucLinh, TrangThaiChiTra = b.TrangThaiChiTra
+                }).OrderByDescending(b => b.ThoiGian).ToListAsync();
             return Ok(bangLuongs);
         }
     }

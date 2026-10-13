@@ -262,7 +262,7 @@ namespace HrmApp.Api.Controllers
         /// Xóa mềm nhân viên
         /// </summary>
         [HttpDelete("{id}")]
-        [Authorize(Roles = "Quản trị viên")]
+        [Authorize(Roles = "Quản trị viên,Quản lý")]
         public async Task<IActionResult> DeleteNhanVien(Guid id)
         {
             var nhanVien = await _context.NhanViens.FindAsync(id);
