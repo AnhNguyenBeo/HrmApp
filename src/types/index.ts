@@ -1,4 +1,4 @@
-export interface LoginRequest {
+﻿export interface LoginRequest {
   tenDangNhap: string;
   matKhau: string;
 }
@@ -57,6 +57,8 @@ export interface DonTu {
   maDon: string;
   maNhanVien: string;
   hoTen?: string;
+  tenChucVu?: string;
+  tenPhongBan?: string;
   loaiDon: string;
   loaiNghi?: string;
   ngayBatDau: string;

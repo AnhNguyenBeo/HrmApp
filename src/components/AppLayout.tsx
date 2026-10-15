@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { Layout, Menu, Button, Avatar, Space, message, Dropdown, Tag } from 'antd';
 import {
   DashboardOutlined,
@@ -57,6 +57,7 @@ export const AppLayout: React.FC = () => {
     // Admin: Chỉ quản lý account, xem thông tin account, thêm, xóa, sửa và phân quyền
     menuItems = [
       { key: '/tai-khoan', icon: <KeyOutlined />, label: 'Quản lý tài khoản & Phân quyền' },
+      { key: '/don-tu/quan-ly', icon: <SolutionOutlined />, label: 'Phê duyệt đơn từ (Giám đốc)' },
       { key: '/profile', icon: <UserOutlined />, label: 'Hồ sơ cá nhân' },
     ];
   } else if (role === 'Quản lý') {

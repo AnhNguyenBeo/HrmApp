@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ConfigProvider } from 'antd';
 import viVN from 'antd/locale/vi_VN';
@@ -34,7 +34,7 @@ export const App: React.FC = () => {
               <Route path="/bang-luong" element={<BangLuongPage />} />
 
               {/* Quản lý Only - toàn bộ quản lý nhân sự, lương, báo cáo */}
-              <Route element={<ProtectedRoute allowedRoles={['Quản lý']} />}>
+              <Route element={<ProtectedRoute allowedRoles={['Quản lý', 'Quản trị viên']} />}>
                 <Route path="/dashboard" element={<DashboardPage />} />
                 <Route path="/nhan-vien" element={<NhanVienPage />} />
                 <Route path="/don-tu/quan-ly" element={<DuyetDonTuPage />} />
