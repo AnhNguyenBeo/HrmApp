@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 
 namespace HrmApp.Api.DTOs.DonTu
 {
@@ -7,6 +7,8 @@ namespace HrmApp.Api.DTOs.DonTu
         public Guid MaDon { get; set; }
         public Guid MaNhanVien { get; set; }
         public string HoTen { get; set; } = null!;
+        public string? TenChucVu { get; set; }
+        public string? TenPhongBan { get; set; }
         public string LoaiDon { get; set; } = null!;
         public string? LoaiNghi { get; set; }
         public DateOnly NgayBatDau { get; set; }
