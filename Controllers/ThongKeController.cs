@@ -1,4 +1,4 @@
-using HrmApp.Api.Data;
+﻿using HrmApp.Api.Data;
 using HrmApp.Api.DTOs.ThongKe;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

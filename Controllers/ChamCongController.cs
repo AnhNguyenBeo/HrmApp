@@ -1,4 +1,4 @@
-using HrmApp.Api.Data;
+﻿using HrmApp.Api.Data;
 using HrmApp.Api.Data.Models;
 using HrmApp.Api.DTOs.ChamCong;
 using Microsoft.AspNetCore.Authorization;
@@ -87,7 +87,7 @@ namespace HrmApp.Api.Controllers
         }
 
         [HttpGet]
-        [Authorize(Roles = "Quản lý, Kế toán")]
+        [Authorize(Roles = "Quản lý")]
         public async Task<IActionResult> GetAllAttendance()
         {
             var result = await _context.ChamCongs.Include(c => c.MaNhanVienNavigation).Select(c => new ChamCongResponseDto {

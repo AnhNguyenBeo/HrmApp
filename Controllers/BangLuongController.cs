@@ -1,4 +1,4 @@
-using HrmApp.Api.Data;
+﻿using HrmApp.Api.Data;
 using HrmApp.Api.Data.Models;
 using HrmApp.Api.DTOs.BangLuong;
 using Microsoft.AspNetCore.Authorization;
@@ -18,7 +18,7 @@ namespace HrmApp.Api.Controllers
         public BangLuongController(QuanLyNhanSuDbContext context) { _context = context; }
 
         [HttpPost("tinh-luong")]
-        [Authorize(Roles = "Quản lý, Kế toán, Quản trị viên")]
+        [Authorize(Roles = "Quản lý,Quản trị viên")]
         public async Task<IActionResult> CalculateSalary([FromBody] TinhLuongRequestDto request)
         {
             if (string.IsNullOrEmpty(request.ThoiGian)) return BadRequest("ThoiGian is required");
@@ -112,7 +112,7 @@ namespace HrmApp.Api.Controllers
         }
 
         [HttpGet]
-        [Authorize(Roles = "Quản lý, Kế toán, Quản trị viên")]
+        [Authorize(Roles = "Quản lý,Quản trị viên")]
         public async Task<IActionResult> GetAllSalaries([FromQuery] string? thoiGian)
         {
             var query = _context.BangLuongs.Include(b => b.MaNhanVienNavigation).AsQueryable();
