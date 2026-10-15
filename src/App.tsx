@@ -24,7 +24,7 @@ export const App: React.FC = () => {
           {/* Public Route */}
           <Route path="/login" element={<Login />} />
 
-          {/* Protected Routes */}
+          {/* Protected Routes - yêu cầu đăng nhập */}
           <Route element={<ProtectedRoute />}>
             <Route element={<AppLayout />}>
               <Route path="/" element={<Navigate to="/profile" replace />} />
@@ -33,7 +33,7 @@ export const App: React.FC = () => {
               <Route path="/don-tu" element={<DonTuPage />} />
               <Route path="/bang-luong" element={<BangLuongPage />} />
 
-              {/* Quản lý Only */}
+              {/* Quản lý Only - toàn bộ quản lý nhân sự, lương, báo cáo */}
               <Route element={<ProtectedRoute allowedRoles={['Quản lý']} />}>
                 <Route path="/dashboard" element={<DashboardPage />} />
                 <Route path="/nhan-vien" element={<NhanVienPage />} />
@@ -42,7 +42,7 @@ export const App: React.FC = () => {
                 <Route path="/tinh-luong" element={<TinhLuongPage />} />
               </Route>
 
-              {/* Quản trị viên (Admin) Only */}
+              {/* Quản trị viên (Admin) Only - chỉ quản lý tài khoản */}
               <Route element={<ProtectedRoute allowedRoles={['Quản trị viên']} />}>
                 <Route path="/tai-khoan" element={<TaiKhoanPage />} />
               </Route>

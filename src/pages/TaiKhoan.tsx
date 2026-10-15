@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { Card, Table, Button, Modal, Form, Input, Select, Tag, Space, message, Popconfirm } from 'antd';
 import { UserAddOutlined, KeyOutlined, LockOutlined, UnlockOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
 import { taiKhoanApi } from '../api/taiKhoanApi';
@@ -87,7 +87,6 @@ export const TaiKhoanPage: React.FC = () => {
         let color = 'default';
         if (val === 'Quản trị viên') color = 'magenta';
         else if (val === 'Quản lý') color = 'blue';
-        else if (val === 'Kế toán') color = 'gold';
         else color = 'green';
         return <Tag color={color}>{val || 'Chưa phân quyền'}</Tag>;
       },
