@@ -13,4 +13,5 @@ export const taiKhoanApi = {
   changePassword: (id: string, data: { matKhauCu: string; matKhauMoi: string }) =>
     axiosClient.put('/taikhoan/' + id + '/doi-mat-khau', data),
   lock: (id: string) => axiosClient.delete('/taikhoan/' + id),
+  unlock: (id: string) => axiosClient.put('/taikhoan/' + id + '/mo-khoa'),
 };

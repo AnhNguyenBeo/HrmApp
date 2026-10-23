@@ -1,4 +1,4 @@
-﻿export interface LoginRequest {
+export interface LoginRequest {
   tenDangNhap: string;
   matKhau: string;
 }
@@ -11,6 +11,9 @@ export interface LoginResponse {
   maNhanVien: string;
   hoTen: string;
   vaiTro: string;
+  maPhongBan?: string;
+  tenPhongBan?: string;
+  tenChucVu?: string;
 }
 
 export interface UserInfo {
@@ -20,6 +23,9 @@ export interface UserInfo {
   maNhanVien: string;
   hoTen: string;
   vaiTro: string;
+  maPhongBan?: string;
+  tenPhongBan?: string;
+  tenChucVu?: string;
 }
 
 export interface NhanVien {
@@ -46,6 +52,9 @@ export interface ChamCong {
   maChamCong: string;
   maNhanVien: string;
   hoTen?: string;
+  maPhongBan?: string;
+  tenPhongBan?: string;
+  tenChucVu?: string;
   ngay: string;
   gioVao: string;
   gioRa: string;
@@ -57,6 +66,7 @@ export interface DonTu {
   maDon: string;
   maNhanVien: string;
   hoTen?: string;
+  maPhongBan?: string;
   tenChucVu?: string;
   tenPhongBan?: string;
   loaiDon: string;
@@ -96,6 +106,12 @@ export interface DashboardData {
   nhanVienTheoPhongBan: { tenPhongBan: string; soLuongNhanVien: number }[];
   nhanVienTheoTrinhDo: { trinhDo: string; soLuong: number }[];
   nhanVienTheoThamNien: { nhomThamNien: string; soLuong: number }[];
+  nhanVienTheoMucLuong: { mucLuong: string; soLuong: number }[];
+  tinhHinhNhanSu: {
+    dangLamViec: { maNhanVien: string; hoTen: string; tenPhongBan: string; tenChucVu: string; ngayVaoLam?: string }[];
+    nghiPhep: { maNhanVien: string; hoTen: string; tenPhongBan: string; loaiDon: string; soNgayNghi: number; ngayBatDau: string; ngayKetThuc: string }[];
+    daNghiViec: { maNhanVien: string; hoTen: string; tenPhongBan: string; tenChucVu: string; ngayNghiViec?: string }[];
+  };
 }
 
 export interface HopDong {
@@ -115,6 +131,8 @@ export interface TaiKhoan {
   maNhanVien: string;
   tenDangNhap: string;
   tenNhanVien?: string;
+  tenPhongBan?: string;
+  tenChucVu?: string;
   tenVaiTro?: string;
   trangThai: string;
   ngayTao: string;

@@ -1,16 +1,22 @@
-﻿import React, { useEffect, useState } from 'react';
-import { Card, Table, Button, Modal, Form, Input, Select, Tag, Space, message, Popconfirm } from 'antd';
-import { UserAddOutlined, KeyOutlined, LockOutlined, UnlockOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
+import React, { useEffect, useState } from 'react';
+import { Card, Table, Button, Modal, Form, Input, Select, Tag, Space, message, Popconfirm, Row, Col } from 'antd';
+import { UserAddOutlined, LockOutlined, UnlockOutlined, SafetyCertificateOutlined, SearchOutlined, KeyOutlined } from '@ant-design/icons';
 import { taiKhoanApi } from '../api/taiKhoanApi';
 import { nhanVienApi } from '../api/nhanVienApi';
-import { danhMucApi, VaiTro } from '../api/danhMucApi';
+import { danhMucApi, VaiTro, PhongBan } from '../api/danhMucApi';
 import { TaiKhoan, NhanVien } from '../types';
 
 export const TaiKhoanPage: React.FC = () => {
   const [data, setData] = useState<TaiKhoan[]>([]);
   const [nhanViens, setNhanViens] = useState<NhanVien[]>([]);
   const [vaiTros, setVaiTros] = useState<VaiTro[]>([]);
+  const [phongBans, setPhongBans] = useState<PhongBan[]>([]);
   const [loading, setLoading] = useState(false);
+
+  const [searchText, setSearchText] = useState('');
+  const [filterRole, setFilterRole] = useState('ALL');
+  const [filterStatus, setFilterStatus] = useState('ALL');
+  const [filterPhongBan, setFilterPhongBan] = useState('ALL');
 
   const [createModal, setCreateModal] = useState(false);
   const [roleModal, setRoleModal] = useState(false);
@@ -22,16 +28,32 @@ export const TaiKhoanPage: React.FC = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [accRes, nvRes, vtRes] = await Promise.all([
+      const [tkRes, nvRes, vtRes, pbRes] = await Promise.allSettled([
         taiKhoanApi.getAll(),
         nhanVienApi.getAll({ pageSize: 100 }),
         danhMucApi.getVaiTros(),
+        danhMucApi.getPhongBans(),
       ]);
-      setData(accRes.data);
-      setNhanViens(nvRes.data.items || []);
-      setVaiTros(vtRes.data);
+
+      if (tkRes.status === 'fulfilled') {
+        setData(tkRes.value.data);
+      } else {
+        message.error('Không thể tải danh sách tài khoản.');
+      }
+
+      if (nvRes.status === 'fulfilled') {
+        setNhanViens(nvRes.value.data.items || []);
+      }
+
+      if (vtRes.status === 'fulfilled') {
+        setVaiTros(vtRes.value.data);
+      }
+
+      if (pbRes.status === 'fulfilled') {
+        setPhongBans(pbRes.value.data);
+      }
     } catch {
-      message.error('Không thể tải danh sách tài khoản.');
+      message.error('Không thể tải dữ liệu tài khoản.');
     } finally {
       setLoading(false);
     }
@@ -43,13 +65,13 @@ export const TaiKhoanPage: React.FC = () => {
 
   const handleCreate = async (values: any) => {
     try {
-      await taiKhoanApi.create(values);
-      message.success('Tạo tài khoản thành công!');
+      await taiKhoanApi.create({ ...values, trangThai: 'Hoạt động' });
+      message.success('Cấp tài khoản mới thành công!');
       setCreateModal(false);
       createForm.resetFields();
       fetchData();
     } catch (err: any) {
-      message.error(err.response?.data?.message || 'Tạo tài khoản thất bại.');
+      message.error(err.response?.data?.message || err.response?.data || 'Cấp tài khoản thất bại.');
     }
   };
 
@@ -57,28 +79,72 @@ export const TaiKhoanPage: React.FC = () => {
     if (!selectedAcc) return;
     try {
       await taiKhoanApi.changeRole(selectedAcc.maTaiKhoan, values.maVaiTro);
-      message.success('Cập nhật phân quyền thành công!');
+      message.success('Cập nhật phân quyền vai trò thành công!');
       setRoleModal(false);
-      roleForm.resetFields();
       fetchData();
     } catch (err: any) {
-      message.error(err.response?.data?.message || 'Phân quyền thất bại.');
+      message.error(err.response?.data?.message || 'Cập nhật vai trò thất bại.');
     }
   };
 
-  const handleToggleLock = async (id: string) => {
+  const handleToggleLock = async (record: TaiKhoan) => {
     try {
-      await taiKhoanApi.lock(id);
-      message.success('Thay đổi trạng thái tài khoản thành công!');
+      const res = await taiKhoanApi.lock(record.maTaiKhoan);
+      message.success(res.data?.message || 'Cập nhật trạng thái tài khoản thành công!');
       fetchData();
     } catch {
       message.error('Thao tác thất bại.');
     }
   };
 
+  const filteredData = data.filter((item) => {
+    const matchSearch =
+      !searchText ||
+      item.tenDangNhap.toLowerCase().includes(searchText.toLowerCase()) ||
+      (item.tenNhanVien && item.tenNhanVien.toLowerCase().includes(searchText.toLowerCase())) ||
+      (item.tenPhongBan && item.tenPhongBan.toLowerCase().includes(searchText.toLowerCase())) ||
+      (item.tenChucVu && item.tenChucVu.toLowerCase().includes(searchText.toLowerCase()));
+    const matchRole = filterRole === 'ALL' || item.tenVaiTro === filterRole;
+    const matchStatus = filterStatus === 'ALL' || item.trangThai === filterStatus;
+    const matchDept = filterPhongBan === 'ALL' || item.tenPhongBan === filterPhongBan;
+    return matchSearch && matchRole && matchStatus && matchDept;
+  });
+
   const columns = [
-    { title: 'Tên đăng nhập', dataIndex: 'tenDangNhap', key: 'tenDangNhap', render: (val: string) => <strong>{val}</strong> },
-    { title: 'Chủ sở hữu (Nhân viên)', dataIndex: 'tenNhanVien', key: 'tenNhanVien', render: (val: string) => val || 'Chưa gán' },
+    {
+      title: 'Tên đăng nhập',
+      dataIndex: 'tenDangNhap',
+      key: 'tenDangNhap',
+      sorter: (a: TaiKhoan, b: TaiKhoan) => a.tenDangNhap.localeCompare(b.tenDangNhap),
+      render: (val: string) => <strong>{val}</strong>,
+    },
+    {
+      title: 'Chủ sở hữu (Nhân viên)',
+      dataIndex: 'tenNhanVien',
+      key: 'tenNhanVien',
+      sorter: (a: TaiKhoan, b: TaiKhoan) => (a.tenNhanVien || '').localeCompare(b.tenNhanVien || ''),
+      render: (val: string) => val || 'Chưa gán',
+    },
+    {
+      title: 'Phòng ban',
+      dataIndex: 'tenPhongBan',
+      key: 'tenPhongBan',
+      sorter: (a: TaiKhoan, b: TaiKhoan) => (a.tenPhongBan || '').localeCompare(b.tenPhongBan || ''),
+      render: (val: string) => <Tag color="blue">{val || 'Chưa gán'}</Tag>,
+    },
+    {
+      title: 'Chức vụ',
+      dataIndex: 'tenChucVu',
+      key: 'tenChucVu',
+      sorter: (a: TaiKhoan, b: TaiKhoan) => (a.tenChucVu || '').localeCompare(b.tenChucVu || ''),
+      render: (val: string) => {
+        let color = 'default';
+        if (val?.includes('Chủ doanh nghiệp') || val?.includes('Giám đốc')) color = 'gold';
+        else if (val?.includes('Trưởng')) color = 'cyan';
+        else if (val?.includes('Phó')) color = 'purple';
+        return <Tag color={color}>{val || 'Chưa gán'}</Tag>;
+      },
+    },
     {
       title: 'Vai trò (Quyền)',
       dataIndex: 'tenVaiTro',
@@ -86,6 +152,7 @@ export const TaiKhoanPage: React.FC = () => {
       render: (val: string) => {
         let color = 'default';
         if (val === 'Quản trị viên') color = 'magenta';
+        else if (val === 'Chủ doanh nghiệp') color = 'gold';
         else if (val === 'Quản lý') color = 'blue';
         else color = 'green';
         return <Tag color={color}>{val || 'Chưa phân quyền'}</Tag>;
@@ -101,7 +168,12 @@ export const TaiKhoanPage: React.FC = () => {
         </Tag>
       ),
     },
-    { title: 'Ngày tạo', dataIndex: 'ngayTao', key: 'ngayTao' },
+    {
+      title: 'Ngày tạo',
+      dataIndex: 'ngayTao',
+      key: 'ngayTao',
+      sorter: (a: TaiKhoan, b: TaiKhoan) => a.ngayTao.localeCompare(b.ngayTao),
+    },
     {
       title: 'Thao tác (Admin)',
       key: 'action',
@@ -122,7 +194,7 @@ export const TaiKhoanPage: React.FC = () => {
 
           <Popconfirm
             title={record.trangThai === 'Hoạt động' ? 'Bạn có muốn khóa tài khoản này?' : 'Mở khóa tài khoản này?'}
-            onConfirm={() => handleToggleLock(record.maTaiKhoan)}
+            onConfirm={() => handleToggleLock(record)}
           >
             <Button
               size="small"
@@ -152,7 +224,57 @@ export const TaiKhoanPage: React.FC = () => {
           </Button>
         }
       >
-        <Table dataSource={data} columns={columns} rowKey="maTaiKhoan" loading={loading} />
+        <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+          <Col xs={24} sm={12} md={7}>
+            <Input
+              placeholder="Tìm theo tên đăng nhập, nhân viên, phòng ban, chức vụ..."
+              prefix={<SearchOutlined />}
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              allowClear
+            />
+          </Col>
+          <Col xs={12} sm={6} md={5}>
+            <Select
+              style={{ width: '100%' }}
+              value={filterPhongBan}
+              onChange={(v) => setFilterPhongBan(v)}
+            >
+              <Select.Option value="ALL">Tất cả phòng ban</Select.Option>
+              {phongBans.map((pb) => (
+                <Select.Option key={pb.maPhongBan} value={pb.tenPhongBan}>
+                  {pb.tenPhongBan}
+                </Select.Option>
+              ))}
+            </Select>
+          </Col>
+          <Col xs={12} sm={6} md={6}>
+            <Select
+              style={{ width: '100%' }}
+              value={filterRole}
+              onChange={(v) => setFilterRole(v)}
+            >
+              <Select.Option value="ALL">Tất cả vai trò</Select.Option>
+              <Select.Option value="Quản trị viên">Quản trị viên</Select.Option>
+              <Select.Option value="Chủ doanh nghiệp">Chủ doanh nghiệp</Select.Option>
+              <Select.Option value="Quản lý">Quản lý</Select.Option>
+              <Select.Option value="Nhân viên">Nhân viên</Select.Option>
+            </Select>
+          </Col>
+          <Col xs={24} sm={12} md={6}>
+            <Select
+              style={{ width: '100%' }}
+              value={filterStatus}
+              onChange={(v) => setFilterStatus(v)}
+            >
+              <Select.Option value="ALL">Tất cả trạng thái</Select.Option>
+              <Select.Option value="Hoạt động">Hoạt động</Select.Option>
+              <Select.Option value="Bị khóa">Bị khóa</Select.Option>
+            </Select>
+          </Col>
+        </Row>
+
+        <Table dataSource={filteredData} columns={columns} rowKey="maTaiKhoan" loading={loading} />
       </Card>
 
       <Modal title="Cấp tài khoản đăng nhập mới" open={createModal} onCancel={() => setCreateModal(false)} footer={null}>
@@ -161,7 +283,7 @@ export const TaiKhoanPage: React.FC = () => {
             <Select showSearch placeholder="Chọn nhân sự cần cấp tài khoản" optionFilterProp="label">
               {nhanViens.map((nv) => (
                 <Select.Option key={nv.maNhanVien} value={nv.maNhanVien} label={nv.hoTen}>
-                  {nv.hoTen} ({nv.email || nv.soDienThoai})
+                  {nv.hoTen} ({nv.tenPhongBan || 'Chưa gán'} - {nv.tenChucVu || 'Chưa gán'})
                 </Select.Option>
               ))}
             </Select>

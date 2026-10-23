@@ -1,11 +1,12 @@
-﻿import React from 'react';
+import React from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 
 interface ProtectedRouteProps {
   allowedRoles?: string[];
+  allowDepartments?: string[];
 }
 
-export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) => {
+export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles, allowDepartments }) => {
   const token = localStorage.getItem('token');
   const userStr = localStorage.getItem('user');
 
@@ -16,7 +17,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) 
   if (allowedRoles && allowedRoles.length > 0) {
     try {
       const user = JSON.parse(userStr);
-      if (!allowedRoles.includes(user.vaiTro)) {
+      const hasRole = allowedRoles.includes(user.vaiTro);
+      const hasDept = allowDepartments ? allowDepartments.some((d) => (user.tenPhongBan || '').includes(d)) : false;
+
+      if (!hasRole && !hasDept) {
         return (
           <div style={{ padding: 50, textAlign: 'center' }}>
             <h2>403 - Không có quyền truy cập</h2>

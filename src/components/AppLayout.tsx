@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Layout, Menu, Button, Avatar, Space, message, Dropdown, Tag } from 'antd';
 import {
   DashboardOutlined,
@@ -13,9 +13,11 @@ import {
   MenuUnfoldOutlined,
   KeyOutlined,
   SolutionOutlined,
+  CrownOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { chamCongApi } from '../api/chamCongApi';
+import { nhanVienApi } from '../api/nhanVienApi';
 import dayjs from 'dayjs';
 
 const { Header, Sider, Content } = Layout;
@@ -23,12 +25,27 @@ const { Header, Sider, Content } = Layout;
 export const AppLayout: React.FC = () => {
   const [collapsed, setCollapsed] = useState(false);
   const [checkInLoading, setCheckInLoading] = useState(false);
+  const [departmentName, setDepartmentName] = useState<string>('');
   const navigate = useNavigate();
   const location = useLocation();
 
   const userStr = localStorage.getItem('user');
   const user = userStr ? JSON.parse(userStr) : null;
   const role = user?.vaiTro || '';
+
+  useEffect(() => {
+    if (user?.tenPhongBan) {
+      setDepartmentName(user.tenPhongBan);
+    } else if (user?.maNhanVien) {
+      nhanVienApi.getById(user.maNhanVien).then((res) => {
+        if (res.data?.tenPhongBan) {
+          setDepartmentName(res.data.tenPhongBan);
+          const updated = { ...user, tenPhongBan: res.data.tenPhongBan };
+          localStorage.setItem('user', JSON.stringify(updated));
+        }
+      }).catch(() => {});
+    }
+  }, [userStr]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -50,24 +67,33 @@ export const AppLayout: React.FC = () => {
     }
   };
 
-  // Build menu strictly according to the defined Role
+  const isAccountingManager = role === 'Quản lý' && departmentName.toLowerCase().includes('kế toán');
+  const isHR = departmentName.toLowerCase().includes('nhân sự');
+
   let menuItems: any[] = [];
 
   if (role === 'Quản trị viên') {
-    // Admin: Chỉ quản lý account, xem thông tin account, thêm, xóa, sửa và phân quyền
     menuItems = [
       { key: '/tai-khoan', icon: <KeyOutlined />, label: 'Quản lý tài khoản & Phân quyền' },
-      { key: '/don-tu/quan-ly', icon: <SolutionOutlined />, label: 'Phê duyệt đơn từ (Giám đốc)' },
-      { key: '/profile', icon: <UserOutlined />, label: 'Hồ sơ cá nhân' },
+      { key: '/profile', icon: <UserOutlined />, label: 'Hồ sơ quản trị viên' },
     ];
-  } else if (role === 'Quản lý') {
-    // Quản lý: Quản lý nhân sự, duyệt đơn, thống kê, chấm công & tính lương
+  } else if (role === 'Chủ doanh nghiệp') {
     menuItems = [
       { key: '/dashboard', icon: <DashboardOutlined />, label: 'Báo cáo & Thống kê' },
       { key: '/nhan-vien', icon: <TeamOutlined />, label: 'Quản lý nhân sự' },
-      { key: '/don-tu/quan-ly', icon: <SolutionOutlined />, label: 'Duyệt đơn từ' },
+      { key: '/don-tu/quan-ly', icon: <SolutionOutlined />, label: 'Phê duyệt đơn từ toàn cty' },
       { key: '/cham-cong-quan-ly', icon: <ClockCircleOutlined />, label: 'Theo dõi chấm công' },
       { key: '/tinh-luong', icon: <DollarOutlined />, label: 'Tính & Quản lý lương' },
+      { type: 'divider' as const },
+      { key: '/profile', icon: <CrownOutlined />, label: 'Hồ sơ Chủ doanh nghiệp' },
+    ];
+  } else if (role === 'Quản lý') {
+    menuItems = [
+      { key: '/dashboard', icon: <DashboardOutlined />, label: 'Báo cáo & Thống kê' },
+      { key: '/nhan-vien', icon: <TeamOutlined />, label: isHR ? 'Quản lý nhân sự' : 'Nhân sự phòng ban' },
+      { key: '/don-tu/quan-ly', icon: <SolutionOutlined />, label: 'Duyệt đơn từ nhân viên' },
+      { key: '/cham-cong-quan-ly', icon: <ClockCircleOutlined />, label: 'Theo dõi chấm công' },
+      ...(isAccountingManager ? [{ key: '/tinh-luong', icon: <DollarOutlined />, label: 'Tính & Quản lý lương' }] : []),
       { type: 'divider' as const },
       { key: '/profile', icon: <UserOutlined />, label: 'Hồ sơ của tôi' },
       { key: '/cham-cong', icon: <ClockCircleOutlined />, label: 'Chấm công cá nhân' },
@@ -75,8 +101,8 @@ export const AppLayout: React.FC = () => {
       { key: '/bang-luong', icon: <DollarOutlined />, label: 'Bảng lương của tôi' },
     ];
   } else {
-    // Nhân viên
     menuItems = [
+      ...(isHR ? [{ key: '/nhan-vien', icon: <TeamOutlined />, label: 'Quản lý nhân sự' }] : []),
       { key: '/profile', icon: <UserOutlined />, label: 'Hồ sơ của tôi' },
       { key: '/cham-cong', icon: <ClockCircleOutlined />, label: 'Chấm công cá nhân' },
       { key: '/don-tu', icon: <FileTextOutlined />, label: 'Đơn từ của tôi' },
@@ -105,6 +131,17 @@ export const AppLayout: React.FC = () => {
     ],
   };
 
+  const getRoleTagColor = (r: string) => {
+    switch (r) {
+      case 'Quản trị viên': return 'magenta';
+      case 'Chủ doanh nghiệp': return 'gold';
+      case 'Quản lý': return 'blue';
+      default: return 'green';
+    }
+  };
+
+  const showQuickCheckIn = role === 'Nhân viên' || role === 'Quản lý';
+
   return (
     <Layout style={{ minHeight: '100vh' }}>
       <Sider trigger={null} collapsible collapsed={collapsed} theme="dark" width={260}>
@@ -130,13 +167,16 @@ export const AppLayout: React.FC = () => {
             />
             <span style={{ fontSize: 16, fontWeight: 500 }}>
               Xin chào, <strong>{user?.hoTen || 'Người dùng'}</strong>{' '}
-              <Tag color={role === 'Quản trị viên' ? 'magenta' : role === 'Quản lý' ? 'blue' : 'green'}>
+              <Tag color={getRoleTagColor(role)}>
                 {role}
               </Tag>
+              {departmentName && (
+                <Tag color="cyan">{departmentName}</Tag>
+              )}
             </span>
           </Space>
           <Space size="middle">
-            {role !== 'Quản trị viên' && (
+            {showQuickCheckIn && (
               <Button
                 type="primary"
                 icon={<CheckCircleOutlined />}
@@ -149,7 +189,7 @@ export const AppLayout: React.FC = () => {
             )}
             <Dropdown menu={userDropdownItems} placement="bottomRight">
               <Space style={{ cursor: 'pointer' }}>
-                <Avatar icon={<UserOutlined />} style={{ backgroundColor: '#1890ff' }} />
+                <Avatar icon={<UserOutlined />} style={{ backgroundColor: role === 'Chủ doanh nghiệp' ? '#faad14' : '#1890ff' }} />
                 <span>{user?.hoTen}</span>
               </Space>
             </Dropdown>

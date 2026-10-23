@@ -12,7 +12,6 @@ export const BangLuongPage: React.FC = () => {
   const [selectedSlip, setSelectedSlip] = useState<BangLuong | null>(null);
   const [detailModal, setDetailModal] = useState(false);
 
-  // Month & Year download filters
   const [exportMonth, setExportMonth] = useState<dayjs.Dayjs>(dayjs());
   const [exportYear, setExportYear] = useState<dayjs.Dayjs>(dayjs());
 
@@ -169,8 +168,6 @@ export const BangLuongPage: React.FC = () => {
       <Card title="LỊCH SỬ BẢNG LƯƠNG CỦA TÔI">
         <Table dataSource={data} columns={columns} rowKey="maBangLuong" loading={loading} />
       </Card>
-
-      {/* Modal Chi tiết cách tính lương */}
       <Modal
         title={'CHI TIẾT CÁCH TÍNH LƯƠNG KỲ: ' + (selectedSlip?.thoiGian || '')}
         open={detailModal}

@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Card, Table, Button, DatePicker, Space, message, Tag, Alert } from 'antd';
-import { CalculatorOutlined, DownloadOutlined, DollarCircleOutlined } from '@ant-design/icons';
+import { Card, Table, Button, DatePicker, Space, message, Tag, Alert, Popconfirm } from 'antd';
+import { CalculatorOutlined, DownloadOutlined, DollarCircleOutlined, CheckCircleOutlined, CheckOutlined } from '@ant-design/icons';
 import { bangLuongApi } from '../api/bangLuongApi';
 import { exportApi } from '../api/exportApi';
+import { nhanVienApi } from '../api/nhanVienApi';
 import { BangLuong } from '../types';
 import dayjs from 'dayjs';
 
@@ -10,7 +11,32 @@ export const TinhLuongPage: React.FC = () => {
   const [data, setData] = useState<BangLuong[]>([]);
   const [loading, setLoading] = useState(false);
   const [calculating, setCalculating] = useState(false);
+  const [approving, setApproving] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState<dayjs.Dayjs>(dayjs());
+  const [departmentName, setDepartmentName] = useState<string>('');
+
+  const userStr = localStorage.getItem('user');
+  const currentUser = userStr ? JSON.parse(userStr) : null;
+  const isOwner = currentUser?.vaiTro === 'Chủ doanh nghiệp';
+
+  useEffect(() => {
+    if (currentUser?.tenPhongBan) {
+      setDepartmentName(currentUser.tenPhongBan);
+    } else if (currentUser?.maNhanVien) {
+      nhanVienApi.getById(currentUser.maNhanVien).then((res) => {
+        if (res.data?.tenPhongBan) {
+          setDepartmentName(res.data.tenPhongBan);
+          const updated = { ...currentUser, tenPhongBan: res.data.tenPhongBan };
+          localStorage.setItem('user', JSON.stringify(updated));
+        }
+      }).catch(() => {});
+    }
+  }, [userStr]);
+
+  const isAccountingManager =
+    currentUser?.vaiTro === 'Quản lý' &&
+    departmentName.toLowerCase().includes('kế toán');
+  const hasAccess = isOwner || isAccountingManager;
 
   const monthStr = selectedMonth.format('MM/YYYY');
 
@@ -27,19 +53,56 @@ export const TinhLuongPage: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (hasAccess) {
+      fetchData();
+    }
+  }, [hasAccess]);
+
+  if (!hasAccess) {
+    return (
+      <Alert
+        type="error"
+        showIcon
+        message="Từ chối truy cập (403 Forbidden)"
+        description="Chức năng Tính lương & Chi trả lương chỉ dành riêng cho Quản lý phòng Kế toán và Chủ doanh nghiệp. Quản lý các phòng ban khác không có thẩm quyền truy cập."
+        style={{ marginTop: 24 }}
+      />
+    );
+  }
 
   const handleCalculate = async () => {
     try {
       setCalculating(true);
       await bangLuongApi.tinhLuong({ thoiGian: monthStr });
-      message.success('Tính lương tự động tháng ' + monthStr + ' hoàn tất!');
+      message.success('Tính lương tự động kỳ ' + monthStr + ' hoàn tất!');
       fetchData();
     } catch (err: any) {
       message.error(err.response?.data?.message || 'Tính lương thất bại.');
     } finally {
       setCalculating(false);
+    }
+  };
+
+  const handleApproveAll = async () => {
+    try {
+      setApproving(true);
+      const res = await bangLuongApi.pheDuyetKyLuong(monthStr, 'Đã chi trả');
+      message.success(res.data?.message || 'Đã duyệt và xác nhận chi trả toàn bộ kỳ lương!');
+      fetchData();
+    } catch (err: any) {
+      message.error(err.response?.data?.message || 'Phê duyệt kỳ lương thất bại.');
+    } finally {
+      setApproving(false);
+    }
+  };
+
+  const handleApproveSingle = async (id: string) => {
+    try {
+      await bangLuongApi.updateTrangThai(id, 'Đã chi trả');
+      message.success('Đã xác nhận chi trả lương thành công!');
+      fetchData();
+    } catch (err: any) {
+      message.error(err.response?.data?.message || 'Thao tác thất bại.');
     }
   };
 
@@ -60,6 +123,7 @@ export const TinhLuongPage: React.FC = () => {
   };
 
   const filteredData = data.filter((b) => b.thoiGian === monthStr);
+  const pendingCount = filteredData.filter((b) => b.trangThaiChiTra !== 'Đã chi trả').length;
 
   const columns = [
     { title: 'Nhân viên', dataIndex: 'hoTen', key: 'hoTen', render: (val: string) => <strong>{val}</strong> },
@@ -117,15 +181,49 @@ export const TinhLuongPage: React.FC = () => {
       title: 'Trạng thái',
       dataIndex: 'trangThaiChiTra',
       key: 'trangThaiChiTra',
-      render: (val: string) => <Tag color={val === 'Đã chi trả' ? 'green' : 'blue'}>{val || 'Chờ duyệt'}</Tag>,
+      render: (val: string) => (
+        <Tag color={val === 'Đã chi trả' ? 'green' : 'gold'}>
+          {val || 'Chờ duyệt'}
+        </Tag>
+      ),
+    },
+    {
+      title: 'Thao tác chi trả',
+      key: 'action',
+      render: (_: any, record: BangLuong) => {
+        if (record.trangThaiChiTra === 'Đã chi trả') {
+          return <Tag color="green">Đã hoàn tất</Tag>;
+        }
+        return (
+          <Popconfirm
+            title={`Xác nhận chi trả lương cho ${record.hoTen}?`}
+            onConfirm={() => handleApproveSingle(record.maBangLuong)}
+          >
+            <Button
+              size="small"
+              type="primary"
+              icon={<CheckOutlined />}
+              style={{ background: '#52c41a', borderColor: '#52c41a' }}
+            >
+              Chi trả
+            </Button>
+          </Popconfirm>
+        );
+      },
     },
   ];
 
   return (
     <div>
       <Alert
-        message="Hệ thống tính lương tự động chuẩn thực tế"
-        description="Thuật toán tổng hợp ngày công từ bảng Chấm công, tính tiền OT x1.5, trích lập 10.5% Bảo hiểm (BHXH, BHYT, BHTN), trừ giảm trừ gia cảnh 11 triệu và áp dụng biểu thuế thu nhập cá nhân lũy tiến 7 bậc để ra lương Thực lĩnh (Net)."
+        message="Phân quyền tính lương & chi trả lương doanh nghiệp"
+        description={
+          <div>
+            <div>• <strong>Quản lý phòng Kế toán:</strong> Lập bảng lương tự động từ dữ liệu chấm công cho toàn thể nhân sự. Bảng lương mới tính sẽ ở trạng thái <strong>Chờ duyệt</strong>.</div>
+            <div>• <strong>Chủ doanh nghiệp & Quản lý Kế toán:</strong> Xem xét tổng quỹ lương và phê duyệt chi trả lương (chuyển sang trạng thái <strong>Đã chi trả</strong>).</div>
+            <div>• <strong>Quản lý phòng ban khác:</strong> Không có thẩm quyền xem hoặc chi trả lương nhân sự công ty (để bảo mật thu nhập).</div>
+          </div>
+        }
         type="info"
         showIcon
         style={{ marginBottom: 16 }}
@@ -135,7 +233,7 @@ export const TinhLuongPage: React.FC = () => {
         title={
           <span>
             <DollarCircleOutlined style={{ marginRight: 8, color: '#1890ff' }} />
-            TÍNH LƯƠNG & QUẢN LÝ BẢNG LƯƠNG NHÂN SỰ
+            TÍNH LƯƠNG & QUẢN LÝ BẢNG LƯƠNG NHÂN SỰ {isOwner ? '(CHỦ DOANH NGHIỆP)' : '(PHÒNG KẾ TOÁN)'}
           </span>
         }
         extra={
@@ -153,8 +251,23 @@ export const TinhLuongPage: React.FC = () => {
               loading={calculating}
               onClick={handleCalculate}
             >
-              Chạy tính lương tháng {monthStr}
+              Chạy tính lương
             </Button>
+            {filteredData.length > 0 && pendingCount > 0 && (
+              <Popconfirm
+                title={`Xác nhận duyệt & chi trả toàn bộ bảng lương kỳ ${monthStr} (${pendingCount} nhân sự chờ duyệt)?`}
+                onConfirm={handleApproveAll}
+              >
+                <Button
+                  type="primary"
+                  icon={<CheckCircleOutlined />}
+                  loading={approving}
+                  style={{ background: '#52c41a', borderColor: '#52c41a' }}
+                >
+                  {isOwner ? 'Chủ DN Duyệt & Chi trả' : 'Kế toán: Duyệt & Chi trả cả kỳ'}
+                </Button>
+              </Popconfirm>
+            )}
             <Button icon={<DownloadOutlined />} onClick={handleExport}>
               Xuất Excel (.csv)
             </Button>

@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Card, Table, Button, Modal, Form, Input, Select, Tag, Space, message, Alert } from 'antd';
-import { CheckOutlined, CloseOutlined, FileTextOutlined } from '@ant-design/icons';
+import { Card, Table, Button, Modal, Form, Input, Select, Tag, Space, message, Alert, Row, Col, Segmented } from 'antd';
+import { CheckOutlined, CloseOutlined, FileTextOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
 import { donTuApi } from '../api/donTuApi';
+import { nhanVienApi } from '../api/nhanVienApi';
+import { danhMucApi, PhongBan } from '../api/danhMucApi';
 import { DonTu } from '../types';
 
 export const DuyetDonTuPage: React.FC = () => {
@@ -13,12 +15,44 @@ export const DuyetDonTuPage: React.FC = () => {
 
   const userStr = localStorage.getItem('user');
   const currentUser = userStr ? JSON.parse(userStr) : null;
+  const isOwner = currentUser?.vaiTro === 'Chủ doanh nghiệp';
+
+  const [myDeptId, setMyDeptId] = useState<string | undefined>(currentUser?.maPhongBan);
+  const [myDeptName, setMyDeptName] = useState<string | undefined>(currentUser?.tenPhongBan);
+
+  const [phongBans, setPhongBans] = useState<PhongBan[]>([]);
+  const [selectedPhongBan, setSelectedPhongBan] = useState<string>('ALL');
+  const [statusFilter, setStatusFilter] = useState<string>('Chờ duyệt');
+
+  useEffect(() => {
+    if (currentUser?.maNhanVien && (!myDeptId || !myDeptName)) {
+      nhanVienApi.getById(currentUser.maNhanVien).then((res) => {
+        if (res.data) {
+          if (res.data.maPhongBan) setMyDeptId(res.data.maPhongBan);
+          if (res.data.tenPhongBan) setMyDeptName(res.data.tenPhongBan);
+          const updated = {
+            ...currentUser,
+            maPhongBan: res.data.maPhongBan,
+            tenPhongBan: res.data.tenPhongBan,
+            tenChucVu: res.data.tenChucVu,
+          };
+          localStorage.setItem('user', JSON.stringify(updated));
+        }
+      }).catch(() => {});
+    }
+  }, [currentUser?.maNhanVien]);
+
+  useEffect(() => {
+    if (isOwner) {
+      danhMucApi.getPhongBans().then((res) => setPhongBans(res.data)).catch(() => {});
+    }
+  }, [isOwner]);
 
   const fetchData = async () => {
     try {
       setLoading(true);
       const res = await donTuApi.getAll();
-      setData(res.data);
+      setData(res.data || []);
     } catch {
       message.error('Không thể tải danh sách đơn từ.');
     } finally {
@@ -29,6 +63,32 @@ export const DuyetDonTuPage: React.FC = () => {
   useEffect(() => {
     fetchData();
   }, []);
+
+  const isSameDept = (record: DonTu) => {
+    if (myDeptId && record.maPhongBan && myDeptId.toLowerCase() === record.maPhongBan.toLowerCase()) {
+      return true;
+    }
+    if (myDeptName && record.tenPhongBan && myDeptName.trim().toLowerCase() === record.tenPhongBan.trim().toLowerCase()) {
+      return true;
+    }
+    return false;
+  };
+
+  const pendingCount = data.filter((d) => d.trangThai === 'Chờ duyệt').length;
+  const approvedCount = data.filter((d) => d.trangThai === 'Đã duyệt').length;
+  const rejectedCount = data.filter((d) => d.trangThai === 'Từ chối').length;
+
+  const displayData = data.filter((item) => {
+    if (statusFilter !== 'ALL' && item.trangThai !== statusFilter) {
+      return false;
+    }
+    if (isOwner && selectedPhongBan !== 'ALL') {
+      if (item.maPhongBan?.toLowerCase() !== selectedPhongBan.toLowerCase()) {
+        return false;
+      }
+    }
+    return true;
+  });
 
   const handleAction = (record: DonTu, status: 'Đã duyệt' | 'Từ chối') => {
     setSelectedDon(record);
@@ -51,18 +111,18 @@ export const DuyetDonTuPage: React.FC = () => {
   const columns = [
     { title: 'Nhân viên gửi', dataIndex: 'hoTen', key: 'hoTen', render: (val: string) => <strong>{val}</strong> },
     {
-      title: 'Chức danh',
+      title: 'Chức vụ',
       dataIndex: 'tenChucVu',
       key: 'tenChucVu',
       render: (val: string) => {
         let color = 'default';
-        if (val?.includes('Giám đốc')) color = 'gold';
+        if (val?.includes('Chủ doanh nghiệp') || val?.includes('Giám đốc')) color = 'gold';
         else if (val?.includes('Trưởng')) color = 'blue';
         else if (val?.includes('Phó')) color = 'cyan';
         return <Tag color={color}>{val || 'Nhân viên'}</Tag>;
       },
     },
-    { title: 'Phòng ban', dataIndex: 'tenPhongBan', key: 'tenPhongBan', render: (val: string) => val || '-' },
+    { title: 'Phòng ban', dataIndex: 'tenPhongBan', key: 'tenPhongBan', render: (val: string) => <Tag color="blue">{val || 'Chưa gán'}</Tag> },
     {
       title: 'Loại đơn',
       dataIndex: 'loaiDon',
@@ -95,20 +155,21 @@ export const DuyetDonTuPage: React.FC = () => {
       key: 'action',
       render: (_: any, record: DonTu) => {
         if (record.trangThai !== 'Chờ duyệt') {
-          return <span style={{ color: '#8c8c8c' }}>Đã hoàn tất</span>;
+          return <Tag color={record.trangThai === 'Đã duyệt' ? 'green' : 'red'}>Đã hoàn tất ({record.trangThai})</Tag>;
         }
 
-        // 1. Chống tự phê duyệt: Quản lý không được duyệt đơn của chính mình!
         if (record.maNhanVien === currentUser?.maNhanVien) {
           return <Tag color="orange">Đơn của bạn (Chờ cấp trên duyệt)</Tag>;
         }
 
-        // 2. Phân cấp duyệt: Đơn của Trưởng/Phó phòng chỉ Ban Giám đốc mới được duyệt
-        const isManagerRequest = record.tenChucVu === 'Trưởng phòng' || record.tenChucVu === 'Phó phòng';
-        const isDirector = currentUser?.hoTen?.includes('Bảo') || currentUser?.hoTen?.includes('An') || currentUser?.vaiTro === 'Quản trị viên';
+        const isManagerRequest = (record.tenChucVu || '').includes('Trưởng') || (record.tenChucVu || '').includes('Phó');
 
-        if (isManagerRequest && !isDirector) {
-          return <Tag color="purple">Cần Ban Giám đốc duyệt</Tag>;
+        if (isManagerRequest && !isOwner) {
+          return <Tag color="purple">Cần Chủ doanh nghiệp duyệt</Tag>;
+        }
+
+        if (!isOwner && !isSameDept(record)) {
+          return <Tag color="default">Khác phòng ban</Tag>;
         }
 
         return (
@@ -139,10 +200,16 @@ export const DuyetDonTuPage: React.FC = () => {
   return (
     <div>
       <Alert
-        message="Quy định phê duyệt đơn từ doanh nghiệp"
-        description="Nhân sự không thể tự phê duyệt đơn từ của chính mình. Đơn từ của Trưởng phòng/Phó phòng thuộc thẩm quyền phê duyệt của Ban Giám đốc (CEO/Phó Giám đốc)."
+        message="Quy định phân quyền phê duyệt đơn từ doanh nghiệp"
+        description={
+          <div>
+            <div>• <strong>Chủ doanh nghiệp:</strong> Thẩm quyền cao nhất, phê duyệt đơn từ của toàn bộ nhân viên công ty và các Quản lý (Trưởng phòng, Phó phòng).</div>
+            <div>• <strong>Trưởng phòng / Quản lý:</strong> Quản lý và phê duyệt toàn bộ đơn từ của nhân sự thuộc đúng phòng ban của mình phụ trách. Không tự duyệt đơn của chính mình. Đơn của Trưởng/Phó phòng do Chủ doanh nghiệp trực tiếp phê duyệt.</div>
+          </div>
+        }
         type="info"
         showIcon
+        icon={<SafetyCertificateOutlined />}
         style={{ marginBottom: 16 }}
       />
 
@@ -150,11 +217,80 @@ export const DuyetDonTuPage: React.FC = () => {
         title={
           <span>
             <FileTextOutlined style={{ marginRight: 8, color: '#1890ff' }} />
-            PHÊ DUYỆT ĐƠN TỪ NHÂN SỰ (NGHỈ PHÉP / NGHỈ VIỆC)
+            {isOwner
+              ? 'PHÊ DUYỆT ĐƠN TỪ TOÀN CÔNG TY (CHỦ DOANH NGHIỆP)'
+              : `QUẢN LÝ & PHÊ DUYỆT ĐƠN TỪ - ${myDeptName ? myDeptName.toUpperCase() : 'PHÒNG BAN QUẢN LÝ'}`}
           </span>
         }
       >
-        <Table dataSource={data} columns={columns} rowKey="maDon" loading={loading} />
+        <Row justify="space-between" align="middle" style={{ marginBottom: 16 }} gutter={[16, 16]}>
+          <Col xs={24} md={16}>
+            <Space wrap size="middle">
+              <Segmented
+                value={statusFilter}
+                onChange={(val) => setStatusFilter(val as string)}
+                options={[
+                  {
+                    label: (
+                      <span style={{ fontWeight: 500, padding: '0 4px' }}>
+                        ⏳ Chờ duyệt ({pendingCount})
+                      </span>
+                    ),
+                    value: 'Chờ duyệt',
+                  },
+                  {
+                    label: (
+                      <span style={{ fontWeight: 500, padding: '0 4px' }}>
+                        📋 Tất cả ({data.length})
+                      </span>
+                    ),
+                    value: 'ALL',
+                  },
+                  {
+                    label: (
+                      <span style={{ fontWeight: 500, padding: '0 4px' }}>
+                        ✅ Đã duyệt ({approvedCount})
+                      </span>
+                    ),
+                    value: 'Đã duyệt',
+                  },
+                  {
+                    label: (
+                      <span style={{ fontWeight: 500, padding: '0 4px' }}>
+                        ❌ Từ chối ({rejectedCount})
+                      </span>
+                    ),
+                    value: 'Từ chối',
+                  },
+                ]}
+              />
+
+              {isOwner && (
+                <Select
+                  value={selectedPhongBan}
+                  onChange={setSelectedPhongBan}
+                  style={{ width: 220 }}
+                >
+                  <Select.Option value="ALL">Tất cả phòng ban</Select.Option>
+                  {phongBans.map((pb) => (
+                    <Select.Option key={pb.maPhongBan} value={pb.maPhongBan}>
+                      {pb.tenPhongBan}
+                    </Select.Option>
+                  ))}
+                </Select>
+              )}
+            </Space>
+          </Col>
+          <Col xs={24} md={8} style={{ textAlign: 'right' }}>
+            {!isOwner && myDeptName && (
+              <Tag color="blue" style={{ fontSize: 13, padding: '4px 10px' }}>
+                🏢 Đang quản lý: <strong>{myDeptName}</strong>
+              </Tag>
+            )}
+          </Col>
+        </Row>
+
+        <Table dataSource={displayData} columns={columns} rowKey="maDon" loading={loading} />
       </Card>
 
       <Modal title={'Xử lý đơn của: ' + (selectedDon?.hoTen || '')} open={modalOpen} onCancel={() => setModalOpen(false)} footer={null}>
