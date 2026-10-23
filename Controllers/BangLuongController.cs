@@ -1,4 +1,4 @@
-﻿using HrmApp.Api.Data;
+using HrmApp.Api.Data;
 using HrmApp.Api.Data.Models;
 using HrmApp.Api.DTOs.BangLuong;
 using Microsoft.AspNetCore.Authorization;
@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
 
 namespace HrmApp.Api.Controllers
@@ -17,10 +18,33 @@ namespace HrmApp.Api.Controllers
         private readonly QuanLyNhanSuDbContext _context;
         public BangLuongController(QuanLyNhanSuDbContext context) { _context = context; }
 
+        private async Task<bool> CanManageSalaryAsync()
+        {
+            var roleClaim = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role || c.Type == "role");
+            var role = roleClaim?.Value;
+            if (role == "Chủ doanh nghiệp") return true;
+            if (role != "Quản lý") return false;
+
+            var maNhanVienStr = User.FindFirst("MaNhanVien")?.Value;
+            if (!Guid.TryParse(maNhanVienStr, out var maNhanVien)) return false;
+
+            var nhanVien = await _context.NhanViens
+                .Include(n => n.MaPhongBanNavigation)
+                .FirstOrDefaultAsync(n => n.MaNhanVien == maNhanVien);
+
+            var tenPB = nhanVien?.MaPhongBanNavigation?.TenPhongBan ?? "";
+            return tenPB.ToLower().Contains("kế toán");
+        }
+
         [HttpPost("tinh-luong")]
-        [Authorize(Roles = "Quản lý,Quản trị viên")]
+        [Authorize(Roles = "Chủ doanh nghiệp, Quản lý")]
         public async Task<IActionResult> CalculateSalary([FromBody] TinhLuongRequestDto request)
         {
+            if (!await CanManageSalaryAsync())
+            {
+                return StatusCode(403, new { message = "Chỉ Quản lý phòng Kế toán và Chủ doanh nghiệp mới có quyền tính toán và quản lý lương." });
+            }
+
             if (string.IsNullOrEmpty(request.ThoiGian)) return BadRequest("ThoiGian is required");
             var parts = request.ThoiGian.Split('/');
             if (parts.Length != 2 || !int.TryParse(parts[0], out int month) || !int.TryParse(parts[1], out int year))
@@ -37,20 +61,29 @@ namespace HrmApp.Api.Controllers
                 var soNgayCong = await _context.ChamCongs.Where(c => c.MaNhanVien == nv.MaNhanVien && c.Ngay.Month == month && c.Ngay.Year == year).CountAsync();
                 var tongGioOt = await _context.ChamCongs.Where(c => c.MaNhanVien == nv.MaNhanVien && c.Ngay.Month == month && c.Ngay.Year == year).SumAsync(c => c.SoGioTangCa ?? 0);
 
-                var hopDong = await _context.HopDongLaoDongs.Where(h => h.MaNhanVien == nv.MaNhanVien && h.TrangThai == "Có hiệu lực").OrderByDescending(h => h.NgayBatDau).FirstOrDefaultAsync();
+                var hopDong = await _context.HopDongLaoDongs
+                    .Where(h => h.MaNhanVien == nv.MaNhanVien && (h.TrangThai == "Có hiệu lực" || h.TrangThai == "Đang hiệu lực" || h.TrangThai.Contains("hiệu lực")))
+                    .OrderByDescending(h => h.NgayBatDau)
+                    .FirstOrDefaultAsync();
+
+                if (hopDong == null)
+                {
+                    hopDong = await _context.HopDongLaoDongs
+                        .Where(h => h.MaNhanVien == nv.MaNhanVien)
+                        .OrderByDescending(h => h.NgayBatDau)
+                        .FirstOrDefaultAsync();
+                }
+
                 decimal luongCoBan = hopDong != null ? hopDong.LuongCoBan : 0;
                 
-                // Gross & OT
                 decimal grossSalary = ngayCongChuan > 0 ? (luongCoBan / ngayCongChuan) * soNgayCong : 0;
                 decimal luongOt = ngayCongChuan > 0 ? (luongCoBan / ngayCongChuan / 8) * tongGioOt * 1.5m : 0;
                 grossSalary += luongOt;
 
-                // Insurance (10.5%)
                 decimal baoHiem = luongCoBan * 0.105m;
                 
-                // Progressive Tax calculation
                 decimal thuNhapChiuThue = grossSalary - baoHiem;
-                decimal thuNhapTinhThue = thuNhapChiuThue - 11000000m; // Gia canh 11M
+                decimal thuNhapTinhThue = thuNhapChiuThue - 11000000m;
                 decimal thue = 0;
                 if (thuNhapTinhThue > 0) {
                     if (thuNhapTinhThue <= 5000000) thue = thuNhapTinhThue * 0.05m;
@@ -112,9 +145,14 @@ namespace HrmApp.Api.Controllers
         }
 
         [HttpGet]
-        [Authorize(Roles = "Quản lý,Quản trị viên")]
+        [Authorize(Roles = "Chủ doanh nghiệp, Quản lý")]
         public async Task<IActionResult> GetAllSalaries([FromQuery] string? thoiGian)
         {
+            if (!await CanManageSalaryAsync())
+            {
+                return StatusCode(403, new { message = "Chỉ Quản lý phòng Kế toán và Chủ doanh nghiệp mới có quyền xem thông tin lương nhân viên." });
+            }
+
             var query = _context.BangLuongs.Include(b => b.MaNhanVienNavigation).AsQueryable();
             if (!string.IsNullOrEmpty(thoiGian)) query = query.Where(b => b.ThoiGian == thoiGian);
 
@@ -128,6 +166,46 @@ namespace HrmApp.Api.Controllers
                     ThucLinh = b.ThucLinh, TrangThaiChiTra = b.TrangThaiChiTra
                 }).OrderByDescending(b => b.ThoiGian).ToListAsync();
             return Ok(bangLuongs);
+        }
+
+        [HttpPut("{id}/trang-thai")]
+        [Authorize(Roles = "Chủ doanh nghiệp, Quản lý")]
+        public async Task<IActionResult> UpdateTrangThai(Guid id, [FromBody] UpdateTrangThaiDto dto)
+        {
+            if (!await CanManageSalaryAsync())
+            {
+                return StatusCode(403, new { message = "Chỉ Quản lý phòng Kế toán và Chủ doanh nghiệp mới có quyền chi trả lương." });
+            }
+
+            var bangLuong = await _context.BangLuongs.FindAsync(id);
+            if (bangLuong == null) return NotFound(new { message = "Không tìm thấy bảng lương." });
+
+            bangLuong.TrangThaiChiTra = dto.TrangThai ?? "Đã chi trả";
+            await _context.SaveChangesAsync();
+            return Ok(new { message = $"Cập nhật trạng thái thành công ({bangLuong.TrangThaiChiTra})." });
+        }
+
+        [HttpPost("phe-duyet-ky-luong")]
+        [Authorize(Roles = "Chủ doanh nghiệp, Quản lý")]
+        public async Task<IActionResult> PheDuyetKyLuong([FromBody] PheDuyetKyLuongDto dto)
+        {
+            if (!await CanManageSalaryAsync())
+            {
+                return StatusCode(403, new { message = "Chỉ Quản lý phòng Kế toán và Chủ doanh nghiệp mới có quyền phê duyệt và chi trả lương." });
+            }
+
+            if (string.IsNullOrEmpty(dto.ThoiGian)) return BadRequest(new { message = "Vui lòng cung cấp kỳ lương (MM/yyyy)." });
+
+            var records = await _context.BangLuongs.Where(b => b.ThoiGian == dto.ThoiGian).ToListAsync();
+            if (!records.Any()) return NotFound(new { message = $"Không có dữ liệu bảng lương kỳ {dto.ThoiGian}." });
+
+            var targetStatus = dto.TrangThai ?? "Đã chi trả";
+            foreach (var r in records)
+            {
+                r.TrangThaiChiTra = targetStatus;
+            }
+            await _context.SaveChangesAsync();
+            return Ok(new { message = $"Đã phê duyệt và chi trả toàn bộ bảng lương kỳ {dto.ThoiGian} ({records.Count} nhân sự)." });
         }
     }
 }

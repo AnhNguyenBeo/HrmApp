@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -28,12 +28,18 @@ namespace HrmApp.Api.Controllers
 
             var query = _context.BangLuongs.Include(b => b.MaNhanVienNavigation).AsQueryable();
 
-            // Phân quyền: Nhân viên chỉ xuất của chính mình
-            if (role != "Quản trị viên" && role != "Quản lý") {
+            bool isAccountingManager = false;
+            if (role == "Quản lý")
+            {
+                var nv = await _context.NhanViens.Include(n => n.MaPhongBanNavigation).FirstOrDefaultAsync(n => n.MaNhanVien == maNhanVien);
+                var tenPB = nv?.MaPhongBanNavigation?.TenPhongBan ?? "";
+                isAccountingManager = tenPB.ToLower().Contains("kế toán");
+            }
+
+            if (role != "Chủ doanh nghiệp" && !isAccountingManager) {
                 query = query.Where(b => b.MaNhanVien == maNhanVien);
             }
 
-            // Filter
             if (!string.IsNullOrEmpty(thoiGianThang)) {
                 query = query.Where(b => b.ThoiGian == thoiGianThang);
             } else if (nam.HasValue) {

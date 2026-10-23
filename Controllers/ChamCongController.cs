@@ -1,4 +1,4 @@
-﻿using HrmApp.Api.Data;
+using HrmApp.Api.Data;
 using HrmApp.Api.Data.Models;
 using HrmApp.Api.DTOs.ChamCong;
 using Microsoft.AspNetCore.Authorization;
@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
 
 namespace HrmApp.Api.Controllers
@@ -24,6 +25,12 @@ namespace HrmApp.Api.Controllers
             var maNhanVienStr = User.FindFirst("MaNhanVien")?.Value;
             if (string.IsNullOrEmpty(maNhanVienStr) || !Guid.TryParse(maNhanVienStr, out var maNhanVien))
                 return Unauthorized();
+
+            var userRole = User.FindFirst(ClaimTypes.Role)?.Value ?? User.FindFirst("role")?.Value;
+            if (userRole == "Chủ doanh nghiệp" || userRole == "Quản trị viên")
+            {
+                return BadRequest(new { message = "Tài khoản Chủ doanh nghiệp và Quản trị viên không yêu cầu chấm công cá nhân." });
+            }
 
             var chamCong = await _context.ChamCongs.FirstOrDefaultAsync(c => c.MaNhanVien == maNhanVien && c.Ngay == request.Ngay);
             var nowTime = TimeOnly.FromDateTime(DateTime.Now);
@@ -74,27 +81,91 @@ namespace HrmApp.Api.Controllers
             var maNhanVienStr = User.FindFirst("MaNhanVien")?.Value;
             if (string.IsNullOrEmpty(maNhanVienStr) || !Guid.TryParse(maNhanVienStr, out var maNhanVien)) return Unauthorized();
 
-            var query = _context.ChamCongs.Include(c => c.MaNhanVienNavigation).Where(c => c.MaNhanVien == maNhanVien);
+            var query = _context.ChamCongs
+                .Include(c => c.MaNhanVienNavigation)
+                    .ThenInclude(nv => nv.MaPhongBanNavigation)
+                .Include(c => c.MaNhanVienNavigation)
+                    .ThenInclude(nv => nv.MaChucVuNavigation)
+                .Where(c => c.MaNhanVien == maNhanVien);
+
             if (month.HasValue && year.HasValue) query = query.Where(c => c.Ngay.Month == month.Value && c.Ngay.Year == year.Value);
 
             var result = await query.Select(c => new ChamCongResponseDto {
-                MaChamCong = c.MaChamCong, MaNhanVien = c.MaNhanVien,
+                MaChamCong = c.MaChamCong,
+                MaNhanVien = c.MaNhanVien,
                 HoTen = c.MaNhanVienNavigation != null ? c.MaNhanVienNavigation.HoTen : null,
-                Ngay = c.Ngay, GioVao = c.GioVao, GioRa = c.GioRa, SoGioTangCa = c.SoGioTangCa, TrangThai = c.TrangThai
+                MaPhongBan = c.MaNhanVienNavigation != null ? c.MaNhanVienNavigation.MaPhongBan : null,
+                TenPhongBan = c.MaNhanVienNavigation != null && c.MaNhanVienNavigation.MaPhongBanNavigation != null ? c.MaNhanVienNavigation.MaPhongBanNavigation.TenPhongBan : null,
+                TenChucVu = c.MaNhanVienNavigation != null && c.MaNhanVienNavigation.MaChucVuNavigation != null ? c.MaNhanVienNavigation.MaChucVuNavigation.TenChucVu : null,
+                Ngay = c.Ngay,
+                GioVao = c.GioVao,
+                GioRa = c.GioRa,
+                SoGioTangCa = c.SoGioTangCa,
+                TrangThai = c.TrangThai
             }).OrderByDescending(c => c.Ngay).ToListAsync();
 
             return Ok(result);
         }
 
         [HttpGet]
-        [Authorize(Roles = "Quản lý")]
-        public async Task<IActionResult> GetAllAttendance()
+        [Authorize(Roles = "Chủ doanh nghiệp, Quản lý")]
+        public async Task<IActionResult> GetAllAttendance([FromQuery] int? month, [FromQuery] int? year, [FromQuery] Guid? maPhongBan)
         {
-            var result = await _context.ChamCongs.Include(c => c.MaNhanVienNavigation).Select(c => new ChamCongResponseDto {
-                MaChamCong = c.MaChamCong, MaNhanVien = c.MaNhanVien,
-                HoTen = c.MaNhanVienNavigation != null ? c.MaNhanVienNavigation.HoTen : null,
-                Ngay = c.Ngay, GioVao = c.GioVao, GioRa = c.GioRa, SoGioTangCa = c.SoGioTangCa, TrangThai = c.TrangThai
-            }).OrderByDescending(c => c.Ngay).ToListAsync();
+            var userRole = User.FindFirst(ClaimTypes.Role)?.Value ?? User.FindFirst("role")?.Value;
+            var maNhanVienStr = User.FindFirst("MaNhanVien")?.Value;
+            Guid.TryParse(maNhanVienStr, out var currentNhanVienId);
+
+            var query = _context.ChamCongs
+                .Include(c => c.MaNhanVienNavigation)
+                    .ThenInclude(nv => nv.MaPhongBanNavigation)
+                .Include(c => c.MaNhanVienNavigation)
+                    .ThenInclude(nv => nv.MaChucVuNavigation)
+                .AsQueryable();
+
+            if (month.HasValue && year.HasValue)
+            {
+                query = query.Where(c => c.Ngay.Month == month.Value && c.Ngay.Year == year.Value);
+            }
+
+            if (userRole != "Chủ doanh nghiệp")
+            {
+                var currentNhanVien = await _context.NhanViens
+                    .Include(n => n.MaChucVuNavigation)
+                    .Include(n => n.MaPhongBanNavigation)
+                    .FirstOrDefaultAsync(n => n.MaNhanVien == currentNhanVienId);
+
+                var myChucVu = currentNhanVien?.MaChucVuNavigation?.TenChucVu ?? "";
+                var myPhongBan = currentNhanVien?.MaPhongBanNavigation?.TenPhongBan ?? "";
+                bool isDirector = myChucVu.Contains("Giám đốc") || myPhongBan.Contains("Ban Giám đốc");
+
+                if (!isDirector && currentNhanVien?.MaPhongBan != null)
+                {
+                    query = query.Where(c => c.MaNhanVienNavigation != null && c.MaNhanVienNavigation.MaPhongBan == currentNhanVien.MaPhongBan);
+                }
+            }
+            else if (maPhongBan.HasValue)
+            {
+                query = query.Where(c => c.MaNhanVienNavigation != null && c.MaNhanVienNavigation.MaPhongBan == maPhongBan.Value);
+            }
+
+            var result = await query
+                .OrderByDescending(c => c.Ngay)
+                .Select(c => new ChamCongResponseDto
+                {
+                    MaChamCong = c.MaChamCong,
+                    MaNhanVien = c.MaNhanVien,
+                    HoTen = c.MaNhanVienNavigation != null ? c.MaNhanVienNavigation.HoTen : null,
+                    MaPhongBan = c.MaNhanVienNavigation != null ? c.MaNhanVienNavigation.MaPhongBan : null,
+                    TenPhongBan = c.MaNhanVienNavigation != null && c.MaNhanVienNavigation.MaPhongBanNavigation != null ? c.MaNhanVienNavigation.MaPhongBanNavigation.TenPhongBan : null,
+                    TenChucVu = c.MaNhanVienNavigation != null && c.MaNhanVienNavigation.MaChucVuNavigation != null ? c.MaNhanVienNavigation.MaChucVuNavigation.TenChucVu : null,
+                    Ngay = c.Ngay,
+                    GioVao = c.GioVao,
+                    GioRa = c.GioRa,
+                    SoGioTangCa = c.SoGioTangCa,
+                    TrangThai = c.TrangThai
+                })
+                .ToListAsync();
+
             return Ok(result);
         }
     }

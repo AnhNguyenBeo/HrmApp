@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using HrmApp.Api.Data;
 using HrmApp.Api.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -8,17 +8,13 @@ using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ── 1. Database ───────────────────────────────────────────────
-var connectionString = builder.Configuration
-    .GetConnectionString("HrmConnection")!;
+var connectionString = builder.Configuration.GetConnectionString("HrmConnection")!;
 
 builder.Services.AddDbContext<QuanLyNhanSuDbContext>(options =>
     options.UseSqlServer(connectionString));
 
-// ── 2. JWT Service (DI) ───────────────────────────────────────
 builder.Services.AddScoped<IJwtService, JwtService>();
 
-// ── 3. JWT Authentication Middleware ─────────────────────────
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 var secretKey = jwtSettings["SecretKey"]!;
 
@@ -38,24 +34,24 @@ builder.Services
             ValidateIssuerSigningKey = true,
             ValidIssuer = jwtSettings["Issuer"],
             ValidAudience = jwtSettings["Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(
-                                           Encoding.UTF8.GetBytes(secretKey)),
-            ClockSkew = TimeSpan.Zero  // Token hết hạn chính xác
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
+            ClockSkew = TimeSpan.Zero
         };
     });
 
 builder.Services.AddAuthorization();
 
-// ── 4. Controllers ────────────────────────────────────────────
-builder.Services.AddControllers();
+builder.Services.AddControllers().AddJsonOptions(options =>
+{
+    options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+    options.JsonSerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
+});
 builder.Services.AddEndpointsApiExplorer();
 
-// ── 5. Swagger với hỗ trợ JWT ─────────────────────────────────
 builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new OpenApiInfo { Title = "HRM API", Version = "v1" });
 
-    // Thêm nút Authorize vào Swagger UI
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Name = "Authorization",
@@ -74,7 +70,7 @@ builder.Services.AddSwaggerGen(options =>
                 Reference = new OpenApiReference
                 {
                     Type = ReferenceType.SecurityScheme,
-                    Id   = "Bearer"
+                    Id = "Bearer"
                 }
             },
             Array.Empty<string>()
@@ -82,7 +78,6 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-// ── 6. CORS ───────────────────────────────────────────────────
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
@@ -91,7 +86,6 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// ── 7. Middleware Pipeline ────────────────────────────────────
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -100,7 +94,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors("AllowAll");
 app.UseHttpsRedirection();
-app.UseAuthentication();   // ← Phải trước UseAuthorization
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 app.Run();

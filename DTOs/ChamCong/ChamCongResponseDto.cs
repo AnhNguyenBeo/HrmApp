@@ -6,11 +6,14 @@ namespace HrmApp.Api.DTOs.ChamCong
     {
         public Guid MaChamCong { get; set; }
         public Guid? MaNhanVien { get; set; }
-        public string HoTen { get; set; }
+        public string? HoTen { get; set; }
+        public Guid? MaPhongBan { get; set; }
+        public string? TenPhongBan { get; set; }
+        public string? TenChucVu { get; set; }
         public DateOnly Ngay { get; set; }
         public TimeOnly GioVao { get; set; }
         public TimeOnly? GioRa { get; set; }
         public decimal? SoGioTangCa { get; set; }
-        public string TrangThai { get; set; }
+        public string TrangThai { get; set; } = null!;
     }
 }

@@ -33,11 +33,9 @@ namespace HrmApp.Api.DTOs.NhanVien
         [Required(ErrorMessage = "Phòng ban là bắt buộc")]
         public Guid MaPhongBan { get; set; }
         
-        [Required(ErrorMessage = "Chức vụ là bắt buộc")]
-        public Guid MaChucVu { get; set; }
+        public Guid? MaChucVu { get; set; }
         
-        [Required(ErrorMessage = "Trạng thái làm việc là bắt buộc")]
-        public string TrangThaiLamViec { get; set; } = null!;
+        public string? TrangThaiLamViec { get; set; }
         
         public DateOnly? NgayNghiViec { get; set; }
         

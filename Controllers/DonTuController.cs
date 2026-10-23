@@ -1,4 +1,4 @@
-﻿using HrmApp.Api.Data;
+using HrmApp.Api.Data;
 using HrmApp.Api.Data.Models;
 using HrmApp.Api.DTOs.DonTu;
 using Microsoft.AspNetCore.Authorization;
@@ -21,6 +21,12 @@ namespace HrmApp.Api.Controllers
         [Authorize]
         public async Task<IActionResult> CreateDonTu([FromBody] CreateDonTuDto request)
         {
+            var userRole = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? User.FindFirst("role")?.Value;
+            if (userRole == "Chủ doanh nghiệp" || userRole == "Quản trị viên")
+            {
+                return BadRequest(new { message = "Tài khoản Chủ doanh nghiệp và Quản trị viên không cần nộp đơn xin nghỉ cá nhân." });
+            }
+
             var maNhanVienStr = User.FindFirst("MaNhanVien")?.Value;
             if (string.IsNullOrEmpty(maNhanVienStr) || !Guid.TryParse(maNhanVienStr, out var maNhanVien)) return Unauthorized();
 
@@ -33,23 +39,30 @@ namespace HrmApp.Api.Controllers
             }
 
             int songaynghi = 0;
-            for (var d = request.NgayBatDau; d <= request.NgayKetThuc; d = d.AddDays(1))
+            if (request.LoaiDon == "Thai sản")
             {
-                if (d.DayOfWeek != DayOfWeek.Saturday && d.DayOfWeek != DayOfWeek.Sunday) songaynghi++;
+                songaynghi = request.NgayKetThuc.DayNumber - request.NgayBatDau.DayNumber + 1;
+            }
+            else
+            {
+                for (var d = request.NgayBatDau; d <= request.NgayKetThuc; d = d.AddDays(1))
+                {
+                    if (d.DayOfWeek != DayOfWeek.Saturday && d.DayOfWeek != DayOfWeek.Sunday) songaynghi++;
+                }
             }
 
-            if (songaynghi == 0) return BadRequest(new { message = "Khoảng thời gian nghỉ không bao gồm ngày làm việc." });
+            if (songaynghi <= 0) return BadRequest(new { message = "Khoảng thời gian nghỉ không bao gồm ngày làm việc hợp lệ." });
 
-            if (request.LoaiDon == "Nghỉ phép")
+            if (request.LoaiDon == "Nghỉ phép" || request.LoaiDon == "Nghỉ phép năm")
             {
                 var year = request.NgayBatDau.Year;
                 var nghiDaDung = await _context.DonTus
-                    .Where(d => d.MaNhanVien == maNhanVien && d.LoaiDon == "Nghỉ phép" && d.TrangThai == "Đã duyệt" && d.NgayBatDau.Year == year)
+                    .Where(d => d.MaNhanVien == maNhanVien && (d.LoaiDon == "Nghỉ phép" || d.LoaiDon == "Nghỉ phép năm") && d.TrangThai == "Đã duyệt" && d.NgayBatDau.Year == year)
                     .SumAsync(d => d.SoNgayNghi);
 
                 if (nghiDaDung + songaynghi > 12)
                 {
-                    return BadRequest(new { message = $"Hạn mức nghỉ phép 12 ngày/năm đã vượt quá (Đã nghỉ: {nghiDaDung} ngày, xin thêm: {songaynghi} ngày)." });
+                    return BadRequest(new { message = $"Hạn mức nghỉ phép 12 ngày/năm đã vượt quá (Đã duyệt: {nghiDaDung} ngày, xin thêm: {songaynghi} ngày, tối đa: 12 ngày)." });
                 }
             }
 
@@ -69,7 +82,23 @@ namespace HrmApp.Api.Controllers
 
             await _context.DonTus.AddAsync(donTu);
             await _context.SaveChangesAsync();
-            return Ok(new { message = "Nộp đơn thành công.", data = donTu });
+
+            var responseDto = new DonTuResponseDto
+            {
+                MaDon = donTu.MaDon,
+                MaNhanVien = donTu.MaNhanVien,
+                HoTen = donTu.HoTen,
+                MaPhongBan = nhanVien.MaPhongBan,
+                LoaiDon = donTu.LoaiDon,
+                LoaiNghi = donTu.LoaiNghi,
+                NgayBatDau = donTu.NgayBatDau,
+                NgayKetThuc = donTu.NgayKetThuc,
+                SoNgayNghi = donTu.SoNgayNghi,
+                LyDo = donTu.LyDo,
+                TrangThai = donTu.TrangThai
+            };
+
+            return Ok(new { message = "Nộp đơn thành công.", data = responseDto });
         }
 
         [HttpGet("cua-toi")]
@@ -89,6 +118,7 @@ namespace HrmApp.Api.Controllers
                     MaDon = d.MaDon,
                     MaNhanVien = d.MaNhanVien,
                     HoTen = d.HoTen,
+                    MaPhongBan = d.MaNhanVienNavigation != null ? d.MaNhanVienNavigation.MaPhongBan : null,
                     TenChucVu = d.MaNhanVienNavigation != null && d.MaNhanVienNavigation.MaChucVuNavigation != null ? d.MaNhanVienNavigation.MaChucVuNavigation.TenChucVu : null,
                     TenPhongBan = d.MaNhanVienNavigation != null && d.MaNhanVienNavigation.MaPhongBanNavigation != null ? d.MaNhanVienNavigation.MaPhongBanNavigation.TenPhongBan : null,
                     LoaiDon = d.LoaiDon,
@@ -106,18 +136,43 @@ namespace HrmApp.Api.Controllers
         }
 
         [HttpGet]
-        [Authorize(Roles = "Quản trị viên, Quản lý")]
+        [Authorize(Roles = "Chủ doanh nghiệp, Quản lý")]
         public async Task<IActionResult> GetAllDonTu()
         {
-            var donTus = await _context.DonTus
+            var userRole = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? User.FindFirst("role")?.Value;
+            var maNhanVienStr = User.FindFirst("MaNhanVien")?.Value;
+            Guid.TryParse(maNhanVienStr, out var currentNhanVienId);
+
+            var query = _context.DonTus
                 .Include(d => d.NguoiDuyetMaNavigation)
                 .Include(d => d.MaNhanVienNavigation).ThenInclude(nv => nv.MaChucVuNavigation)
                 .Include(d => d.MaNhanVienNavigation).ThenInclude(nv => nv.MaPhongBanNavigation)
+                .AsQueryable();
+
+            if (userRole != "Chủ doanh nghiệp")
+            {
+                var currentNhanVien = await _context.NhanViens
+                    .Include(n => n.MaChucVuNavigation)
+                    .Include(n => n.MaPhongBanNavigation)
+                    .FirstOrDefaultAsync(n => n.MaNhanVien == currentNhanVienId);
+
+                var chucVu = currentNhanVien?.MaChucVuNavigation?.TenChucVu ?? "";
+                var phongBan = currentNhanVien?.MaPhongBanNavigation?.TenPhongBan ?? "";
+                bool isDirector = chucVu.Contains("Giám đốc") || phongBan.Contains("Ban Giám đốc");
+
+                if (!isDirector && currentNhanVien?.MaPhongBan != null)
+                {
+                    query = query.Where(d => d.MaNhanVienNavigation != null && d.MaNhanVienNavigation.MaPhongBan == currentNhanVien.MaPhongBan);
+                }
+            }
+
+            var donTus = await query
                 .OrderByDescending(d => d.NgayBatDau)
                 .Select(d => new DonTuResponseDto {
                     MaDon = d.MaDon,
                     MaNhanVien = d.MaNhanVien,
                     HoTen = d.HoTen,
+                    MaPhongBan = d.MaNhanVienNavigation != null ? d.MaNhanVienNavigation.MaPhongBan : null,
                     TenChucVu = d.MaNhanVienNavigation != null && d.MaNhanVienNavigation.MaChucVuNavigation != null ? d.MaNhanVienNavigation.MaChucVuNavigation.TenChucVu : null,
                     TenPhongBan = d.MaNhanVienNavigation != null && d.MaNhanVienNavigation.MaPhongBanNavigation != null ? d.MaNhanVienNavigation.MaPhongBanNavigation.TenPhongBan : null,
                     LoaiDon = d.LoaiDon,
@@ -131,11 +186,12 @@ namespace HrmApp.Api.Controllers
                     NgayDuyet = d.NgayDuyet,
                     GhiChuDuyet = d.GhiChuDuyet
                 }).ToListAsync();
+
             return Ok(donTus);
         }
 
         [HttpPut("{id}/duyet")]
-        [Authorize(Roles = "Quản trị viên, Quản lý")]
+        [Authorize(Roles = "Chủ doanh nghiệp, Quản lý")]
         public async Task<IActionResult> DuyetDonTu(Guid id, [FromBody] DuyetDonTuDto request)
         {
             var donTu = await _context.DonTus.FindAsync(id);
@@ -144,13 +200,11 @@ namespace HrmApp.Api.Controllers
             var maNguoiDuyetStr = User.FindFirst("MaNhanVien")?.Value;
             if (!Guid.TryParse(maNguoiDuyetStr, out var nguoiDuyetMa)) return Unauthorized();
 
-            // 1. QUY TẮC CHỐNG TỰ PHÊ DUYỆT (ANTI-SELF-APPROVAL)
             if (donTu.MaNhanVien == nguoiDuyetMa)
             {
                 return BadRequest(new { message = "Quy định doanh nghiệp: Bạn không thể tự phê duyệt đơn từ của chính mình!" });
             }
 
-            // 2. QUY TẮC PHÂN CẤP PHÊ DUYỆT (APPROVAL HIERARCHY)
             var nguoiLamDon = await _context.NhanViens
                 .Include(n => n.MaChucVuNavigation)
                 .Include(n => n.MaPhongBanNavigation)
@@ -161,19 +215,26 @@ namespace HrmApp.Api.Controllers
                 .Include(n => n.MaPhongBanNavigation)
                 .FirstOrDefaultAsync(n => n.MaNhanVien == nguoiDuyetMa);
 
+            var userRole = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? User.FindFirst("role")?.Value;
+
             if (nguoiLamDon != null && nguoiDuyet != null)
             {
-                var chucVuNguoiLamDon = nguoiLamDon.MaChucVuNavigation?.TenChucVu;
-                var chucVuNguoiDuyet = nguoiDuyet.MaChucVuNavigation?.TenChucVu;
-                var phongBanNguoiDuyet = nguoiDuyet.MaPhongBanNavigation?.TenPhongBan;
+                var chucVuNguoiLamDon = nguoiLamDon.MaChucVuNavigation?.TenChucVu ?? "";
+                var chucVuNguoiDuyet = nguoiDuyet.MaChucVuNavigation?.TenChucVu ?? "";
+                var phongBanNguoiDuyet = nguoiDuyet.MaPhongBanNavigation?.TenPhongBan ?? "";
 
-                // Nếu người làm đơn là Quản lý (Trưởng phòng, Phó phòng):
-                if (chucVuNguoiLamDon == "Trưởng phòng" || chucVuNguoiLamDon == "Phó phòng")
+                bool isDirector = userRole == "Chủ doanh nghiệp" || chucVuNguoiDuyet.Contains("Giám đốc") || phongBanNguoiDuyet.Contains("Ban Giám đốc");
+
+                if (!isDirector)
                 {
-                    // Chỉ Ban Giám đốc (Giám đốc, Phó Giám đốc) mới có thẩm quyền duyệt:
-                    if (phongBanNguoiDuyet != "Ban Giám đốc" && chucVuNguoiDuyet != "Giám đốc")
+                    if (nguoiLamDon.MaPhongBan != nguoiDuyet.MaPhongBan)
                     {
-                        return StatusCode(403, new { message = $"Đơn từ của {chucVuNguoiLamDon} ({nguoiLamDon.HoTen}) phải do Ban Giám đốc phê duyệt! Quản lý cùng cấp không được duyệt chéo." });
+                        return StatusCode(403, new { message = "Trưởng phòng / Quản lý chỉ được quyền phê duyệt đơn từ của nhân sự thuộc phòng ban của mình!" });
+                    }
+
+                    if (chucVuNguoiLamDon.Contains("Trưởng") || chucVuNguoiLamDon.Contains("Phó"))
+                    {
+                        return StatusCode(403, new { message = $"Đơn từ của {chucVuNguoiLamDon} ({nguoiLamDon.HoTen}) phải do Chủ doanh nghiệp phê duyệt! Quản lý cùng cấp không được duyệt chéo." });
                     }
                 }
             }
@@ -185,7 +246,9 @@ namespace HrmApp.Api.Controllers
 
             _context.DonTus.Update(donTu);
             await _context.SaveChangesAsync();
-            return Ok(new { message = $"Đã {request.TrangThai.ToLower()} đơn từ." });
+
+            var actionText = request.TrangThai == "Đã duyệt" ? "phê duyệt" : "từ chối";
+            return Ok(new { message = $"Đã {actionText} đơn từ thành công." });
         }
 
         [HttpDelete("{id}")]

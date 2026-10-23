@@ -1,3 +1,5 @@
+using System;
+
 namespace HrmApp.Api.DTOs.Auth;
 
 public class LoginResponseDto
@@ -9,4 +11,6 @@ public class LoginResponseDto
 	public Guid MaNhanVien { get; set; }
 	public string HoTen { get; set; } = string.Empty;
 	public string VaiTro { get; set; } = string.Empty;
+	public Guid? MaPhongBan { get; set; }
+	public string TenPhongBan { get; set; } = string.Empty;
 }

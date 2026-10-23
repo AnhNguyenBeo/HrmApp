@@ -1,4 +1,4 @@
-﻿using System.IdentityModel.Tokens.Jwt;
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using HrmApp.Api.Data.Models;
@@ -26,7 +26,6 @@ public class JwtService : IJwtService
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-        // ── JWT Claims Payload ────────────────────────────────────
         var claims = new[]
         {
             new Claim(JwtRegisteredClaimNames.Sub,   taiKhoan.MaTaiKhoan.ToString()),
@@ -36,6 +35,7 @@ public class JwtService : IJwtService
             new Claim("TenDangNhap",                 taiKhoan.TenDangNhap),
             new Claim(ClaimTypes.Role,               taiKhoan.MaVaiTroNavigation?.TenVaiTro ?? string.Empty),
             new Claim("HoTen",                       taiKhoan.MaNhanVienNavigation?.HoTen ?? string.Empty),
+            new Claim("TenPhongBan",                 taiKhoan.MaNhanVienNavigation?.MaPhongBanNavigation?.TenPhongBan ?? string.Empty),
         };
 
         var token = new JwtSecurityToken(

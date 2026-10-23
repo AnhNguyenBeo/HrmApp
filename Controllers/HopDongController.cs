@@ -21,9 +21,6 @@ namespace HrmApp.Api.Controllers
             _context = context;
         }
 
-        /// <summary>
-        /// Lấy danh sách hợp đồng
-        /// </summary>
         [HttpGet]
         [Authorize]
         public async Task<ActionResult<System.Collections.Generic.IEnumerable<HopDongResponseDto>>> GetHopDongs([FromQuery] Guid? nhanVienId)
@@ -53,9 +50,6 @@ namespace HrmApp.Api.Controllers
             return Ok(result);
         }
 
-        /// <summary>
-        /// Lấy hợp đồng theo ID
-        /// </summary>
         [HttpGet("{id}")]
         [Authorize]
         public async Task<ActionResult<HopDongResponseDto>> GetHopDong(Guid id)
@@ -85,11 +79,8 @@ namespace HrmApp.Api.Controllers
             return Ok(hopDong);
         }
 
-        /// <summary>
-        /// Tạo hợp đồng mới
-        /// </summary>
         [HttpPost]
-        [Authorize(Roles = "Quản trị viên,Quản lý")]
+        [Authorize(Roles = "Chủ doanh nghiệp, Quản lý")]
         public async Task<ActionResult<HopDongResponseDto>> PostHopDong([FromBody] CreateHopDongDto dto)
         {
             var hopDong = new HopDongLaoDong
@@ -110,11 +101,8 @@ namespace HrmApp.Api.Controllers
             return CreatedAtAction(nameof(GetHopDong), new { id = hopDong.MaHopDong }, null);
         }
 
-        /// <summary>
-        /// Cập nhật hợp đồng
-        /// </summary>
         [HttpPut("{id}")]
-        [Authorize(Roles = "Quản trị viên,Quản lý")]
+        [Authorize(Roles = "Chủ doanh nghiệp, Quản lý")]
         public async Task<IActionResult> PutHopDong(Guid id, [FromBody] UpdateHopDongDto dto)
         {
             var hopDong = await _context.HopDongLaoDongs.FindAsync(id);
@@ -135,11 +123,8 @@ namespace HrmApp.Api.Controllers
             return NoContent();
         }
 
-        /// <summary>
-        /// Chấm dứt hợp đồng
-        /// </summary>
         [HttpPut("{id}/cham-dut")]
-        [Authorize(Roles = "Quản trị viên,Quản lý")]
+        [Authorize(Roles = "Chủ doanh nghiệp, Quản lý")]
         public async Task<IActionResult> TerminateHopDong(Guid id)
         {
             var hopDong = await _context.HopDongLaoDongs.FindAsync(id);

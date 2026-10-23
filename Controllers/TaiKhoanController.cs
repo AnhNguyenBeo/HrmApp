@@ -21,21 +21,23 @@ namespace HrmApp.Api.Controllers
             _context = context;
         }
 
-        /// <summary>
-        /// Lấy danh sách tài khoản
-        /// </summary>
         [HttpGet]
         [Authorize(Roles = "Quản trị viên")]
         public async Task<ActionResult<System.Collections.Generic.IEnumerable<TaiKhoanResponseDto>>> GetTaiKhoans()
         {
             var result = await _context.TaiKhoans
                 .Include(t => t.MaNhanVienNavigation)
+                    .ThenInclude(nv => nv.MaPhongBanNavigation)
+                .Include(t => t.MaNhanVienNavigation)
+                    .ThenInclude(nv => nv.MaChucVuNavigation)
                 .Include(t => t.MaVaiTroNavigation)
                 .Select(t => new TaiKhoanResponseDto
                 {
                     MaTaiKhoan = t.MaTaiKhoan,
                     MaNhanVien = t.MaNhanVien,
                     TenNhanVien = t.MaNhanVienNavigation != null ? t.MaNhanVienNavigation.HoTen : "",
+                    TenPhongBan = t.MaNhanVienNavigation != null && t.MaNhanVienNavigation.MaPhongBanNavigation != null ? t.MaNhanVienNavigation.MaPhongBanNavigation.TenPhongBan : "",
+                    TenChucVu = t.MaNhanVienNavigation != null && t.MaNhanVienNavigation.MaChucVuNavigation != null ? t.MaNhanVienNavigation.MaChucVuNavigation.TenChucVu : "",
                     TenDangNhap = t.TenDangNhap,
                     MaVaiTro = t.MaVaiTro,
                     TenVaiTro = t.MaVaiTroNavigation != null ? t.MaVaiTroNavigation.TenVaiTro : "",
@@ -47,15 +49,15 @@ namespace HrmApp.Api.Controllers
             return Ok(result);
         }
 
-        /// <summary>
-        /// Lấy thông tin tài khoản
-        /// </summary>
         [HttpGet("{id}")]
         [Authorize(Roles = "Quản trị viên")]
         public async Task<ActionResult<TaiKhoanResponseDto>> GetTaiKhoan(Guid id)
         {
             var taiKhoan = await _context.TaiKhoans
                 .Include(t => t.MaNhanVienNavigation)
+                    .ThenInclude(nv => nv.MaPhongBanNavigation)
+                .Include(t => t.MaNhanVienNavigation)
+                    .ThenInclude(nv => nv.MaChucVuNavigation)
                 .Include(t => t.MaVaiTroNavigation)
                 .Where(t => t.MaTaiKhoan == id)
                 .Select(t => new TaiKhoanResponseDto
@@ -63,6 +65,8 @@ namespace HrmApp.Api.Controllers
                     MaTaiKhoan = t.MaTaiKhoan,
                     MaNhanVien = t.MaNhanVien,
                     TenNhanVien = t.MaNhanVienNavigation != null ? t.MaNhanVienNavigation.HoTen : "",
+                    TenPhongBan = t.MaNhanVienNavigation != null && t.MaNhanVienNavigation.MaPhongBanNavigation != null ? t.MaNhanVienNavigation.MaPhongBanNavigation.TenPhongBan : "",
+                    TenChucVu = t.MaNhanVienNavigation != null && t.MaNhanVienNavigation.MaChucVuNavigation != null ? t.MaNhanVienNavigation.MaChucVuNavigation.TenChucVu : "",
                     TenDangNhap = t.TenDangNhap,
                     MaVaiTro = t.MaVaiTro,
                     TenVaiTro = t.MaVaiTroNavigation != null ? t.MaVaiTroNavigation.TenVaiTro : "",
@@ -79,14 +83,10 @@ namespace HrmApp.Api.Controllers
             return Ok(taiKhoan);
         }
 
-        /// <summary>
-        /// Tạo tài khoản mới
-        /// </summary>
         [HttpPost]
         [Authorize(Roles = "Quản trị viên")]
         public async Task<ActionResult<TaiKhoanResponseDto>> PostTaiKhoan([FromBody] CreateTaiKhoanDto dto)
         {
-            // Kiểm tra trùng tên đăng nhập
             var exists = await _context.TaiKhoans.AnyAsync(t => t.TenDangNhap == dto.TenDangNhap);
             if (exists)
             {
@@ -110,9 +110,6 @@ namespace HrmApp.Api.Controllers
             return CreatedAtAction(nameof(GetTaiKhoan), new { id = taiKhoan.MaTaiKhoan }, null);
         }
 
-        /// <summary>
-        /// Cập nhật tài khoản (Vai trò, Trạng thái)
-        /// </summary>
         [HttpPut("{id}")]
         [Authorize(Roles = "Quản trị viên")]
         public async Task<IActionResult> PutTaiKhoan(Guid id, [FromBody] UpdateTaiKhoanDto dto)
@@ -131,9 +128,6 @@ namespace HrmApp.Api.Controllers
             return NoContent();
         }
 
-        /// <summary>
-        /// Đổi mật khẩu
-        /// </summary>
         [HttpPut("{id}/doi-mat-khau")]
         [Authorize]
         public async Task<IActionResult> DoiMatKhau(Guid id, [FromBody] ChangePasswordDto dto)
@@ -155,9 +149,6 @@ namespace HrmApp.Api.Controllers
             return NoContent();
         }
 
-        /// <summary>
-        /// Đổi vai trò
-        /// </summary>
         [HttpPut("{id}/vai-tro")]
         [Authorize(Roles = "Quản trị viên")]
         public async Task<IActionResult> ChangeRole(Guid id, [FromBody] Guid maVaiTro)
@@ -174,9 +165,6 @@ namespace HrmApp.Api.Controllers
             return NoContent();
         }
 
-        /// <summary>
-        /// Khóa tài khoản
-        /// </summary>
         [HttpDelete("{id}")]
         [Authorize(Roles = "Quản trị viên")]
         public async Task<IActionResult> DeleteTaiKhoan(Guid id)
@@ -187,10 +175,26 @@ namespace HrmApp.Api.Controllers
                 return NotFound("Không tìm thấy tài khoản.");
             }
 
-            taiKhoan.TrangThai = "Bị khóa";
+            taiKhoan.TrangThai = taiKhoan.TrangThai == "Hoạt động" ? "Bị khóa" : "Hoạt động";
             await _context.SaveChangesAsync();
 
-            return NoContent();
+            return Ok(new { message = taiKhoan.TrangThai == "Hoạt động" ? "Mở khóa tài khoản thành công." : "Đã khóa tài khoản.", trangThai = taiKhoan.TrangThai });
+        }
+
+        [HttpPut("{id}/mo-khoa")]
+        [Authorize(Roles = "Quản trị viên")]
+        public async Task<IActionResult> MoKhoaTaiKhoan(Guid id)
+        {
+            var taiKhoan = await _context.TaiKhoans.FindAsync(id);
+            if (taiKhoan == null)
+            {
+                return NotFound("Không tìm thấy tài khoản.");
+            }
+
+            taiKhoan.TrangThai = "Hoạt động";
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Mở khóa tài khoản thành công." });
         }
     }
 }
