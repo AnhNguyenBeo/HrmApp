@@ -39,11 +39,8 @@ public class AuthController : ControllerBase
         if (taiKhoan is null)
             return Unauthorized(new { message = "Tên đăng nhập hoặc mật khẩu không đúng." });
 
-        if (taiKhoan.TrangThai != "Hoạt động")
-            return Unauthorized(new { message = "Tài khoản đã bị khoá hoặc vô hiệu hoá." });
-
-        if (taiKhoan.MaNhanVienNavigation?.TrangThaiLamViec == "Đã nghỉ việc")
-            return Unauthorized(new { message = "Tài khoản đã bị khóa do nhân sự đã thôi việc." });
+        if (taiKhoan.TrangThai != "Hoạt động" || taiKhoan.MaNhanVienNavigation?.TrangThaiLamViec == "Đã nghỉ việc")
+            return Unauthorized(new { message = "Tài khoản đã bị khóa, liên hệ phòng nhân sự để biết thêm chi tiết." });
 
         bool isPasswordValid = BCrypt.Net.BCrypt.Verify(request.MatKhau, taiKhoan.MatKhauHash);
         if (!isPasswordValid)
