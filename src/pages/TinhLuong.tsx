@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Card, Table, Button, DatePicker, Space, message, Tag, Alert, Popconfirm, Input, Select, Row, Col } from 'antd';
-import { CalculatorOutlined, DownloadOutlined, DollarCircleOutlined, CheckCircleOutlined, CheckOutlined, SearchOutlined } from '@ant-design/icons';
+import { Card, Table, Button, DatePicker, Space, message, Tag, Alert, Popconfirm, Input, Select, Row, Col, Progress, Statistic } from 'antd';
+import { CalculatorOutlined, DownloadOutlined, DollarCircleOutlined, CheckCircleOutlined, CheckOutlined, SearchOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import { bangLuongApi } from '../api/bangLuongApi';
 import { exportApi } from '../api/exportApi';
 import { nhanVienApi } from '../api/nhanVienApi';
@@ -132,7 +132,13 @@ export const TinhLuongPage: React.FC = () => {
   };
 
   const monthRecords = data.filter((b) => b.thoiGian === monthStr);
-  const pendingCount = monthRecords.filter((b) => b.trangThaiChiTra !== 'Đã chi trả').length;
+  const pendingCount = monthRecords.filter((b) => b.trangThaiChiTra !== 'Đã chi trả' && b.trangThaiChiTra !== 'Đã thanh toán').length;
+  const totalMonthNet = monthRecords.reduce((sum, b) => sum + (b.thucLinh || 0), 0);
+  const paidRecords = monthRecords.filter((b) => b.trangThaiChiTra === 'Đã chi trả' || b.trangThaiChiTra === 'Đã thanh toán');
+  const paidAmount = paidRecords.reduce((sum, b) => sum + (b.thucLinh || 0), 0);
+  const pendingRecords = monthRecords.filter((b) => b.trangThaiChiTra !== 'Đã chi trả' && b.trangThaiChiTra !== 'Đã thanh toán');
+  const pendingAmount = pendingRecords.reduce((sum, b) => sum + (b.thucLinh || 0), 0);
+  const percentPaid = totalMonthNet > 0 ? Math.round((paidAmount / totalMonthNet) * 100) : 0;
 
   const filteredData = monthRecords.filter((b) => {
     if (statusFilter !== 'ALL' && (b.trangThaiChiTra || 'Chờ duyệt') !== statusFilter) {
@@ -284,6 +290,64 @@ export const TinhLuongPage: React.FC = () => {
         showIcon
         style={{ marginBottom: 16 }}
       />
+
+      <Row gutter={16} style={{ marginBottom: 16 }}>
+        <Col xs={24} sm={12} md={6}>
+          <Card size="small" style={{ borderRadius: 8, borderLeft: '4px solid #1890ff', boxShadow: '0 2px 6px rgba(0,0,0,0.04)' }}>
+            <Statistic
+              title={<span style={{ fontSize: 13, color: '#666', fontWeight: 500 }}>Tổng quỹ lương ({monthStr})</span>}
+              value={totalMonthNet}
+              prefix={<DollarCircleOutlined style={{ color: '#1890ff' }} />}
+              suffix="đ"
+              valueStyle={{ fontSize: 18, fontWeight: 700, color: '#1890ff' }}
+            />
+            <div style={{ fontSize: 12, color: '#888', marginTop: 4 }}>
+              Quy mô: <strong>{monthRecords.length}</strong> nhân sự
+            </div>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card size="small" style={{ borderRadius: 8, borderLeft: '4px solid #52c41a', boxShadow: '0 2px 6px rgba(0,0,0,0.04)' }}>
+            <Statistic
+              title={<span style={{ fontSize: 13, color: '#666', fontWeight: 500 }}>Đã giải ngân chi trả</span>}
+              value={paidAmount}
+              prefix={<CheckCircleOutlined style={{ color: '#52c41a' }} />}
+              suffix="đ"
+              valueStyle={{ fontSize: 18, fontWeight: 700, color: '#52c41a' }}
+            />
+            <div style={{ fontSize: 12, color: '#52c41a', marginTop: 4 }}>
+              Đã trả: <strong>{paidRecords.length}</strong> / {monthRecords.length} nhân sự
+            </div>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card size="small" style={{ borderRadius: 8, borderLeft: '4px solid #faad14', boxShadow: '0 2px 6px rgba(0,0,0,0.04)' }}>
+            <Statistic
+              title={<span style={{ fontSize: 13, color: '#666', fontWeight: 500 }}>Còn lại chờ duyệt chi</span>}
+              value={pendingAmount}
+              prefix={<ClockCircleOutlined style={{ color: '#faad14' }} />}
+              suffix="đ"
+              valueStyle={{ fontSize: 18, fontWeight: 700, color: '#faad14' }}
+            />
+            <div style={{ fontSize: 12, color: '#faad14', marginTop: 4 }}>
+              Chờ duyệt: <strong>{pendingRecords.length}</strong> nhân sự
+            </div>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card size="small" style={{ borderRadius: 8, borderLeft: '4px solid #722ed1', boxShadow: '0 2px 6px rgba(0,0,0,0.04)' }}>
+            <div style={{ fontSize: 13, color: '#666', marginBottom: 4, fontWeight: 500 }}>Tiến độ giải ngân kỳ này</div>
+            <Progress
+              percent={percentPaid}
+              status={percentPaid === 100 ? 'success' : 'active'}
+              strokeColor={{ '0%': '#108ee9', '100%': '#52c41a' }}
+            />
+            <div style={{ fontSize: 12, color: '#888', marginTop: 4 }}>
+              {percentPaid === 100 ? 'Đã hoàn tất chi trả 100%' : `Còn lại ${100 - percentPaid}% cần giải ngân`}
+            </div>
+          </Card>
+        </Col>
+      </Row>
 
       <Card
         title={

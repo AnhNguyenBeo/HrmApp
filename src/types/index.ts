@@ -106,6 +106,10 @@ export interface DashboardData {
   nhanVienMoiTrongThang: number;
   donTuChoDuyet: number;
   tongQuyLuongThang: number;
+  luongDaChiTraThang?: number;
+  luongChoChiTraThang?: number;
+  soBangLuongDaChiTra?: number;
+  soBangLuongChoChiTra?: number;
   nhanVienTheoPhongBan: { tenPhongBan: string; soLuongNhanVien: number }[];
   nhanVienTheoTrinhDo: { trinhDo: string; soLuong: number }[];
   nhanVienTheoThamNien: { nhomThamNien: string; soLuong: number }[];

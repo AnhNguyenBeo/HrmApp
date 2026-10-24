@@ -1,6 +1,6 @@
-﻿import axiosClient from './axiosClient';
+import axiosClient from './axiosClient';
 import { DashboardData } from '../types';
 
 export const thongKeApi = {
-  getDashboard: () => axiosClient.get<DashboardData>('/thongke/dashboard'),
+  getDashboard: (thoiGian?: string) => axiosClient.get<DashboardData>('/thongke/dashboard', { params: { thoiGian } }),
 };
