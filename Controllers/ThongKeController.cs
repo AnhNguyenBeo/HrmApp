@@ -19,10 +19,10 @@ namespace HrmApp.Api.Controllers
         public ThongKeController(QuanLyNhanSuDbContext context) { _context = context; }
 
         [HttpGet("dashboard")]
-        public async Task<IActionResult> GetDashboardStats()
+        public async Task<IActionResult> GetDashboardStats([FromQuery] string? thoiGian)
         {
             var now = DateTime.UtcNow;
-            var currentMonthStr = $"{now.Month:D2}/{now.Year}";
+            var currentMonthStr = !string.IsNullOrEmpty(thoiGian) ? thoiGian : $"{now.Month:D2}/{now.Year}";
 
             var allEmployees = await _context.NhanViens
                 .Include(nv => nv.MaPhongBanNavigation)
@@ -47,12 +47,32 @@ namespace HrmApp.Api.Controllers
                 return hd?.LuongCoBan ?? 0;
             }).ToList();
 
+            var bangLuongsThang = await _context.BangLuongs
+                .Where(b => b.ThoiGian == currentMonthStr)
+                .ToListAsync();
+
+            var tongQuyLuong = bangLuongsThang.Sum(b => b.ThucLinh ?? 0);
+            var luongDaChiTra = bangLuongsThang
+                .Where(b => b.TrangThaiChiTra == "Đã chi trả" || b.TrangThaiChiTra == "Đã thanh toán")
+                .Sum(b => b.ThucLinh ?? 0);
+            var luongChoChiTra = bangLuongsThang
+                .Where(b => b.TrangThaiChiTra != "Đã chi trả" && b.TrangThaiChiTra != "Đã thanh toán")
+                .Sum(b => b.ThucLinh ?? 0);
+            var soBangLuongDaChiTra = bangLuongsThang
+                .Count(b => b.TrangThaiChiTra == "Đã chi trả" || b.TrangThaiChiTra == "Đã thanh toán");
+            var soBangLuongChoChiTra = bangLuongsThang
+                .Count(b => b.TrangThaiChiTra != "Đã chi trả" && b.TrangThaiChiTra != "Đã thanh toán");
+
             var response = new DashboardResponseDto
             {
                 TongSoNhanVien = allActive.Count,
                 NhanVienMoiTrongThang = allActive.Count(nv => nv.NgayVaoLam.Month == now.Month && nv.NgayVaoLam.Year == now.Year),
                 DonTuChoDuyet = await _context.DonTus.CountAsync(d => d.TrangThai == "Chờ duyệt"),
-                TongQuyLuongThang = await _context.BangLuongs.Where(b => b.ThoiGian == currentMonthStr).SumAsync(b => b.ThucLinh ?? 0),
+                TongQuyLuongThang = tongQuyLuong,
+                LuongDaChiTraThang = luongDaChiTra,
+                LuongChoChiTraThang = luongChoChiTra,
+                SoBangLuongDaChiTra = soBangLuongDaChiTra,
+                SoBangLuongChoChiTra = soBangLuongChoChiTra,
                 
                 NhanVienTheoPhongBan = await _context.PhongBans.Select(pb => new ThongKePhongBanDto {
                     TenPhongBan = pb.TenPhongBan,

@@ -9,6 +9,10 @@ namespace HrmApp.Api.DTOs.ThongKe
         public int NhanVienMoiTrongThang { get; set; }
         public int DonTuChoDuyet { get; set; }
         public decimal TongQuyLuongThang { get; set; }
+        public decimal LuongDaChiTraThang { get; set; }
+        public decimal LuongChoChiTraThang { get; set; }
+        public int SoBangLuongDaChiTra { get; set; }
+        public int SoBangLuongChoChiTra { get; set; }
         public List<ThongKePhongBanDto> NhanVienTheoPhongBan { get; set; } = new List<ThongKePhongBanDto>();
         public List<ThongKeTrinhDoDto> NhanVienTheoTrinhDo { get; set; } = new List<ThongKeTrinhDoDto>();
         public List<ThongKeThamNienDto> NhanVienTheoThamNien { get; set; } = new List<ThongKeThamNienDto>();
