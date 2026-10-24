@@ -21,7 +21,7 @@ Hệ thống thiết kế mô hình phân quyền chặt chẽ kết hợp giữ
 | **💰 Quản lý / NV Kế toán** | Kích hoạt tính bảng lương tự động hàng loạt toàn cty; theo dõi bảng lương; cập nhật trạng thái chi trả và phê duyệt chi trả lương nhân sự (được kiểm soát chặt chẽ bởi cấp quản lý & Chủ doanh nghiệp). |
 | **📋 Quản lý phòng ban khác** | Theo dõi lịch sử chấm công nhân sự trực thuộc phòng ban; phê duyệt đơn từ xin nghỉ phép/OT của nhân viên phòng ban mình. Không được duyệt chéo phòng ban khác. |
 | **👤 Nhân viên** | Điểm danh Check-in/Check-out hằng ngày; nộp đơn từ (nghỉ phép, nghỉ ốm, thai sản, OT...); theo dõi lịch sử chấm công; xem phiếu lương chi tiết từng tháng; tự cập nhật thông tin cá nhân. |
-| **🛡️ Quản trị viên** | Quản trị tài khoản hệ thống: cấp tài khoản mới, phân quyền vai trò, khóa/mở khóa tài khoản; theo dõi Nhật ký hoạt động hệ thống (Audit Logs). |
+| **🛡️ Quản trị viên** | Quản trị tài khoản hệ thống: cấp tài khoản mới, phân quyền vai trò, khóa/mở khóa tài khoản; theo dõi Nhật ký hoạt động hệ thống. |
 
 ---
 
@@ -58,12 +58,12 @@ Hệ thống thiết kế mô hình phân quyền chặt chẽ kết hợp giữ
 - Phê duyệt & Chi trả phân cấp: Kế toán duyệt lương nhân viên; Quản lý Kế toán duyệt nhân sự kế toán; Chủ doanh nghiệp duyệt cho Quản lý Kế toán.
 - Xuất bảng lương ra file Excel (.CSV UTF-8 BOM chuẩn tiếng Việt).
 
-### 3.6. Báo cáo & Thống kê trực quan (Dashboard Analytics)
+### 3.6. Báo cáo & Thống kê trực quan
 - Chỉ số tài chính lương: Tổng quỹ lương tháng, số tiền đã chi trả, số tiền chờ chi trả, tỷ lệ hoàn tất chi trả.
 - Biểu đồ phân tích trực quan: Cơ cấu nhân sự theo Phòng ban, Phân bổ theo Trình độ học vấn, Phân bổ theo Thâm niên, Phân bổ theo Mức thu nhập.
 - Danh sách tình hình nhân sự trực tiếp: Nhân sự đang làm việc, Nhân sự đang nghỉ phép, Nhân sự đã nghỉ việc.
 
-### 3.7. Nhật ký hoạt động hệ thống (Audit Logs)
+### 3.7. Nhật ký hoạt động hệ thốn
 - Ghi nhận chi tiết mọi thao tác quan trọng: Đăng nhập/Đăng nhập thất bại, Cấp tài khoản, Phân quyền, Đổi mật khẩu, Khóa/Mở khóa tài khoản, Tính lương, Phê duyệt chi trả lương, Bổ nhiệm chức vụ, Thôi việc.
 - Thông tin nhật ký: Thời gian (chuẩn giờ địa phương Việt Nam), Người thực hiện (Username + Họ tên), Hành động, Chi tiết thao tác (kèm tên nhân sự cụ thể), Trạng thái (Thành công, Cảnh báo, Thất bại), Địa chỉ IP (chuẩn hóa IPv4).
 - Bộ lọc đa năng: Tìm kiếm từ khóa, Lọc theo hành động, Lọc theo trạng thái, Chọn khoảng ngày (RangePicker) và Phân trang dữ liệu.
