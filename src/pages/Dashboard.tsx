@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { Card, Row, Col, Statistic, Spin, Table, Tag, Tabs, Badge, Progress, DatePicker, Space, Input } from 'antd';
 import {
   TeamOutlined,
@@ -22,6 +22,12 @@ export const DashboardPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState<dayjs.Dayjs>(dayjs());
   const [tabSearch, setTabSearch] = useState('');
+
+  const userStr = localStorage.getItem('user');
+  const currentUser = userStr ? JSON.parse(userStr) : null;
+  const isOwner = currentUser?.vaiTro === 'Chủ doanh nghiệp';
+  const isAccounting = (currentUser?.tenPhongBan || '').toLowerCase().includes('kế toán');
+  const canViewPayroll = Boolean(data?.canViewPayroll ?? (isOwner || isAccounting));
 
   const fetchStats = async (monthStr: string) => {
     try {
@@ -179,6 +185,7 @@ export const DashboardPage: React.FC = () => {
         </Col>
       </Row>
 
+      {canViewPayroll && (
       <Card
         title={
           <span style={{ fontSize: 16, fontWeight: 600 }}>
@@ -237,6 +244,7 @@ export const DashboardPage: React.FC = () => {
           </Col>
         </Row>
       </Card>
+      )}
 
       <Row gutter={[16, 16]}>
         <Col xs={24} sm={12} md={6}>
@@ -295,7 +303,7 @@ export const DashboardPage: React.FC = () => {
       </Row>
 
       <Row gutter={[16, 16]}>
-        <Col xs={24} sm={12} md={6}>
+        <Col xs={24} sm={12} md={canViewPayroll ? 6 : 8}>
           <Card
             title={
               <span style={{ fontSize: 14, fontWeight: 600 }}>
@@ -321,7 +329,7 @@ export const DashboardPage: React.FC = () => {
             })}
           </Card>
         </Col>
-        <Col xs={24} sm={12} md={6}>
+        <Col xs={24} sm={12} md={canViewPayroll ? 6 : 8}>
           <Card
             title={
               <span style={{ fontSize: 14, fontWeight: 600 }}>
@@ -347,7 +355,7 @@ export const DashboardPage: React.FC = () => {
             })}
           </Card>
         </Col>
-        <Col xs={24} sm={12} md={6}>
+        <Col xs={24} sm={12} md={canViewPayroll ? 6 : 8}>
           <Card
             title={
               <span style={{ fontSize: 14, fontWeight: 600 }}>
@@ -373,32 +381,34 @@ export const DashboardPage: React.FC = () => {
             })}
           </Card>
         </Col>
-        <Col xs={24} sm={12} md={6}>
-          <Card
-            title={
-              <span style={{ fontSize: 14, fontWeight: 600 }}>
-                <PieChartOutlined style={{ marginRight: 6, color: '#fa8c16' }} />
-                Theo Dải mức lương
-              </span>
-            }
-            style={{ borderRadius: 10, height: '100%', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}
-          >
-            {(data?.nhanVienTheoMucLuong || []).map((item) => {
-              const pct = Math.round((item.soLuong / totalActive) * 100);
-              return (
-                <div key={item.mucLuong} style={{ marginBottom: 12 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: 13 }}>
-                    <span style={{ color: '#262626' }}>{item.mucLuong}</span>
-                    <span>
-                      <strong>{item.soLuong}</strong> <span style={{ color: '#8c8c8c', fontSize: 12 }}>({pct}%)</span>
-                    </span>
+        {canViewPayroll && (
+          <Col xs={24} sm={12} md={6}>
+            <Card
+              title={
+                <span style={{ fontSize: 14, fontWeight: 600 }}>
+                  <PieChartOutlined style={{ marginRight: 6, color: '#fa8c16' }} />
+                  Theo Dải mức lương
+                </span>
+              }
+              style={{ borderRadius: 10, height: '100%', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}
+            >
+              {(data?.nhanVienTheoMucLuong || []).map((item) => {
+                const pct = Math.round((item.soLuong / totalActive) * 100);
+                return (
+                  <div key={item.mucLuong} style={{ marginBottom: 12 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: 13 }}>
+                      <span style={{ color: '#262626' }}>{item.mucLuong}</span>
+                      <span>
+                        <strong>{item.soLuong}</strong> <span style={{ color: '#8c8c8c', fontSize: 12 }}>({pct}%)</span>
+                      </span>
+                    </div>
+                    <Progress percent={pct} showInfo={false} strokeColor="#fa8c16" size="small" />
                   </div>
-                  <Progress percent={pct} showInfo={false} strokeColor="#fa8c16" size="small" />
-                </div>
-              );
-            })}
-          </Card>
-        </Col>
+                );
+              })}
+            </Card>
+          </Col>
+        )}
       </Row>
 
       <Card

@@ -1,4 +1,4 @@
-export interface LoginRequest {
+﻿export interface LoginRequest {
   tenDangNhap: string;
   matKhau: string;
 }
@@ -103,6 +103,7 @@ export interface BangLuong {
 
 export interface DashboardData {
   tongSoNhanVien: number;
+  canViewPayroll?: boolean;
   nhanVienMoiTrongThang: number;
   donTuChoDuyet: number;
   tongQuyLuongThang: number;
