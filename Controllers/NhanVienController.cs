@@ -9,6 +9,7 @@ using HrmApp.Api.Data;
 using HrmApp.Api.Data.Models;
 using HrmApp.Api.DTOs.NhanVien;
 using HrmApp.Api.DTOs.Shared;
+using HrmApp.Api.Services;
 
 namespace HrmApp.Api.Controllers
 {
@@ -17,10 +18,12 @@ namespace HrmApp.Api.Controllers
     public class NhanVienController : ControllerBase
     {
         private readonly QuanLyNhanSuDbContext _context;
+        private readonly INhatKyService _nhatKyService;
 
-        public NhanVienController(QuanLyNhanSuDbContext context)
+        public NhanVienController(QuanLyNhanSuDbContext context, INhatKyService nhatKyService)
         {
             _context = context;
+            _nhatKyService = nhatKyService;
         }
 
         [HttpGet]
@@ -285,6 +288,11 @@ namespace HrmApp.Api.Controllers
             _context.NhanViens.Add(nhanVien);
             await _context.SaveChangesAsync();
 
+            var callerUser = User.FindFirst("TenDangNhap")?.Value ?? User.Identity?.Name ?? "Hệ thống";
+            var callerName = User.FindFirst("HoTen")?.Value;
+            var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
+            await _nhatKyService.GhiLogAsync(callerUser, callerName, "Thêm nhân sự", $"Thêm mới nhân sự '{nhanVien.HoTen}'", "Thành công", ip);
+
             return CreatedAtAction(nameof(GetNhanVien), new { id = nhanVien.MaNhanVien }, null);
         }
 
@@ -428,6 +436,11 @@ namespace HrmApp.Api.Controllers
             nhanVien.MaChucVu = maChucVu;
             await _context.SaveChangesAsync();
 
+            var callerUser = User.FindFirst("TenDangNhap")?.Value ?? User.Identity?.Name ?? "Hệ thống";
+            var callerName = User.FindFirst("HoTen")?.Value;
+            var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
+            await _nhatKyService.GhiLogAsync(callerUser, callerName, "Bổ nhiệm chức vụ", $"Bổ nhiệm chức vụ '{newChucVu.TenChucVu}' cho nhân sự '{nhanVien.HoTen}'", "Thành công", ip);
+
             return Ok(new { message = $"Đã cấp chức vụ {newChucVu.TenChucVu} cho nhân sự {nhanVien.HoTen} thành công." });
         }
 
@@ -503,6 +516,11 @@ namespace HrmApp.Api.Controllers
             }
 
             await _context.SaveChangesAsync();
+
+            var callerUser = User.FindFirst("TenDangNhap")?.Value ?? User.Identity?.Name ?? "Hệ thống";
+            var callerName = User.FindFirst("HoTen")?.Value;
+            var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
+            await _nhatKyService.GhiLogAsync(callerUser, callerName, "Thôi việc nhân sự", $"Cho nhân sự '{nhanVien.HoTen}' thôi việc và khóa tài khoản liên kết", "Thành công", ip);
 
             return Ok(new { message = $"Đã cho nhân sự {nhanVien.HoTen} thôi việc và tự động khóa tài khoản liên kết." });
         }        

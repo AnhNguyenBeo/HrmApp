@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using HrmApp.Api.Data.Models;
 using Microsoft.EntityFrameworkCore;
@@ -29,6 +29,8 @@ public partial class QuanLyNhanSuDbContext : DbContext
     public virtual DbSet<TaiKhoan> TaiKhoans { get; set; }
 
     public virtual DbSet<VaiTro> VaiTros { get; set; }
+
+    public virtual DbSet<NhatKyHoatDong> NhatKyHoatDongs { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

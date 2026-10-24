@@ -1,6 +1,7 @@
-﻿USE QuanLyNhanSu;
+USE QuanLyNhanSu;
 GO
 
+DELETE FROM NhatKyHoatDong;
 DELETE FROM DonTu;
 DELETE FROM BangLuong;
 DELETE FROM ChamCong;
@@ -325,3 +326,14 @@ INSERT INTO [DonTu] ([MaDon], [MaNhanVien], [HoTen], [LoaiDon], [LoaiNghi], [Nga
     ('bc190f9d-df6b-4797-a29e-e6f11662eff7', 'f7422bf8-1249-4c9e-8b9b-cb65989d75f1', N'Lê Minh Châu', N'Nghỉ phép', N'Nghỉ phép', '2026-10-28', '2026-10-29', 2.00, N'Trưởng phòng xin nghỉ việc gia đình', N'Đã duyệt', '3b7412b7-6569-4cba-9b0e-c3af2b1cb5f1', '2026-10-15', N'Ban Giám đốc đã đồng ý phê duyệt.');
 GO
 
+
+INSERT INTO [NhatKyHoatDong] ([MaLog], [ThoiGian], [TenDangNhap], [HoTen], [HanhDong], [ChiTiet], [TrangThai], [DiaChiIP]) VALUES
+    ('f1b2c3d4-0000-4000-8000-000000000001', '2026-10-24 08:00:00', 'admin', N'Quản trị viên hệ thống', N'Đăng nhập', N'Đăng nhập thành công vào trang quản trị', N'Thành công', '127.0.0.1'),
+    ('f1b2c3d4-0000-4000-8000-000000000002', '2026-10-24 08:15:00', 'admin', N'Quản trị viên hệ thống', N'Khóa tài khoản', N'Đã khóa tài khoản nhân viên do vi phạm nội quy', N'Thành công', '127.0.0.1'),
+    ('f1b2c3d4-0000-4000-8000-000000000003', '2026-10-24 08:30:00', 'nam.vo', N'Võ Nhật Nam', N'Đăng nhập thất bại', N'Cố gắng đăng nhập khi tài khoản đã bị khóa', N'Cảnh báo', '192.168.1.45'),
+    ('f1b2c3d4-0000-4000-8000-000000000004', '2026-10-24 09:00:00', 'binh.tran', N'Trần Thị Bình', N'Đăng nhập', N'Đăng nhập thành công vào hệ thống', N'Thành công', '192.168.1.12'),
+    ('f1b2c3d4-0000-4000-8000-000000000005', '2026-10-24 09:30:00', 'binh.tran', N'Trần Thị Bình', N'Tính bảng lương', N'Chạy tính bảng lương tự động kỳ 10/2026 cho 18 nhân sự', N'Thành công', '192.168.1.12'),
+    ('f1b2c3d4-0000-4000-8000-000000000006', '2026-10-24 10:00:00', 'bao.lam', N'Lâm Quốc Bảo', N'Phê duyệt chi trả', N'Chủ doanh nghiệp duyệt chi trả lương kỳ 10/2026', N'Thành công', '127.0.0.1'),
+    ('f1b2c3d4-0000-4000-8000-000000000007', '2026-10-24 10:45:00', 'hai.duong', N'Dương Quang Hải', N'Thăng chức', N'Thăng chức nhân sự từ Nhân viên lên Phó phòng Kỹ thuật', N'Thành công', '192.168.1.8'),
+    ('f1b2c3d4-0000-4000-8000-000000000008', '2026-10-24 11:30:00', 'admin', N'Quản trị viên hệ thống', N'Cấp tài khoản', N'Cấp tài khoản mới cho nhân sự mới gia nhập', N'Thành công', '127.0.0.1');
+GO

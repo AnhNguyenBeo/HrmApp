@@ -14,6 +14,7 @@ builder.Services.AddDbContext<QuanLyNhanSuDbContext>(options =>
     options.UseSqlServer(connectionString));
 
 builder.Services.AddScoped<IJwtService, JwtService>();
+builder.Services.AddScoped<INhatKyService, NhatKyService>();
 
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 var secretKey = jwtSettings["SecretKey"]!;

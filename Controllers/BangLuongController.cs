@@ -1,6 +1,7 @@
 using HrmApp.Api.Data;
 using HrmApp.Api.Data.Models;
 using HrmApp.Api.DTOs.BangLuong;
+using HrmApp.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -16,7 +17,12 @@ namespace HrmApp.Api.Controllers
     public class BangLuongController : ControllerBase
     {
         private readonly QuanLyNhanSuDbContext _context;
-        public BangLuongController(QuanLyNhanSuDbContext context) { _context = context; }
+        private readonly INhatKyService _nhatKyService;
+        public BangLuongController(QuanLyNhanSuDbContext context, INhatKyService nhatKyService)
+        {
+            _context = context;
+            _nhatKyService = nhatKyService;
+        }
 
         private async Task<bool> CanManageSalaryAsync()
         {
@@ -193,6 +199,12 @@ namespace HrmApp.Api.Controllers
                 }
             }
             await _context.SaveChangesAsync();
+
+            var callerUser = User.FindFirst("TenDangNhap")?.Value ?? User.Identity?.Name ?? "Hệ thống";
+            var callerName = User.FindFirst("HoTen")?.Value;
+            var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
+            await _nhatKyService.GhiLogAsync(callerUser, callerName, "Tính bảng lương", $"Chạy tính lương hàng loạt cho kỳ {request.ThoiGian} ({nhanViens.Count} nhân sự)", "Thành công", ip);
+
             return Ok(new { message = "Tính lương hàng loạt hoàn tất." });
         }
 
@@ -293,6 +305,12 @@ namespace HrmApp.Api.Controllers
 
             bangLuong.TrangThaiChiTra = dto.TrangThai ?? "Đã chi trả";
             await _context.SaveChangesAsync();
+
+            var callerUser = User.FindFirst("TenDangNhap")?.Value ?? User.Identity?.Name ?? "Hệ thống";
+            var callerName = User.FindFirst("HoTen")?.Value;
+            var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
+            await _nhatKyService.GhiLogAsync(callerUser, callerName, "Chi trả lương", $"Cập nhật trạng thái chi trả bảng lương ({bangLuong.ThoiGian}) của nhân sự {bangLuong.MaNhanVien} thành '{bangLuong.TrangThaiChiTra}'", "Thành công", ip);
+
             return Ok(new { message = $"Cập nhật trạng thái thành công ({bangLuong.TrangThaiChiTra})." });
         }
 
@@ -333,6 +351,11 @@ namespace HrmApp.Api.Controllers
             if (approvedCount > 0)
             {
                 await _context.SaveChangesAsync();
+
+                var callerUser = User.FindFirst("TenDangNhap")?.Value ?? User.Identity?.Name ?? "Hệ thống";
+                var callerName = User.FindFirst("HoTen")?.Value;
+                var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
+                await _nhatKyService.GhiLogAsync(callerUser, callerName, "Phê duyệt chi trả", $"Phê duyệt chi trả bảng lương kỳ {dto.ThoiGian} cho {approvedCount} nhân sự", "Thành công", ip);
             }
 
             if (skippedCount > 0)

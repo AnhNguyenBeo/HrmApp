@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using HrmApp.Api.Data;
 using HrmApp.Api.Data.Models;
 using HrmApp.Api.DTOs.TaiKhoan;
+using HrmApp.Api.Services;
 
 namespace HrmApp.Api.Controllers
 {
@@ -15,10 +16,12 @@ namespace HrmApp.Api.Controllers
     public class TaiKhoanController : ControllerBase
     {
         private readonly QuanLyNhanSuDbContext _context;
+        private readonly INhatKyService _nhatKyService;
 
-        public TaiKhoanController(QuanLyNhanSuDbContext context)
+        public TaiKhoanController(QuanLyNhanSuDbContext context, INhatKyService nhatKyService)
         {
             _context = context;
+            _nhatKyService = nhatKyService;
         }
 
         [HttpGet]
@@ -107,6 +110,11 @@ namespace HrmApp.Api.Controllers
             _context.TaiKhoans.Add(taiKhoan);
             await _context.SaveChangesAsync();
 
+            var callerUser = User.FindFirst("TenDangNhap")?.Value ?? User.Identity?.Name ?? "Hệ thống";
+            var callerName = User.FindFirst("HoTen")?.Value;
+            var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
+            await _nhatKyService.GhiLogAsync(callerUser, callerName, "Cấp tài khoản", $"Tạo mới tài khoản '{dto.TenDangNhap}' cho nhân viên", "Thành công", ip);
+
             return CreatedAtAction(nameof(GetTaiKhoan), new { id = taiKhoan.MaTaiKhoan }, null);
         }
 
@@ -125,6 +133,11 @@ namespace HrmApp.Api.Controllers
 
             await _context.SaveChangesAsync();
 
+            var callerUser = User.FindFirst("TenDangNhap")?.Value ?? User.Identity?.Name ?? "Hệ thống";
+            var callerName = User.FindFirst("HoTen")?.Value;
+            var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
+            await _nhatKyService.GhiLogAsync(callerUser, callerName, "Cập nhật tài khoản", $"Cập nhật trạng thái/vai trò cho tài khoản '{taiKhoan.TenDangNhap}'", "Thành công", ip);
+
             return NoContent();
         }
 
@@ -138,13 +151,20 @@ namespace HrmApp.Api.Controllers
                 return NotFound("Không tìm thấy tài khoản.");
             }
 
+            var callerUser = User.FindFirst("TenDangNhap")?.Value ?? User.Identity?.Name ?? taiKhoan.TenDangNhap;
+            var callerName = User.FindFirst("HoTen")?.Value;
+            var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
+
             if (!BCrypt.Net.BCrypt.Verify(dto.MatKhauCu, taiKhoan.MatKhauHash))
             {
+                await _nhatKyService.GhiLogAsync(callerUser, callerName, "Đổi mật khẩu", $"Đổi mật khẩu thất bại (mật khẩu cũ sai) cho '{taiKhoan.TenDangNhap}'", "Thất bại", ip);
                 return BadRequest("Mật khẩu cũ không chính xác.");
             }
 
             taiKhoan.MatKhauHash = BCrypt.Net.BCrypt.HashPassword(dto.MatKhauMoi);
             await _context.SaveChangesAsync();
+
+            await _nhatKyService.GhiLogAsync(callerUser, callerName, "Đổi mật khẩu", $"Đổi mật khẩu thành công cho tài khoản '{taiKhoan.TenDangNhap}'", "Thành công", ip);
 
             return NoContent();
         }
@@ -162,6 +182,11 @@ namespace HrmApp.Api.Controllers
             taiKhoan.MaVaiTro = maVaiTro;
             await _context.SaveChangesAsync();
 
+            var callerUser = User.FindFirst("TenDangNhap")?.Value ?? User.Identity?.Name ?? "Hệ thống";
+            var callerName = User.FindFirst("HoTen")?.Value;
+            var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
+            await _nhatKyService.GhiLogAsync(callerUser, callerName, "Phân quyền", $"Thay đổi vai trò cho tài khoản '{taiKhoan.TenDangNhap}'", "Thành công", ip);
+
             return NoContent();
         }
 
@@ -178,6 +203,12 @@ namespace HrmApp.Api.Controllers
             taiKhoan.TrangThai = taiKhoan.TrangThai == "Hoạt động" ? "Bị khóa" : "Hoạt động";
             await _context.SaveChangesAsync();
 
+            var callerUser = User.FindFirst("TenDangNhap")?.Value ?? User.Identity?.Name ?? "Hệ thống";
+            var callerName = User.FindFirst("HoTen")?.Value;
+            var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
+            var act = taiKhoan.TrangThai == "Hoạt động" ? "Mở khóa tài khoản" : "Khóa tài khoản";
+            await _nhatKyService.GhiLogAsync(callerUser, callerName, act, $"{act} '{taiKhoan.TenDangNhap}'", "Thành công", ip);
+
             return Ok(new { message = taiKhoan.TrangThai == "Hoạt động" ? "Mở khóa tài khoản thành công." : "Đã khóa tài khoản.", trangThai = taiKhoan.TrangThai });
         }
 
@@ -193,6 +224,11 @@ namespace HrmApp.Api.Controllers
 
             taiKhoan.TrangThai = "Hoạt động";
             await _context.SaveChangesAsync();
+
+            var callerUser = User.FindFirst("TenDangNhap")?.Value ?? User.Identity?.Name ?? "Hệ thống";
+            var callerName = User.FindFirst("HoTen")?.Value;
+            var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
+            await _nhatKyService.GhiLogAsync(callerUser, callerName, "Mở khóa tài khoản", $"Mở khóa tài khoản '{taiKhoan.TenDangNhap}'", "Thành công", ip);
 
             return Ok(new { message = "Mở khóa tài khoản thành công." });
         }

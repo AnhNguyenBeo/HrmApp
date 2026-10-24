@@ -1,6 +1,7 @@
 using HrmApp.Api.Data;
 using HrmApp.Api.Data.Models;
 using HrmApp.Api.DTOs.DonTu;
+using HrmApp.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -15,7 +16,12 @@ namespace HrmApp.Api.Controllers
     public class DonTuController : ControllerBase
     {
         private readonly QuanLyNhanSuDbContext _context;
-        public DonTuController(QuanLyNhanSuDbContext context) { _context = context; }
+        private readonly INhatKyService _nhatKyService;
+        public DonTuController(QuanLyNhanSuDbContext context, INhatKyService nhatKyService)
+        {
+            _context = context;
+            _nhatKyService = nhatKyService;
+        }
 
         [HttpPost]
         [Authorize]
@@ -248,6 +254,11 @@ namespace HrmApp.Api.Controllers
             await _context.SaveChangesAsync();
 
             var actionText = request.TrangThai == "Đã duyệt" ? "phê duyệt" : "từ chối";
+            var callerUser = User.FindFirst("TenDangNhap")?.Value ?? User.Identity?.Name ?? "Hệ thống";
+            var callerName = User.FindFirst("HoTen")?.Value;
+            var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
+            await _nhatKyService.GhiLogAsync(callerUser, callerName, request.TrangThai == "Đã duyệt" ? "Phê duyệt đơn từ" : "Từ chối đơn từ", $"Đã {actionText} đơn {donTu.LoaiDon} của {donTu.HoTen}", "Thành công", ip);
+
             return Ok(new { message = $"Đã {actionText} đơn từ thành công." });
         }
 

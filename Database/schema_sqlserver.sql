@@ -1,4 +1,4 @@
-﻿USE master;
+USE master;
 GO
 
 IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = N'QuanLyNhanSu')
@@ -10,6 +10,7 @@ GO
 USE QuanLyNhanSu;
 GO
 
+DROP TABLE IF EXISTS NhatKyHoatDong;
 DROP TABLE IF EXISTS DonTu;
 DROP TABLE IF EXISTS BangLuong;
 DROP TABLE IF EXISTS ChamCong;
@@ -137,6 +138,19 @@ CREATE TABLE DonTu (
     NgayDuyet DATE NULL,
     GhiChuDuyet NVARCHAR(MAX) NULL,
     CONSTRAINT PK_DonTu PRIMARY KEY (MaDon)
+);
+GO
+
+CREATE TABLE NhatKyHoatDong (
+    MaLog UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID(),
+    ThoiGian DATETIME NOT NULL DEFAULT GETDATE(),
+    TenDangNhap NVARCHAR(100) NOT NULL,
+    HoTen NVARCHAR(150) NULL,
+    HanhDong NVARCHAR(100) NOT NULL,
+    ChiTiet NVARCHAR(MAX) NULL,
+    TrangThai NVARCHAR(50) NOT NULL DEFAULT N'Thành công',
+    DiaChiIP NVARCHAR(50) NULL,
+    CONSTRAINT PK_NhatKyHoatDong PRIMARY KEY (MaLog)
 );
 GO
 

@@ -16,12 +16,14 @@ public class AuthController : ControllerBase
     private readonly QuanLyNhanSuDbContext _context;
     private readonly IJwtService _jwtService;
     private readonly IConfiguration _config;
+    private readonly INhatKyService _nhatKyService;
 
-    public AuthController(QuanLyNhanSuDbContext context, IJwtService jwtService, IConfiguration config)
+    public AuthController(QuanLyNhanSuDbContext context, IJwtService jwtService, IConfiguration config, INhatKyService nhatKyService)
     {
         _context = context;
         _jwtService = jwtService;
         _config = config;
+        _nhatKyService = nhatKyService;
     }
 
     [HttpPost("login")]
@@ -30,6 +32,8 @@ public class AuthController : ControllerBase
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
 
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
+
         var taiKhoan = await _context.TaiKhoans
             .Include(t => t.MaNhanVienNavigation)
                 .ThenInclude(n => n.MaPhongBanNavigation)
@@ -37,14 +41,25 @@ public class AuthController : ControllerBase
             .FirstOrDefaultAsync(t => t.TenDangNhap == request.TenDangNhap);
 
         if (taiKhoan is null)
+        {
+            await _nhatKyService.GhiLogAsync(request.TenDangNhap, null, "Đăng nhập thất bại", "Tài khoản không tồn tại trên hệ thống", "Thất bại", ip);
             return Unauthorized(new { message = "Tên đăng nhập hoặc mật khẩu không đúng." });
+        }
 
         if (taiKhoan.TrangThai != "Hoạt động" || taiKhoan.MaNhanVienNavigation?.TrangThaiLamViec == "Đã nghỉ việc")
+        {
+            await _nhatKyService.GhiLogAsync(request.TenDangNhap, taiKhoan.MaNhanVienNavigation?.HoTen, "Đăng nhập thất bại", "Cố gắng đăng nhập khi tài khoản đã bị khóa", "Cảnh báo", ip);
             return Unauthorized(new { message = "Tài khoản đã bị khóa, liên hệ phòng nhân sự để biết thêm chi tiết." });
+        }
 
         bool isPasswordValid = BCrypt.Net.BCrypt.Verify(request.MatKhau, taiKhoan.MatKhauHash);
         if (!isPasswordValid)
+        {
+            await _nhatKyService.GhiLogAsync(request.TenDangNhap, taiKhoan.MaNhanVienNavigation?.HoTen, "Đăng nhập thất bại", "Nhập sai mật khẩu đăng nhập", "Thất bại", ip);
             return Unauthorized(new { message = "Tên đăng nhập hoặc mật khẩu không đúng." });
+        }
+
+        await _nhatKyService.GhiLogAsync(taiKhoan.TenDangNhap, taiKhoan.MaNhanVienNavigation?.HoTen, "Đăng nhập", "Đăng nhập thành công vào hệ thống", "Thành công", ip);
 
         var token = _jwtService.GenerateToken(taiKhoan);
         var expiresAt = DateTime.UtcNow.AddMinutes(
