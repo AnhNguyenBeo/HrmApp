@@ -63,6 +63,11 @@ builder.Services
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
             ClockSkew = TimeSpan.Zero
         };
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = TokenValidationHandler.ValidateTokenAsync,
+            OnChallenge = TokenValidationHandler.HandleChallengeAsync
+        };
     });
 
 builder.Services.AddAuthorization();
