@@ -26,7 +26,11 @@ export const TinhLuongPage: React.FC = () => {
       nhanVienApi.getById(currentUser.maNhanVien).then((res) => {
         if (res.data?.tenPhongBan) {
           setDepartmentName(res.data.tenPhongBan);
-          const updated = { ...currentUser, tenPhongBan: res.data.tenPhongBan };
+          const updated = {
+            ...currentUser,
+            tenPhongBan: res.data.tenPhongBan,
+            tenChucVu: res.data.tenChucVu,
+          };
           localStorage.setItem('user', JSON.stringify(updated));
         }
       }).catch(() => {});
@@ -34,6 +38,11 @@ export const TinhLuongPage: React.FC = () => {
   }, [userStr]);
 
   const isAccounting = departmentName.toLowerCase().includes('kế toán');
+  const isAccountingManager =
+    isAccounting &&
+    (currentUser?.vaiTro === 'Quản lý' ||
+      currentUser?.tenChucVu?.includes('Trưởng') ||
+      currentUser?.tenChucVu?.includes('Phó'));
   const hasAccess = isOwner || isAccounting;
 
   const monthStr = selectedMonth.format('MM/YYYY');
@@ -125,6 +134,16 @@ export const TinhLuongPage: React.FC = () => {
 
   const columns = [
     { title: 'Nhân viên', dataIndex: 'hoTen', key: 'hoTen', render: (val: string) => <strong>{val}</strong> },
+    {
+      title: 'Phòng ban / Chức vụ',
+      key: 'phongBanChucVu',
+      render: (_: any, record: BangLuong) => (
+        <Space direction="vertical" size={2}>
+          <Tag color="blue">{record.tenPhongBan || 'Chưa xếp'}</Tag>
+          {record.tenChucVu && <Tag color="cyan">{record.tenChucVu}</Tag>}
+        </Space>
+      ),
+    },
     { title: 'Kỳ lương', dataIndex: 'thoiGian', key: 'thoiGian' },
     {
       title: 'Lương cơ bản',
@@ -192,6 +211,29 @@ export const TinhLuongPage: React.FC = () => {
         if (record.trangThaiChiTra === 'Đã chi trả') {
           return <Tag color="green">Đã hoàn tất</Tag>;
         }
+
+        const isSelf = Boolean(currentUser?.maNhanVien && record.maNhanVien === currentUser.maNhanVien);
+        if (isSelf) {
+          return <Tag color="default">Không thể tự duyệt</Tag>;
+        }
+
+        const targetDept = (record.tenPhongBan || '').toLowerCase();
+        const isTargetAccounting = targetDept.includes('kế toán');
+        const targetChucVu = record.tenChucVu || '';
+        const targetRole = record.vaiTro || '';
+        const isTargetAccountingManager = isTargetAccounting && (targetRole === 'Quản lý' || targetChucVu.includes('Trưởng') || targetChucVu.includes('Phó'));
+        const isTargetAccountingStaff = isTargetAccounting && !isTargetAccountingManager;
+
+        if (isTargetAccountingManager) {
+          if (!isOwner) {
+            return <Tag color="orange">Cần Chủ DN duyệt</Tag>;
+          }
+        } else if (isTargetAccountingStaff) {
+          if (!isOwner && !isAccountingManager) {
+            return <Tag color="orange">Cần Quản lý KT duyệt</Tag>;
+          }
+        }
+
         return (
           <Popconfirm
             title={`Xác nhận chi trả lương cho ${record.hoTen}?`}
@@ -214,12 +256,12 @@ export const TinhLuongPage: React.FC = () => {
   return (
     <div>
       <Alert
-        message="Phân quyền tính lương & chi trả lương doanh nghiệp"
+        message="Phân quyền phê duyệt & chi trả lương theo cấp bậc"
         description={
           <div>
-            <div>• <strong>Phòng Kế toán:</strong> Lập bảng lương tự động từ dữ liệu chấm công cho toàn thể nhân sự, xem xét bảng lương và phê duyệt chi trả lương.</div>
-            <div>• <strong>Chủ doanh nghiệp:</strong> Xem xét tổng quỹ lương và phê duyệt chi trả lương toàn công ty.</div>
-            <div>• <strong>Các phòng ban khác:</strong> Không có thẩm quyền xem hoặc chi trả lương nhân sự công ty (để bảo mật thu nhập).</div>
+            <div>• <strong>Nhân viên phòng Kế toán:</strong> Lập bảng lương tự động từ dữ liệu chấm công; phê duyệt chi trả lương cho nhân sự các phòng ban khác. Nhân viên kế toán không được tự duyệt lương của mình hay nhân viên kế toán khác.</div>
+            <div>• <strong>Quản lý phòng Kế toán:</strong> Phê duyệt chi trả lương cho toàn bộ nhân viên phòng Kế toán và nhân sự các phòng ban khác. Bảng lương của Quản lý kế toán phải do Chủ doanh nghiệp phê duyệt.</div>
+            <div>• <strong>Chủ doanh nghiệp:</strong> Phê duyệt chi trả lương cho Quản lý phòng Kế toán và toàn thể nhân sự công ty.</div>
           </div>
         }
         type="info"
@@ -262,7 +304,7 @@ export const TinhLuongPage: React.FC = () => {
                   loading={approving}
                   style={{ background: '#52c41a', borderColor: '#52c41a' }}
                 >
-                  {isOwner ? 'Chủ DN Duyệt & Chi trả' : 'Kế toán: Duyệt & Chi trả cả kỳ'}
+                  {isOwner ? 'Chủ DN Duyệt & Chi trả' : isAccountingManager ? 'Trưởng phòng KT: Duyệt cả kỳ' : 'Kế toán: Duyệt các phòng khác'}
                 </Button>
               </Popconfirm>
             )}

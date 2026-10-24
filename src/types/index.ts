@@ -85,6 +85,9 @@ export interface BangLuong {
   maBangLuong: string;
   maNhanVien: string;
   hoTen?: string;
+  tenPhongBan?: string;
+  tenChucVu?: string;
+  vaiTro?: string;
   thoiGian: string;
   luongCoBan: number;
   phuCap?: number;
