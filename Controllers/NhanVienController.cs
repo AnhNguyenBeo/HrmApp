@@ -68,7 +68,8 @@ namespace HrmApp.Api.Controllers
                 var kw = search.Keyword.ToLower();
                 query = query.Where(n => n.HoTen.ToLower().Contains(kw) 
                                       || n.Email.ToLower().Contains(kw) 
-                                      || n.Cccd.Contains(kw));
+                                      || n.Cccd.Contains(kw)
+                                      || n.SoDienThoai.Contains(kw));
             }
 
             if (search.MaChucVu.HasValue)
