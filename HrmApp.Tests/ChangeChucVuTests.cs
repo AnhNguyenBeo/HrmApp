@@ -5,6 +5,8 @@ using System.Threading.Tasks;
 using HrmApp.Api.Controllers;
 using HrmApp.Api.Data;
 using HrmApp.Api.Data.Models;
+using HrmApp.Api.DTOs.NhanVien;
+using HrmApp.Api.DTOs.Shared;
 using HrmApp.Api.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -152,5 +154,56 @@ public class ChangeChucVuTests
         var updatedEmployee = await context.NhanViens.FindAsync(targetStaffId);
         Assert.NotNull(updatedEmployee);
         Assert.Equal(cvTruongPhongHr.MaChucVu, updatedEmployee.MaChucVu);
+    }
+
+    [Fact]
+    public async Task GetNhanViens_HrEmployee_CanViewAllEmployees()
+    {
+        using var context = CreateDbContext();
+        var pbHr = new PhongBan { MaPhongBan = Guid.NewGuid(), TenPhongBan = "Phòng Nhân sự" };
+        var pbSales = new PhongBan { MaPhongBan = Guid.NewGuid(), TenPhongBan = "Phòng Kinh doanh" };
+        var cvNhanVien = new ChucVu { MaChucVu = Guid.NewGuid(), TenChucVu = "Nhân viên" };
+
+        var hrStaffId = Guid.NewGuid();
+        var hrStaff = CreateEmployee(hrStaffId, "Mai Hồng Ngọc", pbHr.MaPhongBan, cvNhanVien.MaChucVu);
+        var salesStaff = CreateEmployee(Guid.NewGuid(), "Đỗ Thu Trang", pbSales.MaPhongBan, cvNhanVien.MaChucVu);
+
+        context.PhongBans.AddRange(pbHr, pbSales);
+        context.ChucVus.Add(cvNhanVien);
+        context.NhanViens.AddRange(hrStaff, salesStaff);
+        await context.SaveChangesAsync();
+
+        var controller = CreateController(context, hrStaffId, "Nhân viên");
+
+        var result = await controller.GetNhanViens(new NhanVienSearchDto());
+
+        var actionResult = Assert.IsType<ActionResult<PagedResultDto<NhanVienResponseDto>>>(result);
+        var okResult = Assert.IsType<OkObjectResult>(actionResult.Result);
+        var paged = Assert.IsType<PagedResultDto<NhanVienResponseDto>>(okResult.Value);
+        Assert.Equal(2, paged.TotalCount);
+    }
+
+    [Fact]
+    public async Task GetNhanViens_NonHrEmployee_ReturnsForbidden()
+    {
+        using var context = CreateDbContext();
+        var pbSales = new PhongBan { MaPhongBan = Guid.NewGuid(), TenPhongBan = "Phòng Kinh doanh" };
+        var cvNhanVien = new ChucVu { MaChucVu = Guid.NewGuid(), TenChucVu = "Nhân viên" };
+
+        var salesStaffId = Guid.NewGuid();
+        var salesStaff = CreateEmployee(salesStaffId, "Đỗ Thu Trang", pbSales.MaPhongBan, cvNhanVien.MaChucVu);
+
+        context.PhongBans.Add(pbSales);
+        context.ChucVus.Add(cvNhanVien);
+        context.NhanViens.Add(salesStaff);
+        await context.SaveChangesAsync();
+
+        var controller = CreateController(context, salesStaffId, "Nhân viên");
+
+        var result = await controller.GetNhanViens(new NhanVienSearchDto());
+
+        var actionResult = Assert.IsType<ActionResult<PagedResultDto<NhanVienResponseDto>>>(result);
+        var objectResult = Assert.IsType<ObjectResult>(actionResult.Result);
+        Assert.Equal(403, objectResult.StatusCode);
     }
 }
