@@ -100,6 +100,7 @@ namespace HrmApp.Api.Controllers
 
             var response = new DashboardResponseDto
             {
+                CanViewPayroll = canViewPayroll,
                 TongSoNhanVien = allActive.Count,
                 NhanVienMoiTrongThang = allActive.Count(nv => nv.NgayVaoLam.Month == targetMonth && nv.NgayVaoLam.Year == targetYear),
                 DonTuChoDuyet = await _context.DonTus.CountAsync(d => d.TrangThai == "Chờ duyệt"),

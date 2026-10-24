@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 namespace HrmApp.Api.DTOs.ThongKe
@@ -8,6 +8,7 @@ namespace HrmApp.Api.DTOs.ThongKe
         public int TongSoNhanVien { get; set; }
         public int NhanVienMoiTrongThang { get; set; }
         public int DonTuChoDuyet { get; set; }
+        public bool CanViewPayroll { get; set; }
         public decimal TongQuyLuongThang { get; set; }
         public decimal LuongDaChiTraThang { get; set; }
         public decimal LuongChoChiTraThang { get; set; }
