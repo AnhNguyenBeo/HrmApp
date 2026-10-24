@@ -1,4 +1,4 @@
-using HrmApp.Api.Data;
+﻿using HrmApp.Api.Data;
 using HrmApp.Api.Data.Models;
 using HrmApp.Api.DTOs.BangLuong;
 using HrmApp.Api.Services;
@@ -294,7 +294,9 @@ namespace HrmApp.Api.Controllers
         [Authorize]
         public async Task<IActionResult> UpdateTrangThai(Guid id, [FromBody] UpdateTrangThaiDto dto)
         {
-            var bangLuong = await _context.BangLuongs.FindAsync(id);
+            var bangLuong = await _context.BangLuongs
+                .Include(b => b.MaNhanVienNavigation)
+                .FirstOrDefaultAsync(b => b.MaBangLuong == id);
             if (bangLuong == null) return NotFound(new { message = "Không tìm thấy bảng lương." });
 
             var (canApprove, errorMessage) = await CanApproveSalaryAsync(bangLuong);
@@ -306,10 +308,11 @@ namespace HrmApp.Api.Controllers
             bangLuong.TrangThaiChiTra = dto.TrangThai ?? "Đã chi trả";
             await _context.SaveChangesAsync();
 
+            var tenNhanVien = bangLuong.MaNhanVienNavigation?.HoTen ?? bangLuong.MaNhanVien.ToString();
             var callerUser = User.FindFirst("TenDangNhap")?.Value ?? User.Identity?.Name ?? "Hệ thống";
             var callerName = User.FindFirst("HoTen")?.Value;
             var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
-            await _nhatKyService.GhiLogAsync(callerUser, callerName, "Chi trả lương", $"Cập nhật trạng thái chi trả bảng lương ({bangLuong.ThoiGian}) của nhân sự {bangLuong.MaNhanVien} thành '{bangLuong.TrangThaiChiTra}'", "Thành công", ip);
+            await _nhatKyService.GhiLogAsync(callerUser, callerName, "Chi trả lương", $"Cập nhật trạng thái chi trả bảng lương ({bangLuong.ThoiGian}) của nhân sự {tenNhanVien} thành '{bangLuong.TrangThaiChiTra}'", "Thành công", ip);
 
             return Ok(new { message = $"Cập nhật trạng thái thành công ({bangLuong.TrangThaiChiTra})." });
         }
