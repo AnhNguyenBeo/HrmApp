@@ -7,6 +7,9 @@ namespace HrmApp.Api.DTOs.BangLuong
         public Guid MaBangLuong { get; set; }
         public Guid? MaNhanVien { get; set; }
         public string HoTen { get; set; } = null!;
+        public string? TenPhongBan { get; set; }
+        public string? TenChucVu { get; set; }
+        public string? VaiTro { get; set; }
         public string ThoiGian { get; set; } = null!;
         public decimal? LuongCoBan { get; set; }
         public decimal? NgayCongChuan { get; set; }

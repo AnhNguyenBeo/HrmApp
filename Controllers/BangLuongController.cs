@@ -35,6 +35,78 @@ namespace HrmApp.Api.Controllers
             return tenPB.ToLower().Contains("kế toán");
         }
 
+        private async Task<(bool CanApprove, string? ErrorMessage)> CanApproveSalaryAsync(BangLuong bangLuong)
+        {
+            var roleClaim = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role || c.Type == "role");
+            var role = roleClaim?.Value;
+            var isOwner = role == "Chủ doanh nghiệp";
+
+            var approverMaNhanVienStr = User.FindFirst("MaNhanVien")?.Value;
+            Guid.TryParse(approverMaNhanVienStr, out var approverMaNhanVien);
+
+            if (approverMaNhanVien != Guid.Empty && bangLuong.MaNhanVien == approverMaNhanVien)
+            {
+                return (false, "Bạn không thể tự phê duyệt bảng lương của chính mình.");
+            }
+
+            var targetNv = await _context.NhanViens
+                .Include(n => n.MaPhongBanNavigation)
+                .Include(n => n.MaChucVuNavigation)
+                .Include(n => n.TaiKhoans).ThenInclude(t => t.MaVaiTroNavigation)
+                .FirstOrDefaultAsync(n => n.MaNhanVien == bangLuong.MaNhanVien);
+
+            var targetDept = targetNv?.MaPhongBanNavigation?.TenPhongBan ?? "";
+            var targetChucVu = targetNv?.MaChucVuNavigation?.TenChucVu ?? "";
+            var targetRole = targetNv?.TaiKhoans.FirstOrDefault()?.MaVaiTroNavigation?.TenVaiTro ?? "";
+
+            bool isTargetAccounting = targetDept.ToLower().Contains("kế toán");
+            bool isTargetAccountingManager = isTargetAccounting && (targetRole == "Quản lý" || targetChucVu.Contains("Trưởng") || targetChucVu.Contains("Phó"));
+            bool isTargetAccountingStaff = isTargetAccounting && !isTargetAccountingManager;
+
+            if (isTargetAccountingManager)
+            {
+                if (!isOwner)
+                {
+                    return (false, "Bảng lương của Quản lý phòng Kế toán chỉ có thể được phê duyệt bởi Chủ doanh nghiệp.");
+                }
+                return (true, null);
+            }
+
+            if (isOwner)
+            {
+                return (true, null);
+            }
+
+            var approverNv = await _context.NhanViens
+                .Include(n => n.MaPhongBanNavigation)
+                .Include(n => n.MaChucVuNavigation)
+                .Include(n => n.TaiKhoans).ThenInclude(t => t.MaVaiTroNavigation)
+                .FirstOrDefaultAsync(n => n.MaNhanVien == approverMaNhanVien);
+
+            var approverDept = approverNv?.MaPhongBanNavigation?.TenPhongBan ?? "";
+            var approverChucVu = approverNv?.MaChucVuNavigation?.TenChucVu ?? "";
+            var approverRoleFromNv = approverNv?.TaiKhoans.FirstOrDefault()?.MaVaiTroNavigation?.TenVaiTro ?? role ?? "";
+
+            bool isApproverAccounting = approverDept.ToLower().Contains("kế toán");
+            if (!isApproverAccounting)
+            {
+                return (false, "Chỉ các thành viên phòng Kế toán và Chủ doanh nghiệp mới có quyền phê duyệt lương.");
+            }
+
+            bool isApproverAccountingManager = approverRoleFromNv == "Quản lý" || approverChucVu.Contains("Trưởng") || approverChucVu.Contains("Phó");
+
+            if (isTargetAccountingStaff)
+            {
+                if (!isApproverAccountingManager)
+                {
+                    return (false, "Bảng lương của nhân viên phòng Kế toán chỉ có thể được phê duyệt bởi Quản lý phòng Kế toán hoặc Chủ doanh nghiệp.");
+                }
+                return (true, null);
+            }
+
+            return (true, null);
+        }
+
         [HttpPost("tinh-luong")]
         [Authorize]
         public async Task<IActionResult> CalculateSalary([FromBody] TinhLuongRequestDto request)
@@ -131,14 +203,33 @@ namespace HrmApp.Api.Controllers
             var maNhanVienStr = User.FindFirst("MaNhanVien")?.Value;
             if (!Guid.TryParse(maNhanVienStr, out var maNhanVien)) return Unauthorized();
 
-            var bangLuongs = await _context.BangLuongs.Include(b => b.MaNhanVienNavigation).Where(b => b.MaNhanVien == maNhanVien)
+            var bangLuongs = await _context.BangLuongs
+                .Include(b => b.MaNhanVienNavigation)
+                    .ThenInclude(n => n.MaPhongBanNavigation)
+                .Include(b => b.MaNhanVienNavigation)
+                    .ThenInclude(n => n.MaChucVuNavigation)
+                .Include(b => b.MaNhanVienNavigation)
+                    .ThenInclude(n => n.TaiKhoans)
+                        .ThenInclude(t => t.MaVaiTroNavigation)
+                .Where(b => b.MaNhanVien == maNhanVien)
                 .Select(b => new BangLuongResponseDto {
-                    MaBangLuong = b.MaBangLuong, MaNhanVien = b.MaNhanVien,
+                    MaBangLuong = b.MaBangLuong,
+                    MaNhanVien = b.MaNhanVien,
                     HoTen = b.MaNhanVienNavigation != null ? b.MaNhanVienNavigation.HoTen : null!,
-                    ThoiGian = b.ThoiGian, LuongCoBan = b.LuongCoBan, PhuCap = b.PhuCap,
-                    NgayCongChuan = b.NgayCongChuan, SoNgayCong = b.SoNgayCong, TongGioOt = b.TongGioOt,
-                    LuongOt = b.LuongOt, BaoHiemXaHoi = b.BaoHiemXaHoi, ThueTncn = b.ThueTncn,
-                    ThucLinh = b.ThucLinh, TrangThaiChiTra = b.TrangThaiChiTra
+                    TenPhongBan = b.MaNhanVienNavigation != null && b.MaNhanVienNavigation.MaPhongBanNavigation != null ? b.MaNhanVienNavigation.MaPhongBanNavigation.TenPhongBan : null,
+                    TenChucVu = b.MaNhanVienNavigation != null && b.MaNhanVienNavigation.MaChucVuNavigation != null ? b.MaNhanVienNavigation.MaChucVuNavigation.TenChucVu : null,
+                    VaiTro = b.MaNhanVienNavigation != null ? b.MaNhanVienNavigation.TaiKhoans.Select(t => t.MaVaiTroNavigation != null ? t.MaVaiTroNavigation.TenVaiTro : null).FirstOrDefault() : null,
+                    ThoiGian = b.ThoiGian,
+                    LuongCoBan = b.LuongCoBan,
+                    PhuCap = b.PhuCap,
+                    NgayCongChuan = b.NgayCongChuan,
+                    SoNgayCong = b.SoNgayCong,
+                    TongGioOt = b.TongGioOt,
+                    LuongOt = b.LuongOt,
+                    BaoHiemXaHoi = b.BaoHiemXaHoi,
+                    ThueTncn = b.ThueTncn,
+                    ThucLinh = b.ThucLinh,
+                    TrangThaiChiTra = b.TrangThaiChiTra
                 }).OrderByDescending(b => b.ThoiGian).ToListAsync();
             return Ok(bangLuongs);
         }
@@ -152,17 +243,37 @@ namespace HrmApp.Api.Controllers
                 return StatusCode(403, new { message = "Chỉ các thành viên phòng Kế toán và Chủ doanh nghiệp mới có quyền xem thông tin lương nhân viên." });
             }
 
-            var query = _context.BangLuongs.Include(b => b.MaNhanVienNavigation).AsQueryable();
+            var query = _context.BangLuongs
+                .Include(b => b.MaNhanVienNavigation)
+                    .ThenInclude(n => n.MaPhongBanNavigation)
+                .Include(b => b.MaNhanVienNavigation)
+                    .ThenInclude(n => n.MaChucVuNavigation)
+                .Include(b => b.MaNhanVienNavigation)
+                    .ThenInclude(n => n.TaiKhoans)
+                        .ThenInclude(t => t.MaVaiTroNavigation)
+                .AsQueryable();
+
             if (!string.IsNullOrEmpty(thoiGian)) query = query.Where(b => b.ThoiGian == thoiGian);
 
             var bangLuongs = await query
                 .Select(b => new BangLuongResponseDto {
-                    MaBangLuong = b.MaBangLuong, MaNhanVien = b.MaNhanVien,
+                    MaBangLuong = b.MaBangLuong,
+                    MaNhanVien = b.MaNhanVien,
                     HoTen = b.MaNhanVienNavigation != null ? b.MaNhanVienNavigation.HoTen : null!,
-                    ThoiGian = b.ThoiGian, LuongCoBan = b.LuongCoBan, PhuCap = b.PhuCap,
-                    NgayCongChuan = b.NgayCongChuan, SoNgayCong = b.SoNgayCong, TongGioOt = b.TongGioOt,
-                    LuongOt = b.LuongOt, BaoHiemXaHoi = b.BaoHiemXaHoi, ThueTncn = b.ThueTncn,
-                    ThucLinh = b.ThucLinh, TrangThaiChiTra = b.TrangThaiChiTra
+                    TenPhongBan = b.MaNhanVienNavigation != null && b.MaNhanVienNavigation.MaPhongBanNavigation != null ? b.MaNhanVienNavigation.MaPhongBanNavigation.TenPhongBan : null,
+                    TenChucVu = b.MaNhanVienNavigation != null && b.MaNhanVienNavigation.MaChucVuNavigation != null ? b.MaNhanVienNavigation.MaChucVuNavigation.TenChucVu : null,
+                    VaiTro = b.MaNhanVienNavigation != null ? b.MaNhanVienNavigation.TaiKhoans.Select(t => t.MaVaiTroNavigation != null ? t.MaVaiTroNavigation.TenVaiTro : null).FirstOrDefault() : null,
+                    ThoiGian = b.ThoiGian,
+                    LuongCoBan = b.LuongCoBan,
+                    PhuCap = b.PhuCap,
+                    NgayCongChuan = b.NgayCongChuan,
+                    SoNgayCong = b.SoNgayCong,
+                    TongGioOt = b.TongGioOt,
+                    LuongOt = b.LuongOt,
+                    BaoHiemXaHoi = b.BaoHiemXaHoi,
+                    ThueTncn = b.ThueTncn,
+                    ThucLinh = b.ThucLinh,
+                    TrangThaiChiTra = b.TrangThaiChiTra
                 }).OrderByDescending(b => b.ThoiGian).ToListAsync();
             return Ok(bangLuongs);
         }
@@ -171,13 +282,14 @@ namespace HrmApp.Api.Controllers
         [Authorize]
         public async Task<IActionResult> UpdateTrangThai(Guid id, [FromBody] UpdateTrangThaiDto dto)
         {
-            if (!await CanManageSalaryAsync())
-            {
-                return StatusCode(403, new { message = "Chỉ các thành viên phòng Kế toán và Chủ doanh nghiệp mới có quyền chi trả lương." });
-            }
-
             var bangLuong = await _context.BangLuongs.FindAsync(id);
             if (bangLuong == null) return NotFound(new { message = "Không tìm thấy bảng lương." });
+
+            var (canApprove, errorMessage) = await CanApproveSalaryAsync(bangLuong);
+            if (!canApprove)
+            {
+                return StatusCode(403, new { message = errorMessage });
+            }
 
             bangLuong.TrangThaiChiTra = dto.TrangThai ?? "Đã chi trả";
             await _context.SaveChangesAsync();
@@ -199,12 +311,36 @@ namespace HrmApp.Api.Controllers
             if (!records.Any()) return NotFound(new { message = $"Không có dữ liệu bảng lương kỳ {dto.ThoiGian}." });
 
             var targetStatus = dto.TrangThai ?? "Đã chi trả";
+            int approvedCount = 0;
+            int skippedCount = 0;
+
             foreach (var r in records)
             {
-                r.TrangThaiChiTra = targetStatus;
+                if (r.TrangThaiChiTra == targetStatus) continue;
+
+                var (canApprove, _) = await CanApproveSalaryAsync(r);
+                if (canApprove)
+                {
+                    r.TrangThaiChiTra = targetStatus;
+                    approvedCount++;
+                }
+                else
+                {
+                    skippedCount++;
+                }
             }
-            await _context.SaveChangesAsync();
-            return Ok(new { message = $"Đã phê duyệt và chi trả toàn bộ bảng lương kỳ {dto.ThoiGian} ({records.Count} nhân sự)." });
+
+            if (approvedCount > 0)
+            {
+                await _context.SaveChangesAsync();
+            }
+
+            if (skippedCount > 0)
+            {
+                return Ok(new { message = $"Đã duyệt và chi trả {approvedCount} bảng lương kỳ {dto.ThoiGian}. Còn {skippedCount} bảng lương cần cấp thẩm quyền cao hơn phê duyệt (Quản lý Kế toán / Chủ doanh nghiệp)." });
+            }
+
+            return Ok(new { message = $"Đã phê duyệt và chi trả toàn bộ bảng lương kỳ {dto.ThoiGian} ({approvedCount} nhân sự)." });
         }
     }
 }
