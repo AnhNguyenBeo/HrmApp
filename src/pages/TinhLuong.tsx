@@ -33,10 +33,8 @@ export const TinhLuongPage: React.FC = () => {
     }
   }, [userStr]);
 
-  const isAccountingManager =
-    currentUser?.vaiTro === 'Quản lý' &&
-    departmentName.toLowerCase().includes('kế toán');
-  const hasAccess = isOwner || isAccountingManager;
+  const isAccounting = departmentName.toLowerCase().includes('kế toán');
+  const hasAccess = isOwner || isAccounting;
 
   const monthStr = selectedMonth.format('MM/YYYY');
 
@@ -219,9 +217,9 @@ export const TinhLuongPage: React.FC = () => {
         message="Phân quyền tính lương & chi trả lương doanh nghiệp"
         description={
           <div>
-            <div>• <strong>Quản lý phòng Kế toán:</strong> Lập bảng lương tự động từ dữ liệu chấm công cho toàn thể nhân sự. Bảng lương mới tính sẽ ở trạng thái <strong>Chờ duyệt</strong>.</div>
-            <div>• <strong>Chủ doanh nghiệp & Quản lý Kế toán:</strong> Xem xét tổng quỹ lương và phê duyệt chi trả lương (chuyển sang trạng thái <strong>Đã chi trả</strong>).</div>
-            <div>• <strong>Quản lý phòng ban khác:</strong> Không có thẩm quyền xem hoặc chi trả lương nhân sự công ty (để bảo mật thu nhập).</div>
+            <div>• <strong>Phòng Kế toán:</strong> Lập bảng lương tự động từ dữ liệu chấm công cho toàn thể nhân sự, xem xét bảng lương và phê duyệt chi trả lương.</div>
+            <div>• <strong>Chủ doanh nghiệp:</strong> Xem xét tổng quỹ lương và phê duyệt chi trả lương toàn công ty.</div>
+            <div>• <strong>Các phòng ban khác:</strong> Không có thẩm quyền xem hoặc chi trả lương nhân sự công ty (để bảo mật thu nhập).</div>
           </div>
         }
         type="info"

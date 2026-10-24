@@ -67,7 +67,7 @@ export const AppLayout: React.FC = () => {
     }
   };
 
-  const isAccountingManager = role === 'Quản lý' && departmentName.toLowerCase().includes('kế toán');
+  const isAccounting = departmentName.toLowerCase().includes('kế toán');
   const isHR = departmentName.toLowerCase().includes('nhân sự');
 
   let menuItems: any[] = [];
@@ -93,7 +93,7 @@ export const AppLayout: React.FC = () => {
       { key: '/nhan-vien', icon: <TeamOutlined />, label: isHR ? 'Quản lý nhân sự' : 'Nhân sự phòng ban' },
       { key: '/don-tu/quan-ly', icon: <SolutionOutlined />, label: 'Duyệt đơn từ nhân viên' },
       { key: '/cham-cong-quan-ly', icon: <ClockCircleOutlined />, label: 'Theo dõi chấm công' },
-      ...(isAccountingManager ? [{ key: '/tinh-luong', icon: <DollarOutlined />, label: 'Tính & Quản lý lương' }] : []),
+      ...(isAccounting ? [{ key: '/tinh-luong', icon: <DollarOutlined />, label: 'Tính & Quản lý lương' }] : []),
       { type: 'divider' as const },
       { key: '/profile', icon: <UserOutlined />, label: 'Hồ sơ của tôi' },
       { key: '/cham-cong', icon: <ClockCircleOutlined />, label: 'Chấm công cá nhân' },
@@ -103,6 +103,7 @@ export const AppLayout: React.FC = () => {
   } else {
     menuItems = [
       ...(isHR ? [{ key: '/nhan-vien', icon: <TeamOutlined />, label: 'Quản lý nhân sự' }] : []),
+      ...(isAccounting ? [{ key: '/tinh-luong', icon: <DollarOutlined />, label: 'Tính & Quản lý lương' }] : []),
       { key: '/profile', icon: <UserOutlined />, label: 'Hồ sơ của tôi' },
       { key: '/cham-cong', icon: <ClockCircleOutlined />, label: 'Chấm công cá nhân' },
       { key: '/don-tu', icon: <FileTextOutlined />, label: 'Đơn từ của tôi' },
