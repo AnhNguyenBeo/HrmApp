@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import {
   Card,
   Table,
@@ -45,7 +45,9 @@ export const NhanVienPage: React.FC = () => {
   const [myDeptName, setMyDeptName] = useState<string | undefined>(currentUser?.tenPhongBan);
 
   const isHR = (myDeptName || currentUser?.tenPhongBan || '').includes('Nhân sự');
-  const canManageHR = isOwner || isHR;
+  const isHRManager = isHR && (currentUser?.vaiTro === 'Quản lý' || currentUser?.vaiTro === 'Chủ doanh nghiệp');
+  const canManageHR = isOwner || isHRManager;
+  const canViewAllDepts = isOwner || isHR;
 
   const [selectedPhongBan, setSelectedPhongBan] = useState<string>('ALL');
 
@@ -99,7 +101,7 @@ export const NhanVienPage: React.FC = () => {
   }, [keyword]);
 
   const displayData = data.filter((item) => {
-    if (!canManageHR) return true;
+    if (!canViewAllDepts) return true;
     if (selectedPhongBan !== 'ALL') {
       if (item.maPhongBan?.toLowerCase() !== selectedPhongBan.toLowerCase()) return false;
     }
@@ -317,7 +319,7 @@ export const NhanVienPage: React.FC = () => {
         <Row justify="space-between" align="middle" style={{ marginBottom: 16 }} gutter={[16, 16]}>
           <Col xs={24} md={15}>
             <Space wrap size="middle">
-              {canManageHR ? (
+              {canViewAllDepts ? (
                 <Select
                   value={selectedPhongBan}
                   onChange={setSelectedPhongBan}
