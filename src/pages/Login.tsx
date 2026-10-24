@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Form, Input, Button, Card, Typography, message } from 'antd';
+import { Form, Input, Button, Card, Typography, message, Alert } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { authApi } from '../api/authApi';
@@ -9,11 +9,13 @@ const { Title, Text } = Typography;
 
 export const Login: React.FC = () => {
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const onFinish = async (values: LoginRequest) => {
     try {
       setLoading(true);
+      setErrorMessage(null);
       const res = await authApi.login(values);
       const data = res.data;
 
@@ -38,7 +40,9 @@ export const Login: React.FC = () => {
         navigate('/profile');
       }
     } catch (err: any) {
-      message.error(err.response?.data?.message || 'Đăng nhập thất bại. Kiểm tra lại thông tin.');
+      const msg = err.response?.data?.message || 'Đăng nhập thất bại. Kiểm tra lại thông tin.';
+      setErrorMessage(msg);
+      message.error(msg);
     } finally {
       setLoading(false);
     }
@@ -67,6 +71,17 @@ export const Login: React.FC = () => {
           </Title>
           <Text type="secondary">Hệ Thống Quản Trị Nhân Sự Doanh Nghiệp</Text>
         </div>
+
+        {errorMessage && (
+          <Alert
+            message={errorMessage}
+            type={errorMessage.toLowerCase().includes('khóa') ? 'error' : 'warning'}
+            showIcon
+            style={{ marginBottom: 20 }}
+            closable
+            onClose={() => setErrorMessage(null)}
+          />
+        )}
 
         <Form
           name="login_form"
