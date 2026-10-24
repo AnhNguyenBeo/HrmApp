@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { Card, Table, Input, Select, DatePicker, Button, Tag, Space, Row, Col, Statistic, Tooltip, message } from 'antd';
+﻿import React, { useEffect, useState, useCallback } from 'react';
+import { Card, Table, Input, Select, DatePicker, Button, Tag, Space, Row, Col, Tooltip, message } from 'antd';
 import { HistoryOutlined, SearchOutlined, ReloadOutlined, ClearOutlined, CheckCircleOutlined, ExclamationCircleOutlined, CloseCircleOutlined, GlobalOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
@@ -109,9 +109,11 @@ export const NhatKyPage: React.FC = () => {
     return <Tag>{status}</Tag>;
   };
 
-  const successCount = logs.filter((l) => l.trangThai === 'Thành công').length;
-  const warningCount = logs.filter((l) => l.trangThai === 'Cảnh báo').length;
-  const errorCount = logs.filter((l) => l.trangThai === 'Thất bại').length;
+  const formatIP = (ip: string | null | undefined) => {
+    if (!ip || ip === '::1' || ip === '::ffff:127.0.0.1') return '127.0.0.1';
+    if (ip.startsWith('::ffff:')) return ip.replace('::ffff:', '');
+    return ip;
+  };
 
   const columns = [
     {
@@ -171,153 +173,108 @@ export const NhatKyPage: React.FC = () => {
       width: 140,
       render: (ip: string) => (
         <Tag icon={<GlobalOutlined />} style={{ fontFamily: 'monospace' }}>
-          {ip || '127.0.0.1'}
+          {formatIP(ip)}
         </Tag>
       ),
     },
   ];
 
   return (
-    <Space direction="vertical" size={16} style={{ width: '100%' }}>
-      <Row gutter={[16, 16]}>
-        <Col xs={24} sm={12} md={6}>
-          <Card size="small" style={{ borderRadius: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-            <Statistic
-              title="Tổng lượt ghi nhận"
-              value={totalCount}
-              prefix={<HistoryOutlined style={{ color: '#1677ff' }} />}
-              valueStyle={{ fontWeight: 700 }}
-            />
-          </Card>
+    <Card
+      title={
+        <Space>
+          <HistoryOutlined style={{ color: '#1677ff', fontSize: 20 }} />
+          <span style={{ fontWeight: 700, fontSize: 16 }}>NHẬT KÝ HOẠT ĐỘNG HỆ THỐNG (AUDIT LOGS)</span>
+        </Space>
+      }
+      extra={
+        <Button
+          icon={<ReloadOutlined />}
+          onClick={() => fetchLogs(page, pageSize)}
+          loading={loading}
+        >
+          Tải lại
+        </Button>
+      }
+      style={{ borderRadius: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}
+    >
+      <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
+        <Col xs={24} md={8}>
+          <Input
+            prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
+            placeholder="Tìm theo tên đăng nhập, họ tên, chi tiết..."
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+            onPressEnter={handleSearch}
+            allowClear
+          />
         </Col>
-        <Col xs={24} sm={12} md={6}>
-          <Card size="small" style={{ borderRadius: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-            <Statistic
-              title="Thành công (Trang này)"
-              value={successCount}
-              valueStyle={{ color: '#52c41a', fontWeight: 700 }}
-              prefix={<CheckCircleOutlined />}
-            />
-          </Card>
+        <Col xs={12} md={4}>
+          <Select
+            style={{ width: '100%' }}
+            value={selectedAction}
+            onChange={(val) => setSelectedAction(val)}
+            options={[
+              { label: 'Tất cả hành động', value: 'ALL' },
+              ...actionsList.map((a) => ({ label: a, value: a })),
+            ]}
+          />
         </Col>
-        <Col xs={24} sm={12} md={6}>
-          <Card size="small" style={{ borderRadius: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-            <Statistic
-              title="Cảnh báo (Trang này)"
-              value={warningCount}
-              valueStyle={{ color: '#faad14', fontWeight: 700 }}
-              prefix={<ExclamationCircleOutlined />}
-            />
-          </Card>
+        <Col xs={12} md={4}>
+          <Select
+            style={{ width: '100%' }}
+            value={selectedStatus}
+            onChange={(val) => setSelectedStatus(val)}
+            options={[
+              { label: 'Tất cả trạng thái', value: 'ALL' },
+              { label: 'Thành công', value: 'Thành công' },
+              { label: 'Cảnh báo', value: 'Cảnh báo' },
+              { label: 'Thất bại', value: 'Thất bại' },
+            ]}
+          />
         </Col>
-        <Col xs={24} sm={12} md={6}>
-          <Card size="small" style={{ borderRadius: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-            <Statistic
-              title="Thất bại (Trang này)"
-              value={errorCount}
-              valueStyle={{ color: '#ff4d4f', fontWeight: 700 }}
-              prefix={<CloseCircleOutlined />}
-            />
-          </Card>
+        <Col xs={24} md={5}>
+          <RangePicker
+            style={{ width: '100%' }}
+            value={dateRange}
+            onChange={(dates) => setDateRange(dates as [Dayjs | null, Dayjs | null])}
+            format="DD/MM/YYYY"
+            placeholder={['Từ ngày', 'Đến ngày']}
+          />
+        </Col>
+        <Col xs={24} md={3}>
+          <Space>
+            <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
+              Tìm
+            </Button>
+            <Tooltip title="Đặt lại bộ lọc">
+              <Button icon={<ClearOutlined />} onClick={handleReset} />
+            </Tooltip>
+          </Space>
         </Col>
       </Row>
 
-      <Card
-        title={
-          <Space>
-            <HistoryOutlined style={{ color: '#1677ff', fontSize: 20 }} />
-            <span style={{ fontWeight: 700, fontSize: 16 }}>NHẬT KÝ HOẠT ĐỘNG HỆ THỐNG (AUDIT LOGS)</span>
-          </Space>
-        }
-        extra={
-          <Button
-            icon={<ReloadOutlined />}
-            onClick={() => fetchLogs(page, pageSize)}
-            loading={loading}
-          >
-            Tải lại
-          </Button>
-        }
-        style={{ borderRadius: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}
-      >
-        <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
-          <Col xs={24} md={8}>
-            <Input
-              prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
-              placeholder="Tìm theo tên đăng nhập, họ tên, chi tiết..."
-              value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
-              onPressEnter={handleSearch}
-              allowClear
-            />
-          </Col>
-          <Col xs={12} md={4}>
-            <Select
-              style={{ width: '100%' }}
-              value={selectedAction}
-              onChange={(val) => setSelectedAction(val)}
-              options={[
-                { label: 'Tất cả hành động', value: 'ALL' },
-                ...actionsList.map((a) => ({ label: a, value: a })),
-              ]}
-            />
-          </Col>
-          <Col xs={12} md={4}>
-            <Select
-              style={{ width: '100%' }}
-              value={selectedStatus}
-              onChange={(val) => setSelectedStatus(val)}
-              options={[
-                { label: 'Tất cả trạng thái', value: 'ALL' },
-                { label: 'Thành công', value: 'Thành công' },
-                { label: 'Cảnh báo', value: 'Cảnh báo' },
-                { label: 'Thất bại', value: 'Thất bại' },
-              ]}
-            />
-          </Col>
-          <Col xs={24} md={5}>
-            <RangePicker
-              style={{ width: '100%' }}
-              value={dateRange}
-              onChange={(dates) => setDateRange(dates as [Dayjs | null, Dayjs | null])}
-              format="DD/MM/YYYY"
-              placeholder={['Từ ngày', 'Đến ngày']}
-            />
-          </Col>
-          <Col xs={24} md={3}>
-            <Space>
-              <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
-                Tìm
-              </Button>
-              <Tooltip title="Đặt lại bộ lọc">
-                <Button icon={<ClearOutlined />} onClick={handleReset} />
-              </Tooltip>
-            </Space>
-          </Col>
-        </Row>
-
-        <Table
-          rowKey="maLog"
-          columns={columns}
-          dataSource={logs}
-          loading={loading}
-          pagination={{
-            current: page,
-            pageSize: pageSize,
-            total: totalCount,
-            showSizeChanger: true,
-            pageSizeOptions: ['10', '15', '20', '50', '100'],
-            showTotal: (total, range) => `${range[0]}-${range[1]} trong số ${total} nhật ký`,
-            onChange: (p, ps) => {
-              setPage(p);
-              setPageSize(ps);
-              fetchLogs(p, ps);
-            },
-          }}
-          bordered
-          size="middle"
-        />
-      </Card>
-    </Space>
+      <Table
+        rowKey="maLog"
+        columns={columns}
+        dataSource={logs}
+        loading={loading}
+        pagination={{
+          current: page,
+          pageSize: pageSize,
+          total: totalCount,
+          showSizeChanger: true,
+          pageSizeOptions: ['10', '15', '20', '50', '100'],
+          showTotal: (total, range) => `${range[0]}-${range[1]} trong số ${total} nhật ký`,
+          onChange: (p, ps) => {
+            setPage(p);
+            setPageSize(ps);
+            fetchLogs(p, ps);
+          },
+        }}
+        bordered
+        size="middle"
+      />
+    </Card>
   );
 };
