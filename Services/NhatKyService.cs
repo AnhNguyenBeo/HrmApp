@@ -21,7 +21,7 @@ public class NhatKyService : INhatKyService
             var log = new NhatKyHoatDong
             {
                 MaLog = Guid.NewGuid(),
-                ThoiGian = DateTime.UtcNow,
+                ThoiGian = DateTime.Now,
                 TenDangNhap = string.IsNullOrEmpty(tenDangNhap) ? "Khách / Ẩn danh" : tenDangNhap,
                 HoTen = hoTen,
                 HanhDong = hanhDong,

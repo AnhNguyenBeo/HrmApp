@@ -27,7 +27,9 @@ namespace HrmApp.Api.Controllers
             [FromQuery] string? hanhDong,
             [FromQuery] string? trangThai,
             [FromQuery] DateTime? fromDate,
+            [FromQuery] DateTime? tuNgay,
             [FromQuery] DateTime? toDate,
+            [FromQuery] DateTime? denNgay,
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 20)
         {
@@ -53,15 +55,17 @@ namespace HrmApp.Api.Controllers
                 query = query.Where(l => l.TrangThai == trangThai);
             }
 
-            if (fromDate.HasValue)
+            var fDate = fromDate ?? tuNgay;
+            if (fDate.HasValue)
             {
-                var from = fromDate.Value.Date;
+                var from = fDate.Value.Date;
                 query = query.Where(l => l.ThoiGian >= from);
             }
 
-            if (toDate.HasValue)
+            var tDate = toDate ?? denNgay;
+            if (tDate.HasValue)
             {
-                var to = toDate.Value.Date.AddDays(1).AddTicks(-1);
+                var to = tDate.Value.Date.AddDays(1).AddTicks(-1);
                 query = query.Where(l => l.ThoiGian <= to);
             }
 
