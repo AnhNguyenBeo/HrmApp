@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Form, Input, Button, Card, Typography, message, Alert } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
@@ -11,6 +11,15 @@ export const Login: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const authError = sessionStorage.getItem('auth_error_message');
+    if (authError) {
+      sessionStorage.removeItem('auth_error_message');
+      setErrorMessage(authError);
+      message.error(authError);
+    }
+  }, []);
 
   const onFinish = async (values: LoginRequest) => {
     try {
