@@ -1,6 +1,7 @@
-using HrmApp.Api.Data;
+﻿using HrmApp.Api.Data;
 using HrmApp.Api.Data.Models;
 using HrmApp.Api.DTOs.ChamCong;
+using HrmApp.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -16,7 +17,13 @@ namespace HrmApp.Api.Controllers
     public class ChamCongController : ControllerBase
     {
         private readonly QuanLyNhanSuDbContext _context;
-        public ChamCongController(QuanLyNhanSuDbContext context) { _context = context; }
+        private readonly INhatKyService _nhatKyService;
+
+        public ChamCongController(QuanLyNhanSuDbContext context, INhatKyService nhatKyService)
+        {
+            _context = context;
+            _nhatKyService = nhatKyService;
+        }
 
         [HttpPost("check-in-out")]
         [Authorize]
@@ -32,46 +39,75 @@ namespace HrmApp.Api.Controllers
                 return BadRequest(new { message = "Tài khoản Chủ doanh nghiệp và Quản trị viên không yêu cầu chấm công cá nhân." });
             }
 
-            var chamCong = await _context.ChamCongs.FirstOrDefaultAsync(c => c.MaNhanVien == maNhanVien && c.Ngay == request.Ngay);
+            var today = DateOnly.FromDateTime(DateTime.Now);
             var nowTime = TimeOnly.FromDateTime(DateTime.Now);
 
+            var chamCong = await _context.ChamCongs.FirstOrDefaultAsync(c => c.MaNhanVien == maNhanVien && c.Ngay == today);
+
+            string actionType;
             if (chamCong != null)
             {
+                actionType = "Check-out";
                 chamCong.GioRa = nowTime;
                 var gioVao = chamCong.GioVao.ToTimeSpan();
                 var gioRa = chamCong.GioRa.ToTimeSpan();
                 var duration = gioRa - gioVao;
                 
-                if (duration.TotalHours > 8) {
-                    chamCong.SoGioTangCa = (decimal)(duration.TotalHours - 8);
-                } else {
+                if (duration.TotalHours > 8)
+                {
+                    chamCong.SoGioTangCa = Math.Round((decimal)(duration.TotalHours - 8), 2);
+                }
+                else
+                {
                     chamCong.SoGioTangCa = 0;
                 }
                 
-                chamCong.TrangThai = chamCong.TrangThai == "Thiếu giờ vào" ? "Thiếu giờ vào (Đã ra)" : "Hoàn thành";
+                if (chamCong.TrangThai == "Thiếu giờ vào")
+                {
+                    chamCong.TrangThai = "Thiếu giờ vào (Đã ra)";
+                }
+                else if (chamCong.TrangThai != "Đi muộn")
+                {
+                    chamCong.TrangThai = "Hoàn thành";
+                }
+
                 _context.ChamCongs.Update(chamCong);
             }
             else
             {
+                actionType = "Check-in";
                 var newChamCong = new ChamCong
                 {
                     MaChamCong = Guid.NewGuid(),
                     MaNhanVien = maNhanVien,
-                    Ngay = request.Ngay,
+                    Ngay = today,
                     GioVao = nowTime,
                     GioRa = TimeOnly.MinValue
                 };
                 
-                if (nowTime.Hour >= 12) {
+                if (nowTime.Hour >= 12)
+                {
                     newChamCong.TrangThai = "Thiếu giờ vào";
-                } else {
+                }
+                else if (nowTime > new TimeOnly(8, 30))
+                {
+                    newChamCong.TrangThai = "Đi muộn";
+                }
+                else
+                {
                     newChamCong.TrangThai = "Đã check-in";
                 }
                 await _context.ChamCongs.AddAsync(newChamCong);
             }
 
             await _context.SaveChangesAsync();
-            return Ok(new { message = "Ghi nhận chấm công thành công." });
+
+            var callerUser = User.FindFirst("TenDangNhap")?.Value ?? User.Identity?.Name ?? "Hệ thống";
+            var callerName = User.FindFirst("HoTen")?.Value;
+            var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
+            await _nhatKyService.GhiLogAsync(callerUser, callerName, "Chấm công", $"{actionType} ngày {today:dd/MM/yyyy} vào lúc {nowTime:HH\\:mm\\:ss}", "Thành công", ip);
+
+            return Ok(new { message = $"Ghi nhận {actionType} thành công." });
         }
 
         [HttpGet("cua-toi")]
@@ -134,11 +170,16 @@ namespace HrmApp.Api.Controllers
                     .Include(n => n.MaPhongBanNavigation)
                     .FirstOrDefaultAsync(n => n.MaNhanVien == currentNhanVienId);
 
-                var myChucVu = currentNhanVien?.MaChucVuNavigation?.TenChucVu ?? "";
-                var myPhongBan = currentNhanVien?.MaPhongBanNavigation?.TenPhongBan ?? "";
+                if (currentNhanVien == null || currentNhanVien.MaPhongBan == Guid.Empty)
+                {
+                    return StatusCode(403, new { message = "Không xác định được phòng ban của người dùng." });
+                }
+
+                var myChucVu = currentNhanVien.MaChucVuNavigation?.TenChucVu ?? "";
+                var myPhongBan = currentNhanVien.MaPhongBanNavigation?.TenPhongBan ?? "";
                 bool isDirector = myChucVu.Contains("Giám đốc") || myPhongBan.Contains("Ban Giám đốc");
 
-                if (!isDirector && currentNhanVien?.MaPhongBan != null)
+                if (!isDirector)
                 {
                     query = query.Where(c => c.MaNhanVienNavigation != null && c.MaNhanVienNavigation.MaPhongBan == currentNhanVien.MaPhongBan);
                 }

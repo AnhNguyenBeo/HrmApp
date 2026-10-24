@@ -1,4 +1,4 @@
-USE QuanLyNhanSu;
+﻿USE QuanLyNhanSu;
 GO
 
 DELETE FROM NhatKyHoatDong;
@@ -75,10 +75,10 @@ INSERT INTO [TaiKhoan] ([MaTaiKhoan], [MaNhanVien], [TenDangNhap], [MatKhauHash]
     ('c1b2c3d4-0000-4000-8000-000000000012', 'a1b2c3d4-0012-4000-8000-000000000012', 'nga.ta', '$2a$11$PIJorx2iBdMt1EtCQICa4eXj7O602FUSDALFGMVJr0MbaaI8qFzPq', '907e56c6-0b15-4a6b-b8f3-3bffb89b5182', N'Hoạt động', '2020-07-01'),
     ('c1b2c3d4-0000-4000-8000-000000000013', 'a1b2c3d4-0013-4000-8000-000000000013', 'hang.phan', '$2a$11$PIJorx2iBdMt1EtCQICa4eXj7O602FUSDALFGMVJr0MbaaI8qFzPq', '5aa39951-ef92-4d37-be72-35598abed3f8', N'Hoạt động', '2024-03-01'),
     ('c1b2c3d4-0000-4000-8000-000000000014', 'a1b2c3d4-0014-4000-8000-000000000014', 'nam.vo', '$2a$11$PIJorx2iBdMt1EtCQICa4eXj7O602FUSDALFGMVJr0MbaaI8qFzPq', '5aa39951-ef92-4d37-be72-35598abed3f8', N'Hoạt động', '2026-02-15'),
-    ('c1b2c3d4-0000-4000-8000-000000000015', 'a1b2c3d4-0015-4000-8000-000000000015', 'cuong.cao', '$2a$11$PIJorx2iBdMt1EtCQICa4eXj7O602FUSDALFGMVJr0MbaaI8qFzPq', '5aa39951-ef92-4d37-be72-35598abed3f8', N'Đã khoá', '2022-05-01'),
+    ('c1b2c3d4-0000-4000-8000-000000000015', 'a1b2c3d4-0015-4000-8000-000000000015', 'cuong.cao', '$2a$11$PIJorx2iBdMt1EtCQICa4eXj7O602FUSDALFGMVJr0MbaaI8qFzPq', '5aa39951-ef92-4d37-be72-35598abed3f8', N'Bị khóa', '2022-05-01'),
     ('2fa84926-9c3b-47db-b1b8-222896281258', 'afb0ba06-c43b-4545-b45b-b39e23524f49', 'binh.tran', '$2a$11$PIJorx2iBdMt1EtCQICa4eXj7O602FUSDALFGMVJr0MbaaI8qFzPq', '907e56c6-0b15-4a6b-b8f3-3bffb89b5182', N'Hoạt động', '2016-03-01'),
     ('a0abd563-13a3-4858-881d-336949830c5b', '3b7412b7-6569-4cba-9b0e-c3af2b1cb5f1', 'an.nguyen', '$2a$11$PIJorx2iBdMt1EtCQICa4eXj7O602FUSDALFGMVJr0MbaaI8qFzPq', '3c95792f-571d-4069-904d-05180c302dba', N'Hoạt động', '2015-01-10'),
-    ('8cfb6006-3bbb-4966-bdad-4ab7ac6d7fa7', '6795f0bc-c530-434c-ae3d-a2d8ae226cae', 'em.hoang', '$2a$11$PIJorx2iBdMt1EtCQICa4eXj7O602FUSDALFGMVJr0MbaaI8qFzPq', '5aa39951-ef92-4d37-be72-35598abed3f8', N'Đã khoá', '2019-02-11'),
+    ('8cfb6006-3bbb-4966-bdad-4ab7ac6d7fa7', '6795f0bc-c530-434c-ae3d-a2d8ae226cae', 'em.hoang', '$2a$11$PIJorx2iBdMt1EtCQICa4eXj7O602FUSDALFGMVJr0MbaaI8qFzPq', '5aa39951-ef92-4d37-be72-35598abed3f8', N'Bị khóa', '2019-02-11'),
     ('f7d77b77-a216-4066-8190-5c468824494e', '5a2eb2af-24bf-4bb1-88ff-b6c71f5663bf', 'dung.pham', '$2a$11$PIJorx2iBdMt1EtCQICa4eXj7O602FUSDALFGMVJr0MbaaI8qFzPq', '5aa39951-ef92-4d37-be72-35598abed3f8', N'Hoạt động', '2020-08-01'),
     ('ac3369e9-8bf1-480f-a6f9-bb5f554b32c7', 'f7422bf8-1249-4c9e-8b9b-cb65989d75f1', 'chau.le', '$2a$11$PIJorx2iBdMt1EtCQICa4eXj7O602FUSDALFGMVJr0MbaaI8qFzPq', '907e56c6-0b15-4a6b-b8f3-3bffb89b5182', N'Hoạt động', '2018-06-15'),
     ('fa6d09c3-e98d-4a55-9a28-c6691c933721', '980453dc-5f05-4d9e-b2fc-af2430b17293', 'admin', '$2a$11$PIJorx2iBdMt1EtCQICa4eXj7O602FUSDALFGMVJr0MbaaI8qFzPq', '601ae3a7-f79c-4a4d-bfe4-2275ba0692b8', N'Hoạt động', '2015-01-01');

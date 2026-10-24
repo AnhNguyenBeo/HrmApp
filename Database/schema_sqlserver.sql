@@ -1,4 +1,4 @@
-USE master;
+﻿USE master;
 GO
 
 IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = N'QuanLyNhanSu')
@@ -63,7 +63,9 @@ CREATE TABLE NhanVien (
     TrangThaiLamViec NVARCHAR(50) NOT NULL,
     NgayNghiViec DATE NULL,
     GhiChu NVARCHAR(MAX) NULL,
-    CONSTRAINT PK_NhanVien PRIMARY KEY (MaNhanVien)
+    CONSTRAINT PK_NhanVien PRIMARY KEY (MaNhanVien),
+    CONSTRAINT UQ_NhanVien_CCCD UNIQUE (CCCD),
+    CONSTRAINT UQ_NhanVien_Email UNIQUE (Email)
 );
 GO
 
@@ -75,7 +77,8 @@ CREATE TABLE TaiKhoan (
     MaVaiTro UNIQUEIDENTIFIER NOT NULL,
     TrangThai NVARCHAR(50) NOT NULL,
     NgayTao DATE NOT NULL,
-    CONSTRAINT PK_TaiKhoan PRIMARY KEY (MaTaiKhoan)
+    CONSTRAINT PK_TaiKhoan PRIMARY KEY (MaTaiKhoan),
+    CONSTRAINT UQ_TaiKhoan_TenDangNhap UNIQUE (TenDangNhap)
 );
 GO
 
@@ -100,7 +103,8 @@ CREATE TABLE ChamCong (
     GioRa TIME NOT NULL,
     SoGioTangCa DECIMAL(4, 2) NULL,
     TrangThai NVARCHAR(50) NOT NULL,
-    CONSTRAINT PK_ChamCong PRIMARY KEY (MaChamCong)
+    CONSTRAINT PK_ChamCong PRIMARY KEY (MaChamCong),
+    CONSTRAINT UQ_ChamCong_NhanVien_Ngay UNIQUE (MaNhanVien, Ngay)
 );
 GO
 
@@ -119,7 +123,8 @@ CREATE TABLE BangLuong (
     ThueTNCN DECIMAL(18, 2) NULL,
     ThucLinh DECIMAL(18, 2) NULL,
     TrangThaiChiTra NVARCHAR(50) NOT NULL,
-    CONSTRAINT PK_BangLuong PRIMARY KEY (MaBangLuong)
+    CONSTRAINT PK_BangLuong PRIMARY KEY (MaBangLuong),
+    CONSTRAINT UQ_BangLuong_NhanVien_ThoiGian UNIQUE (MaNhanVien, ThoiGian)
 );
 GO
 
@@ -197,4 +202,10 @@ GO
 ALTER TABLE DonTu
     ADD CONSTRAINT FK_DonTu_NguoiDuyet
     FOREIGN KEY (NguoiDuyetMa) REFERENCES NhanVien (MaNhanVien);
+GO
+
+CREATE INDEX IX_NhatKyHoatDong_ThoiGian ON NhatKyHoatDong(ThoiGian DESC);
+CREATE INDEX IX_ChamCong_Ngay ON ChamCong(Ngay DESC);
+CREATE INDEX IX_BangLuong_ThoiGian ON BangLuong(ThoiGian);
+CREATE INDEX IX_DonTu_TrangThai ON DonTu(TrangThai);
 GO

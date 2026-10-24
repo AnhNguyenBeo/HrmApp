@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
@@ -42,7 +42,7 @@ namespace HrmApp.Api.Controllers
             var myDeptName = currentNhanVien?.MaPhongBanNavigation?.TenPhongBan ?? "";
             bool isOwner = currentUserRole == "Chủ doanh nghiệp";
             bool isAdmin = currentUserRole == "Quản trị viên";
-            bool isHR = myDeptName.Contains("Nhân sự");
+            bool isHR = myDeptName.Contains("Nhân sự") && currentUserRole == "Quản lý";
 
             if (!isOwner && !isHR && !isAdmin && currentUserRole != "Quản lý")
             {
@@ -56,10 +56,11 @@ namespace HrmApp.Api.Controllers
 
             if (!isOwner && !isHR && !isAdmin)
             {
-                if (currentNhanVien?.MaPhongBan != null)
+                if (currentNhanVien == null || currentNhanVien.MaPhongBan == Guid.Empty)
                 {
-                    query = query.Where(n => n.MaPhongBan == currentNhanVien.MaPhongBan);
+                    return StatusCode(403, new { message = "Không xác định được phòng ban của người dùng." });
                 }
+                query = query.Where(n => n.MaPhongBan == currentNhanVien.MaPhongBan);
             }
             else if (search.MaPhongBan.HasValue)
             {
@@ -85,11 +86,14 @@ namespace HrmApp.Api.Controllers
                 query = query.Where(n => n.TrangThaiLamViec == search.TrangThaiLamViec);
             }
 
+            var page = Math.Max(1, search.Page);
+            var pageSize = Math.Clamp(search.PageSize <= 0 ? 10 : search.PageSize, 1, 100);
+
             var totalCount = await query.CountAsync();
             
             var items = await query
-                .Skip((search.Page - 1) * search.PageSize)
-                .Take(search.PageSize)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .Select(n => new NhanVienResponseDto
                 {
                     MaNhanVien = n.MaNhanVien,
@@ -115,8 +119,8 @@ namespace HrmApp.Api.Controllers
             return Ok(new PagedResultDto<NhanVienResponseDto>
             {
                 TotalCount = totalCount,
-                Page = search.Page,
-                PageSize = search.PageSize,
+                Page = page,
+                PageSize = pageSize,
                 Items = items
             });
         }
@@ -136,7 +140,7 @@ namespace HrmApp.Api.Controllers
             var myDeptName = currentNhanVien?.MaPhongBanNavigation?.TenPhongBan ?? "";
             bool isOwner = currentUserRole == "Chủ doanh nghiệp";
             bool isAdmin = currentUserRole == "Quản trị viên";
-            bool isHR = myDeptName.Contains("Nhân sự");
+            bool isHR = myDeptName.Contains("Nhân sự") && currentUserRole == "Quản lý";
 
             var nhanVien = await _context.NhanViens
                 .Include(n => n.MaPhongBanNavigation)
@@ -169,9 +173,12 @@ namespace HrmApp.Api.Controllers
                 return NotFound("Không tìm thấy nhân viên.");
             }
 
-            if (!isOwner && !isHR && !isAdmin && currentNhanVien != null && nhanVien.MaPhongBan != currentNhanVien.MaPhongBan)
+            if (!isOwner && !isHR && !isAdmin)
             {
-                return StatusCode(403, new { message = "Bạn chỉ có quyền xem thông tin nhân sự thuộc phòng ban của mình." });
+                if (currentNhanVien == null || currentNhanVien.MaPhongBan == Guid.Empty || nhanVien.MaPhongBan != currentNhanVien.MaPhongBan)
+                {
+                    return StatusCode(403, new { message = "Bạn chỉ có quyền xem thông tin nhân sự thuộc phòng ban của mình." });
+                }
             }
 
             return Ok(nhanVien);
@@ -197,7 +204,7 @@ namespace HrmApp.Api.Controllers
             var myDeptName = currentNhanVien?.MaPhongBanNavigation?.TenPhongBan ?? "";
             bool isOwner = currentUserRole == "Chủ doanh nghiệp";
             bool isAdmin = currentUserRole == "Quản trị viên";
-            bool isHR = myDeptName.Contains("Nhân sự");
+            bool isHR = myDeptName.Contains("Nhân sự") && currentUserRole == "Quản lý";
 
             var kw = keyword.ToLower();
             var query = _context.NhanViens
@@ -205,8 +212,12 @@ namespace HrmApp.Api.Controllers
                 .Include(n => n.MaChucVuNavigation)
                 .Where(n => n.HoTen.ToLower().Contains(kw) || n.Email.ToLower().Contains(kw) || n.Cccd.Contains(kw));
 
-            if (!isOwner && !isHR && !isAdmin && currentNhanVien?.MaPhongBan != null)
+            if (!isOwner && !isHR && !isAdmin)
             {
+                if (currentNhanVien == null || currentNhanVien.MaPhongBan == Guid.Empty)
+                {
+                    return StatusCode(403, new { message = "Không xác định được phòng ban của người dùng." });
+                }
                 query = query.Where(n => n.MaPhongBan == currentNhanVien.MaPhongBan);
             }
 
@@ -251,15 +262,21 @@ namespace HrmApp.Api.Controllers
 
             var myDeptName = currentNhanVien?.MaPhongBanNavigation?.TenPhongBan ?? "";
             bool isOwner = currentUserRole == "Chủ doanh nghiệp";
-            bool isHR = myDeptName.Contains("Nhân sự");
+            bool isHR = myDeptName.Contains("Nhân sự") && currentUserRole == "Quản lý";
 
             if (!isOwner && !isHR)
             {
-                return StatusCode(403, new { message = "Chỉ có Ban Giám đốc và các thành viên Phòng Nhân sự mới có quyền thêm nhân sự mới!" });
+                return StatusCode(403, new { message = "Chỉ có Ban Giám đốc và Quản lý Phòng Nhân sự mới có quyền thêm nhân sự mới!" });
             }
 
             if (!isOwner)
             {
+                var targetPb = await _context.PhongBans.FindAsync(dto.MaPhongBan);
+                if (targetPb != null && targetPb.TenPhongBan.Contains("Ban Giám đốc"))
+                {
+                    return StatusCode(403, new { message = "Không có quyền thêm nhân sự vào Ban Giám đốc!" });
+                }
+
                 var newCv = await _context.ChucVus.FindAsync(dto.MaChucVu);
                 if (newCv != null && (newCv.TenChucVu.Contains("Giám đốc") || newCv.TenChucVu.Contains("Chủ doanh nghiệp")))
                 {
@@ -321,11 +338,11 @@ namespace HrmApp.Api.Controllers
 
             var myDeptName = currentNhanVien?.MaPhongBanNavigation?.TenPhongBan ?? "";
             bool isOwner = currentUserRole == "Chủ doanh nghiệp";
-            bool isHR = myDeptName.Contains("Nhân sự");
+            bool isHR = myDeptName.Contains("Nhân sự") && currentUserRole == "Quản lý";
 
             if (!isOwner && !isHR)
             {
-                return StatusCode(403, new { message = "Quản lý các phòng ban chỉ có quyền xem thông tin. Chức năng cập nhật nhân sự do Phòng Nhân sự xử lý!" });
+                return StatusCode(403, new { message = "Quản lý các phòng ban chỉ có quyền xem thông tin. Chức năng cập nhật nhân sự do Quản lý Phòng Nhân sự xử lý!" });
             }
 
             if (!isOwner)
@@ -336,6 +353,12 @@ namespace HrmApp.Api.Controllers
                 if (targetChucVu.Contains("Giám đốc") || targetPhongBan.Contains("Ban Giám đốc"))
                 {
                     return StatusCode(403, new { message = "Không thể chỉnh sửa thông tin của Ban Giám đốc / Chủ doanh nghiệp!" });
+                }
+
+                var targetPb = await _context.PhongBans.FindAsync(dto.MaPhongBan);
+                if (targetPb != null && targetPb.TenPhongBan.Contains("Ban Giám đốc"))
+                {
+                    return StatusCode(403, new { message = "Không có quyền chuyển nhân sự sang Ban Giám đốc!" });
                 }
             }
 
@@ -360,6 +383,11 @@ namespace HrmApp.Api.Controllers
             nhanVien.GhiChu = dto.GhiChu;
 
             await _context.SaveChangesAsync();
+
+            var callerUser = User.FindFirst("TenDangNhap")?.Value ?? User.Identity?.Name ?? "Hệ thống";
+            var callerName = User.FindFirst("HoTen")?.Value;
+            var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
+            await _nhatKyService.GhiLogAsync(callerUser, callerName, "Cập nhật nhân sự", $"Cập nhật thông tin nhân sự '{nhanVien.HoTen}'", "Thành công", ip);
 
             return Ok(new { message = "Cập nhật thông tin nhân sự thành công." });
         }
@@ -395,16 +423,11 @@ namespace HrmApp.Api.Controllers
 
             var myDeptName = currentNhanVien?.MaPhongBanNavigation?.TenPhongBan ?? "";
             bool isOwner = currentUserRole == "Chủ doanh nghiệp";
-            bool isHR = myDeptName.Contains("Nhân sự");
+            bool isHR = myDeptName.Contains("Nhân sự") && currentUserRole == "Quản lý";
 
             if (!isOwner && !isHR)
             {
-                return StatusCode(403, new { message = "Quản lý các phòng ban chỉ có quyền xem thông tin. Chức năng cấp chức do Phòng Nhân sự xử lý!" });
-            }
-
-            if (nhanVien.MaNhanVien == currentNhanVienId)
-            {
-                return BadRequest(new { message = "Bạn không thể tự cấp chức cho chính mình!" });
+                return StatusCode(403, new { message = "Quản lý các phòng ban chỉ có quyền xem thông tin. Chức năng bổ nhiệm / thăng cấp do Quản lý Phòng Nhân sự xử lý!" });
             }
 
             if (!isOwner)
@@ -412,36 +435,32 @@ namespace HrmApp.Api.Controllers
                 var targetChucVu = nhanVien.MaChucVuNavigation?.TenChucVu ?? "";
                 var targetPhongBan = nhanVien.MaPhongBanNavigation?.TenPhongBan ?? "";
 
-                if (targetChucVu.Contains("Giám đốc") || targetPhongBan.Contains("Ban Giám đốc") || targetChucVu.Contains("Chủ doanh nghiệp"))
+                if (targetChucVu.Contains("Giám đốc") || targetPhongBan.Contains("Ban Giám đốc"))
                 {
-                    return StatusCode(403, new { message = "Không thể cấp chức cho Ban Giám đốc / Chủ doanh nghiệp!" });
+                    return StatusCode(403, new { message = "Không thể thay đổi chức vụ của Ban Giám đốc / Chủ doanh nghiệp!" });
                 }
 
                 if (newChucVu.TenChucVu.Contains("Giám đốc") || newChucVu.TenChucVu.Contains("Chủ doanh nghiệp"))
                 {
-                    return StatusCode(403, new { message = "Chỉ có Chủ doanh nghiệp mới có quyền bổ nhiệm vị trí Ban Giám đốc!" });
+                    return StatusCode(403, new { message = "Không có quyền bổ nhiệm vào Ban Giám đốc!" });
                 }
 
                 if (targetPhongBan.Contains("Nhân sự") && targetChucVu.Contains("Trưởng"))
                 {
-                    return StatusCode(403, new { message = "Chỉ có Chủ doanh nghiệp mới có quyền điều chỉnh chức vụ của Trưởng phòng Nhân sự!" });
-                }
-
-                if (targetPhongBan.Contains("Nhân sự") && newChucVu.TenChucVu.Contains("Trưởng"))
-                {
-                    return StatusCode(403, new { message = "Chỉ có Chủ doanh nghiệp mới có quyền bổ nhiệm Trưởng phòng Nhân sự!" });
+                    return StatusCode(403, new { message = "Chỉ có Chủ doanh nghiệp mới có thẩm quyền thay đổi chức vụ của Trưởng phòng Nhân sự!" });
                 }
             }
 
+            var oldChucVuName = nhanVien.MaChucVuNavigation?.TenChucVu ?? "Chưa rõ";
             nhanVien.MaChucVu = maChucVu;
             await _context.SaveChangesAsync();
 
             var callerUser = User.FindFirst("TenDangNhap")?.Value ?? User.Identity?.Name ?? "Hệ thống";
             var callerName = User.FindFirst("HoTen")?.Value;
             var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
-            await _nhatKyService.GhiLogAsync(callerUser, callerName, "Bổ nhiệm chức vụ", $"Bổ nhiệm chức vụ '{newChucVu.TenChucVu}' cho nhân sự '{nhanVien.HoTen}'", "Thành công", ip);
+            await _nhatKyService.GhiLogAsync(callerUser, callerName, "Bổ nhiệm chức vụ", $"Thay đổi chức vụ của '{nhanVien.HoTen}' từ '{oldChucVuName}' thành '{newChucVu.TenChucVu}'", "Thành công", ip);
 
-            return Ok(new { message = $"Đã cấp chức vụ {newChucVu.TenChucVu} cho nhân sự {nhanVien.HoTen} thành công." });
+            return Ok(new { message = $"Đã cập nhật chức vụ thành công thành {newChucVu.TenChucVu}." });
         }
 
         [HttpDelete("{id}")]
@@ -474,11 +493,11 @@ namespace HrmApp.Api.Controllers
 
             var myDeptName = currentNhanVien?.MaPhongBanNavigation?.TenPhongBan ?? "";
             bool isOwner = currentUserRole == "Chủ doanh nghiệp";
-            bool isHR = myDeptName.Contains("Nhân sự");
+            bool isHR = myDeptName.Contains("Nhân sự") && currentUserRole == "Quản lý";
 
             if (!isOwner && !isHR)
             {
-                return StatusCode(403, new { message = "Quản lý các phòng ban chỉ có quyền xem thông tin. Chức năng thôi việc do Phòng Nhân sự xử lý!" });
+                return StatusCode(403, new { message = "Quản lý các phòng ban chỉ có quyền xem thông tin. Chức năng thôi việc do Quản lý Phòng Nhân sự xử lý!" });
             }
 
             var targetChucVu = nhanVien.MaChucVuNavigation?.TenChucVu ?? "";
@@ -541,6 +560,12 @@ namespace HrmApp.Api.Controllers
 
             _context.NhanViens.Update(nhanVien);
             await _context.SaveChangesAsync();
+
+            var callerUser = User.FindFirst("TenDangNhap")?.Value ?? User.Identity?.Name ?? "Hệ thống";
+            var callerName = User.FindFirst("HoTen")?.Value ?? nhanVien.HoTen;
+            var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
+            await _nhatKyService.GhiLogAsync(callerUser, callerName, "Cập nhật hồ sơ", "Cập nhật thông tin hồ sơ cá nhân", "Thành công", ip);
+
             return Ok(new { message = "Cập nhật hồ sơ cá nhân thành công." });
         }
     }

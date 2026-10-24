@@ -1,5 +1,7 @@
 ﻿using HrmApp.Api.Data;
 using HrmApp.Api.Data.Models;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 
@@ -7,11 +9,13 @@ namespace HrmApp.Api.Services;
 
 public class NhatKyService : INhatKyService
 {
-    private readonly QuanLyNhanSuDbContext _context;
+    private readonly IServiceScopeFactory _scopeFactory;
+    private readonly ILogger<NhatKyService> _logger;
 
-    public NhatKyService(QuanLyNhanSuDbContext context)
+    public NhatKyService(IServiceScopeFactory scopeFactory, ILogger<NhatKyService> logger)
     {
-        _context = context;
+        _scopeFactory = scopeFactory;
+        _logger = logger;
     }
 
     private static string NormalizeIp(string? ip)
@@ -25,6 +29,8 @@ public class NhatKyService : INhatKyService
     {
         try
         {
+            using var scope = _scopeFactory.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<QuanLyNhanSuDbContext>();
             var log = new NhatKyHoatDong
             {
                 MaLog = Guid.NewGuid(),
@@ -37,11 +43,12 @@ public class NhatKyService : INhatKyService
                 DiaChiIP = NormalizeIp(diaChiIp)
             };
 
-            await _context.NhatKyHoatDongs.AddAsync(log);
-            await _context.SaveChangesAsync();
+            await context.NhatKyHoatDongs.AddAsync(log);
+            await context.SaveChangesAsync();
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogError(ex, "Lỗi ghi nhật ký: {Message}", ex.Message);
         }
     }
 }

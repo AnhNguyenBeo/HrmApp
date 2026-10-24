@@ -1,4 +1,4 @@
-using HrmApp.Api.Data;
+﻿using HrmApp.Api.Data;
 using HrmApp.Api.Data.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -33,6 +33,9 @@ namespace HrmApp.Api.Controllers
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 20)
         {
+            page = Math.Max(1, page);
+            pageSize = Math.Clamp(pageSize <= 0 ? 20 : pageSize, 1, 100);
+
             var query = _context.NhatKyHoatDongs.AsQueryable();
 
             if (!string.IsNullOrEmpty(keyword))

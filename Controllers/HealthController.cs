@@ -1,8 +1,9 @@
+﻿using System;
+using System.Threading.Tasks;
 using HrmApp.Api.Data;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
-namespace HrmApp.Api.Data;
+namespace HrmApp.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
@@ -21,8 +22,7 @@ public class HealthController : ControllerBase
         var canConnect = await _context.Database.CanConnectAsync();
         return Ok(new
         {
-            Status = canConnect ? "Connected" : "Failed",
-            Database = _context.Database.GetDbConnection().Database,
+            Status = canConnect ? "Healthy" : "Unhealthy",
             Time = DateTime.Now
         });
     }

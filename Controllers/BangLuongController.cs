@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
@@ -22,6 +23,17 @@ namespace HrmApp.Api.Controllers
         {
             _context = context;
             _nhatKyService = nhatKyService;
+        }
+
+        private static int ParseThoiGianKey(string? thoiGian)
+        {
+            if (string.IsNullOrEmpty(thoiGian)) return 0;
+            var p = thoiGian.Trim().Split('/');
+            if (p.Length == 2 && int.TryParse(p[0], out var m) && int.TryParse(p[1], out var y))
+            {
+                return y * 100 + m;
+            }
+            return 0;
         }
 
         private async Task<bool> CanManageSalaryAsync()
@@ -123,20 +135,55 @@ namespace HrmApp.Api.Controllers
             }
 
             if (string.IsNullOrEmpty(request.ThoiGian)) return BadRequest("ThoiGian is required");
-            var parts = request.ThoiGian.Split('/');
-            if (parts.Length != 2 || !int.TryParse(parts[0], out int month) || !int.TryParse(parts[1], out int year))
-                return BadRequest("Invalid ThoiGian format, expected MM/yyyy");
+            var parts = request.ThoiGian.Trim().Split('/');
+            if (parts.Length != 2 || !int.TryParse(parts[0], out int month) || !int.TryParse(parts[1], out int year) || month < 1 || month > 12 || year < 2000 || year > 2100)
+            {
+                return BadRequest("Định dạng ThoiGian không hợp lệ, kỳ lương yêu cầu dạng MM/yyyy (ví dụ: 10/2026).");
+            }
 
-            var nhanVienQuery = _context.NhanViens.AsQueryable();
-            if (request.MaNhanVien.HasValue) nhanVienQuery = nhanVienQuery.Where(nv => nv.MaNhanVien == request.MaNhanVien);
+            var thoiGianChuan = $"{month:D2}/{year}";
+
+            var nhanVienQuery = _context.NhanViens
+                .Where(nv => nv.TrangThaiLamViec != "Đã nghỉ việc")
+                .AsQueryable();
+
+            if (request.MaNhanVien.HasValue)
+            {
+                nhanVienQuery = nhanVienQuery.Where(nv => nv.MaNhanVien == request.MaNhanVien);
+            }
 
             var nhanViens = await nhanVienQuery.ToListAsync();
-            int ngayCongChuan = 22; 
+            decimal ngayCongChuan = 22m; 
+            int calculatedCount = 0;
+            int skippedCount = 0;
 
             foreach (var nv in nhanViens)
             {
-                var soNgayCong = await _context.ChamCongs.Where(c => c.MaNhanVien == nv.MaNhanVien && c.Ngay.Month == month && c.Ngay.Year == year).CountAsync();
-                var tongGioOt = await _context.ChamCongs.Where(c => c.MaNhanVien == nv.MaNhanVien && c.Ngay.Month == month && c.Ngay.Year == year).SumAsync(c => c.SoGioTangCa ?? 0);
+                var existingBangLuong = await _context.BangLuongs
+                    .FirstOrDefaultAsync(b => b.MaNhanVien == nv.MaNhanVien && b.ThoiGian == thoiGianChuan);
+
+                if (existingBangLuong != null && (existingBangLuong.TrangThaiChiTra == "Đã chi trả" || existingBangLuong.TrangThaiChiTra == "Đã thanh toán"))
+                {
+                    skippedCount++;
+                    continue;
+                }
+
+                var attendanceCount = await _context.ChamCongs
+                    .Where(c => c.MaNhanVien == nv.MaNhanVien && c.Ngay.Month == month && c.Ngay.Year == year && c.TrangThai != "Thiếu giờ vào" && c.TrangThai != "Vắng mặt")
+                    .CountAsync();
+
+                var approvedPaidLeaveDays = await _context.DonTus
+                    .Where(d => d.MaNhanVien == nv.MaNhanVien &&
+                                (d.LoaiDon == "Nghỉ phép" || d.LoaiDon == "Nghỉ phép năm") &&
+                                d.TrangThai == "Đã duyệt" &&
+                                d.NgayBatDau.Month == month && d.NgayBatDau.Year == year)
+                    .SumAsync(d => d.SoNgayNghi);
+
+                decimal soNgayCong = attendanceCount + approvedPaidLeaveDays;
+
+                var tongGioOt = await _context.ChamCongs
+                    .Where(c => c.MaNhanVien == nv.MaNhanVien && c.Ngay.Month == month && c.Ngay.Year == year)
+                    .SumAsync(c => c.SoGioTangCa ?? 0);
 
                 var hopDong = await _context.HopDongLaoDongs
                     .Where(h => h.MaNhanVien == nv.MaNhanVien && (h.TrangThai == "Có hiệu lực" || h.TrangThai == "Đang hiệu lực" || h.TrangThai.Contains("hiệu lực")))
@@ -162,7 +209,8 @@ namespace HrmApp.Api.Controllers
                 decimal thuNhapChiuThue = grossSalary - baoHiem;
                 decimal thuNhapTinhThue = thuNhapChiuThue - 11000000m;
                 decimal thue = 0;
-                if (thuNhapTinhThue > 0) {
+                if (thuNhapTinhThue > 0)
+                {
                     if (thuNhapTinhThue <= 5000000) thue = thuNhapTinhThue * 0.05m;
                     else if (thuNhapTinhThue <= 10000000) thue = thuNhapTinhThue * 0.10m - 250000m;
                     else if (thuNhapTinhThue <= 18000000) thue = thuNhapTinhThue * 0.15m - 750000m;
@@ -174,7 +222,6 @@ namespace HrmApp.Api.Controllers
 
                 decimal thucLinh = grossSalary - baoHiem - thue;
 
-                var existingBangLuong = await _context.BangLuongs.FirstOrDefaultAsync(b => b.MaNhanVien == nv.MaNhanVien && b.ThoiGian == request.ThoiGian);
                 if (existingBangLuong != null)
                 {
                     existingBangLuong.NgayCongChuan = ngayCongChuan;
@@ -189,23 +236,35 @@ namespace HrmApp.Api.Controllers
                 }
                 else
                 {
-                    var newBangLuong = new BangLuong {
-                        MaBangLuong = Guid.NewGuid(), MaNhanVien = nv.MaNhanVien, ThoiGian = request.ThoiGian,
-                        NgayCongChuan = ngayCongChuan, SoNgayCong = soNgayCong, TongGioOt = tongGioOt,
-                        LuongCoBan = luongCoBan, LuongOt = luongOt, BaoHiemXaHoi = baoHiem, ThueTncn = thue,
-                        ThucLinh = thucLinh, TrangThaiChiTra = "Chờ duyệt"
+                    var newBangLuong = new BangLuong
+                    {
+                        MaBangLuong = Guid.NewGuid(),
+                        MaNhanVien = nv.MaNhanVien,
+                        ThoiGian = thoiGianChuan,
+                        NgayCongChuan = ngayCongChuan,
+                        SoNgayCong = soNgayCong,
+                        TongGioOt = tongGioOt,
+                        LuongCoBan = luongCoBan,
+                        LuongOt = luongOt,
+                        BaoHiemXaHoi = baoHiem,
+                        ThueTncn = thue,
+                        ThucLinh = thucLinh,
+                        TrangThaiChiTra = "Chờ duyệt"
                     };
                     await _context.BangLuongs.AddAsync(newBangLuong);
                 }
+
+                calculatedCount++;
             }
+
             await _context.SaveChangesAsync();
 
             var callerUser = User.FindFirst("TenDangNhap")?.Value ?? User.Identity?.Name ?? "Hệ thống";
             var callerName = User.FindFirst("HoTen")?.Value;
             var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
-            await _nhatKyService.GhiLogAsync(callerUser, callerName, "Tính bảng lương", $"Chạy tính lương hàng loạt cho kỳ {request.ThoiGian} ({nhanViens.Count} nhân sự)", "Thành công", ip);
+            await _nhatKyService.GhiLogAsync(callerUser, callerName, "Tính bảng lương", $"Chạy tính lương hàng loạt cho kỳ {thoiGianChuan} ({calculatedCount} nhân sự được tính, {skippedCount} nhân sự đã chi trả được giữ nguyên)", "Thành công", ip);
 
-            return Ok(new { message = "Tính lương hàng loạt hoàn tất." });
+            return Ok(new { message = $"Tính lương kỳ {thoiGianChuan} hoàn tất ({calculatedCount} nhân sự được tính, {skippedCount} nhân sự đã chi trả được giữ nguyên)." });
         }
 
         [HttpGet("cua-toi")]
@@ -215,7 +274,7 @@ namespace HrmApp.Api.Controllers
             var maNhanVienStr = User.FindFirst("MaNhanVien")?.Value;
             if (!Guid.TryParse(maNhanVienStr, out var maNhanVien)) return Unauthorized();
 
-            var bangLuongs = await _context.BangLuongs
+            var list = await _context.BangLuongs
                 .Include(b => b.MaNhanVienNavigation)
                     .ThenInclude(n => n.MaPhongBanNavigation)
                 .Include(b => b.MaNhanVienNavigation)
@@ -242,8 +301,10 @@ namespace HrmApp.Api.Controllers
                     ThueTncn = b.ThueTncn,
                     ThucLinh = b.ThucLinh,
                     TrangThaiChiTra = b.TrangThaiChiTra
-                }).OrderByDescending(b => b.ThoiGian).ToListAsync();
-            return Ok(bangLuongs);
+                }).ToListAsync();
+
+            var sorted = list.OrderByDescending(b => ParseThoiGianKey(b.ThoiGian)).ToList();
+            return Ok(sorted);
         }
 
         [HttpGet]
@@ -265,9 +326,12 @@ namespace HrmApp.Api.Controllers
                         .ThenInclude(t => t.MaVaiTroNavigation)
                 .AsQueryable();
 
-            if (!string.IsNullOrEmpty(thoiGian)) query = query.Where(b => b.ThoiGian == thoiGian);
+            if (!string.IsNullOrEmpty(thoiGian))
+            {
+                query = query.Where(b => b.ThoiGian == thoiGian);
+            }
 
-            var bangLuongs = await query
+            var list = await query
                 .Select(b => new BangLuongResponseDto {
                     MaBangLuong = b.MaBangLuong,
                     MaNhanVien = b.MaNhanVien,
@@ -286,8 +350,10 @@ namespace HrmApp.Api.Controllers
                     ThueTncn = b.ThueTncn,
                     ThucLinh = b.ThucLinh,
                     TrangThaiChiTra = b.TrangThaiChiTra
-                }).OrderByDescending(b => b.ThoiGian).ToListAsync();
-            return Ok(bangLuongs);
+                }).ToListAsync();
+
+            var sorted = list.OrderByDescending(b => ParseThoiGianKey(b.ThoiGian)).ToList();
+            return Ok(sorted);
         }
 
         [HttpPut("{id}/trang-thai")]
