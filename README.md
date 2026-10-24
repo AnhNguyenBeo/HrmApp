@@ -1,5 +1,5 @@
-﻿# 🏢 HỆ THỐNG QUẢN LÝ NHÂN SỰ TOÀN DIỆN (HRM SYSTEM)
-> **Đồ án Chuyên ngành:** Hệ Thống Thông Tin Doanh Nghiệp (HTTTDN)  
+﻿# 🏢 HỆ THỐNG QUẢN LÝ NHÂN SỰ TOÀN DIỆN
+> **Đồ án Chuyên ngành:** Hệ Thống Thông Tin Doanh Nghiệp
 > **Kiến trúc:** Client - Server (RESTful API & Single Page Application)  
 > **Backend:** ASP.NET Core 8 Web API | Entity Framework Core 8 | SQL Server  
 > **Frontend:** React 19 | TypeScript | Vite | Ant Design 6 | Recharts  
@@ -7,27 +7,27 @@
 ---
 
 ## 📖 1. Giới thiệu tổng quan
-Hệ thống Quản trị Nhân sự (HRM) được nghiên cứu và xây dựng nhằm giải quyết bài toán số hóa toàn diện quy trình quản lý nhân sự trong doanh nghiệp. Hệ thống tối ưu hóa các nghiệp vụ quản trị từ tuyển dụng, quản lý hồ sơ, chấm công, giải quyết đơn từ, tính lương tự động đa bậc, phân tích quỹ lương và tài chính doanh nghiệp, cho đến nhật ký kiểm toán hệ thống (Audit Logs) đảm bảo tính minh bạch và an toàn dữ liệu.
+Hệ thống Quản trị Nhân sự (HRM) được nghiên cứu và xây dựng nhằm giải quyết bài toán số hóa toàn diện quy trình quản lý nhân sự trong doanh nghiệp. Hệ thống tối ưu hóa các nghiệp vụ quản trị từ tuyển dụng, quản lý hồ sơ, chấm công, giải quyết đơn từ, tính lương tự động đa bậc, phân tích quỹ lương và tài chính doanh nghiệp, cho đến nhật ký kiểm toán hệ thống đảm bảo tính minh bạch và an toàn dữ liệu.
 
 ---
 
-## 🎯 2. Mô hình phân quyền đa cấp (RBAC & Department-Based)
-Hệ thống thiết kế mô hình phân quyền chặt chẽ kết hợp giữa **Vai trò (Role)** và **Phòng ban (Department)**:
+## 🎯 2. Mô hình phân quyền đa cấp
+Hệ thống thiết kế mô hình phân quyền chặt chẽ kết hợp giữa **Vai trò** và **Phòng ban**:
 
 | Vai trò | Phạm vi & Thẩm quyền nghiệp vụ |
 | :--- | :--- |
-| **👑 Chủ doanh nghiệp (Owner)** | Toàn quyền kiểm soát hệ thống: xem Báo cáo & Thống kê tài chính toàn cty; phê duyệt đơn từ cấp Trưởng phòng; phê duyệt chi trả kỳ lương phòng Kế toán và toàn cty; xem toàn bộ Nhật ký hoạt động. |
-| **🏢 Quản lý Nhân sự (HR Manager)** | Quản lý vòng đời nhân sự: thêm nhân sự mới, điều chỉnh hồ sơ, bổ nhiệm/thay đổi chức vụ, cho thôi việc (tự động thanh lý hợp đồng và khóa tài khoản). Duyệt đơn từ phòng Nhân sự. |
-| **💰 Quản lý / NV Kế toán (Accounting)** | Kích hoạt tính bảng lương tự động hàng loạt toàn cty; theo dõi bảng lương; cập nhật trạng thái chi trả và phê duyệt chi trả lương nhân sự (được kiểm soát chặt chẽ bởi cấp quản lý & Chủ doanh nghiệp). |
-| **📋 Quản lý phòng ban khác (Managers)** | Theo dõi lịch sử chấm công nhân sự trực thuộc phòng ban; phê duyệt đơn từ xin nghỉ phép/OT của nhân viên phòng ban mình. Không được duyệt chéo phòng ban khác. |
-| **👤 Nhân viên (Employee)** | Điểm danh Check-in/Check-out hằng ngày; nộp đơn từ (nghỉ phép, nghỉ ốm, thai sản, OT...); theo dõi lịch sử chấm công; xem phiếu lương chi tiết từng tháng; tự cập nhật thông tin cá nhân. |
-| **🛡️ Quản trị viên (Admin)** | Quản trị tài khoản hệ thống: cấp tài khoản mới, phân quyền vai trò, khóa/mở khóa tài khoản; theo dõi Nhật ký hoạt động hệ thống (Audit Logs). |
+| **👑 Chủ doanh nghiệp** | Toàn quyền kiểm soát hệ thống: xem Báo cáo & Thống kê tài chính toàn cty; phê duyệt đơn từ cấp Trưởng phòng; phê duyệt chi trả kỳ lương phòng Kế toán và toàn cty; xem toàn bộ Nhật ký hoạt động. |
+| **🏢 Quản lý Nhân sự** | Quản lý vòng đời nhân sự: thêm nhân sự mới, điều chỉnh hồ sơ, bổ nhiệm/thay đổi chức vụ, cho thôi việc (tự động thanh lý hợp đồng và khóa tài khoản). Duyệt đơn từ phòng Nhân sự. |
+| **💰 Quản lý / NV Kế toán** | Kích hoạt tính bảng lương tự động hàng loạt toàn cty; theo dõi bảng lương; cập nhật trạng thái chi trả và phê duyệt chi trả lương nhân sự (được kiểm soát chặt chẽ bởi cấp quản lý & Chủ doanh nghiệp). |
+| **📋 Quản lý phòng ban khác** | Theo dõi lịch sử chấm công nhân sự trực thuộc phòng ban; phê duyệt đơn từ xin nghỉ phép/OT của nhân viên phòng ban mình. Không được duyệt chéo phòng ban khác. |
+| **👤 Nhân viên** | Điểm danh Check-in/Check-out hằng ngày; nộp đơn từ (nghỉ phép, nghỉ ốm, thai sản, OT...); theo dõi lịch sử chấm công; xem phiếu lương chi tiết từng tháng; tự cập nhật thông tin cá nhân. |
+| **🛡️ Quản trị viên** | Quản trị tài khoản hệ thống: cấp tài khoản mới, phân quyền vai trò, khóa/mở khóa tài khoản; theo dõi Nhật ký hoạt động hệ thống (Audit Logs). |
 
 ---
 
 ## 🌟 3. Các phân hệ chức năng chính
 
-### 3.1. Xác thực & Bảo mật (Authentication & Security)
+### 3.1. Xác thực & Bảo mật
 - Xác thực Stateless thông qua **JSON Web Token (JWT)** chuẩn bảo mật cao.
 - Mật khẩu mã hóa một chiều bằng giải thuật **BCrypt**.
 - Cơ chế kiểm tra trạng thái tài khoản: thông báo rõ ràng khi tài khoản bị khóa (*"Tài khoản đã bị khóa, liên hệ phòng nhân sự để biết thêm chi tiết"*).
@@ -35,7 +35,7 @@ Hệ thống thiết kế mô hình phân quyền chặt chẽ kết hợp giữ
 
 ### 3.2. Quản lý Hồ sơ & Hợp đồng Lao động
 - Quản lý hồ sơ nhân viên đầy đủ thông tin: CCCD, Ngày sinh, Giới tính, Trình độ, Số điện thoại, Email, Địa chỉ, Phòng ban, Chức vụ.
-- Quy trình xóa mềm (Soft delete): Khi cho nhân viên thôi việc, hệ thống chuyển trạng thái sang `Đã nghỉ việc`, đồng thời tự động khóa tài khoản liên kết và thanh lý hợp đồng lao động đang hiệu lực.
+- Quy trình xóa mềm : Khi cho nhân viên thôi việc, hệ thống chuyển trạng thái sang `Đã nghỉ việc`, đồng thời tự động khóa tài khoản liên kết và thanh lý hợp đồng lao động đang hiệu lực.
 - Quy định cấp chức vụ phân tầng: Trưởng phòng Nhân sự chỉ được bổ nhiệm nhân viên cấp dưới; chỉ Chủ doanh nghiệp mới có thẩm quyền bổ nhiệm/điều chỉnh cấp Trưởng phòng và Ban Giám đốc.
 
 ### 3.3. Quản lý Chấm công thông minh
