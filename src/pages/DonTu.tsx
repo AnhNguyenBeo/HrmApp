@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Card, Table, Button, Modal, Form, Select, DatePicker, Input, Tag, message, Popconfirm, Alert, Space, Typography } from 'antd';
-import { PlusOutlined, DeleteOutlined, InfoCircleOutlined, CalendarOutlined } from '@ant-design/icons';
+import { Card, Table, Button, Modal, Form, Select, DatePicker, Input, Tag, message, Popconfirm, Alert, Space, Typography, Row, Col } from 'antd';
+import { PlusOutlined, DeleteOutlined, InfoCircleOutlined, CalendarOutlined, SearchOutlined } from '@ant-design/icons';
 import dayjs, { Dayjs } from 'dayjs';
 import { donTuApi } from '../api/donTuApi';
 import { DonTu } from '../types';
@@ -13,6 +13,8 @@ export const DonTuPage: React.FC = () => {
   const [data, setData] = useState<DonTu[]>([]);
   const [loading, setLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [searchKeyword, setSearchKeyword] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [form] = Form.useForm();
 
   const selectedDates = Form.useWatch('dates', form);
@@ -137,6 +139,19 @@ export const DonTuPage: React.FC = () => {
     },
   ];
 
+  const filteredData = data.filter((item) => {
+    if (statusFilter !== 'ALL' && item.trangThai !== statusFilter) return false;
+    if (!searchKeyword) return true;
+    const kw = searchKeyword.toLowerCase();
+    return (
+      (item.loaiDon || '').toLowerCase().includes(kw) ||
+      (item.lyDo || '').toLowerCase().includes(kw) ||
+      (item.trangThai || '').toLowerCase().includes(kw) ||
+      (item.ngayBatDau || '').toLowerCase().includes(kw) ||
+      (item.ngayKetThuc || '').toLowerCase().includes(kw)
+    );
+  });
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <Alert
@@ -162,7 +177,36 @@ export const DonTuPage: React.FC = () => {
           </Button>
         }
       >
-        <Table dataSource={data} columns={columns} rowKey="maDon" loading={loading} />
+        <Row justify="space-between" align="middle" style={{ marginBottom: 16 }} gutter={[16, 16]}>
+          <Col xs={24} sm={16}>
+            <Space wrap>
+              <Input
+                placeholder="Tìm theo lý do, loại đơn, ngày..."
+                prefix={<SearchOutlined />}
+                value={searchKeyword}
+                onChange={(e) => setSearchKeyword(e.target.value)}
+                style={{ width: 260 }}
+                allowClear
+              />
+              <Select
+                value={statusFilter}
+                onChange={setStatusFilter}
+                style={{ width: 160 }}
+              >
+                <Select.Option value="ALL">Tất cả trạng thái</Select.Option>
+                <Select.Option value="Chờ duyệt">Chờ duyệt</Select.Option>
+                <Select.Option value="Đã duyệt">Đã duyệt</Select.Option>
+                <Select.Option value="Từ chối">Từ chối</Select.Option>
+              </Select>
+            </Space>
+          </Col>
+          <Col xs={24} sm={8} style={{ textAlign: 'right' }}>
+            <span style={{ color: '#888', fontSize: 13 }}>
+              Hiển thị: <strong>{filteredData.length}</strong> / {data.length} đơn
+            </span>
+          </Col>
+        </Row>
+        <Table dataSource={filteredData} columns={columns} rowKey="maDon" loading={loading} />
       </Card>
 
       <Modal

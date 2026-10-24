@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Card, Table, Button, Modal, Form, Input, Select, Tag, Space, message, Alert, Row, Col, Segmented } from 'antd';
-import { CheckOutlined, CloseOutlined, FileTextOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
+import { CheckOutlined, CloseOutlined, FileTextOutlined, SafetyCertificateOutlined, SearchOutlined } from '@ant-design/icons';
 import { donTuApi } from '../api/donTuApi';
 import { nhanVienApi } from '../api/nhanVienApi';
 import { danhMucApi, PhongBan } from '../api/danhMucApi';
@@ -23,6 +23,7 @@ export const DuyetDonTuPage: React.FC = () => {
   const [phongBans, setPhongBans] = useState<PhongBan[]>([]);
   const [selectedPhongBan, setSelectedPhongBan] = useState<string>('ALL');
   const [statusFilter, setStatusFilter] = useState<string>('Chờ duyệt');
+  const [searchKeyword, setSearchKeyword] = useState<string>('');
 
   useEffect(() => {
     if (currentUser?.maNhanVien && (!myDeptId || !myDeptName)) {
@@ -87,7 +88,17 @@ export const DuyetDonTuPage: React.FC = () => {
         return false;
       }
     }
-    return true;
+    if (!searchKeyword) return true;
+    const kw = searchKeyword.toLowerCase();
+    return (
+      (item.hoTen || '').toLowerCase().includes(kw) ||
+      (item.tenPhongBan || '').toLowerCase().includes(kw) ||
+      (item.tenChucVu || '').toLowerCase().includes(kw) ||
+      (item.loaiDon || '').toLowerCase().includes(kw) ||
+      (item.lyDo || '').toLowerCase().includes(kw) ||
+      (item.ngayBatDau || '').toLowerCase().includes(kw) ||
+      (item.ngayKetThuc || '').toLowerCase().includes(kw)
+    );
   });
 
   const handleAction = (record: DonTu, status: 'Đã duyệt' | 'Từ chối') => {
@@ -224,7 +235,7 @@ export const DuyetDonTuPage: React.FC = () => {
         }
       >
         <Row justify="space-between" align="middle" style={{ marginBottom: 16 }} gutter={[16, 16]}>
-          <Col xs={24} md={16}>
+          <Col xs={24} lg={15}>
             <Space wrap size="middle">
               <Segmented
                 value={statusFilter}
@@ -281,12 +292,22 @@ export const DuyetDonTuPage: React.FC = () => {
               )}
             </Space>
           </Col>
-          <Col xs={24} md={8} style={{ textAlign: 'right' }}>
-            {!isOwner && myDeptName && (
-              <Tag color="blue" style={{ fontSize: 13, padding: '4px 10px' }}>
-                🏢 Đang quản lý: <strong>{myDeptName}</strong>
-              </Tag>
-            )}
+          <Col xs={24} lg={9} style={{ textAlign: 'right' }}>
+            <Space wrap>
+              {!isOwner && myDeptName && (
+                <Tag color="blue" style={{ fontSize: 13, padding: '4px 10px' }}>
+                  🏢 Đang quản lý: <strong>{myDeptName}</strong>
+                </Tag>
+              )}
+              <Input
+                placeholder="Tìm nhân viên, loại đơn, lý do..."
+                prefix={<SearchOutlined />}
+                value={searchKeyword}
+                onChange={(e) => setSearchKeyword(e.target.value)}
+                style={{ width: 250 }}
+                allowClear
+              />
+            </Space>
           </Col>
         </Row>
 

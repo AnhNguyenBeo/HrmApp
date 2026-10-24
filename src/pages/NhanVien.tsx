@@ -343,11 +343,11 @@ export const NhanVienPage: React.FC = () => {
           <Col xs={24} md={9} style={{ textAlign: 'right' }}>
             <Space wrap>
               <Input
-                placeholder="Tìm theo tên/CCCD..."
+                placeholder="Tìm theo tên, email, CCCD, SĐT..."
                 prefix={<SearchOutlined />}
                 value={keyword}
                 onChange={(e) => setKeyword(e.target.value)}
-                style={{ width: 200 }}
+                style={{ width: 240 }}
                 allowClear
               />
               {canManageHR && (

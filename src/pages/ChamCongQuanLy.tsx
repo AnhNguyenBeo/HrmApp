@@ -76,7 +76,9 @@ export const ChamCongQuanLyPage: React.FC = () => {
     return (
       (item.hoTen || '').toLowerCase().includes(kw) ||
       (item.tenPhongBan || '').toLowerCase().includes(kw) ||
-      (item.tenChucVu || '').toLowerCase().includes(kw)
+      (item.tenChucVu || '').toLowerCase().includes(kw) ||
+      (item.trangThai || '').toLowerCase().includes(kw) ||
+      (item.ngay || '').toLowerCase().includes(kw)
     );
   });
 
@@ -220,11 +222,11 @@ export const ChamCongQuanLyPage: React.FC = () => {
           </Col>
           <Col xs={24} md={8} style={{ textAlign: 'right' }}>
             <Input
-              placeholder="Tìm theo tên/chức vụ..."
+              placeholder="Tìm theo tên, chức vụ, trạng thái, ngày..."
               prefix={<SearchOutlined />}
               value={searchKeyword}
               onChange={(e) => setSearchKeyword(e.target.value)}
-              style={{ width: 220 }}
+              style={{ width: 280 }}
               allowClear
             />
           </Col>

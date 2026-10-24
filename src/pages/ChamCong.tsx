@@ -1,6 +1,6 @@
-﻿import React, { useEffect, useState } from 'react';
-import { Card, Table, Button, DatePicker, Tag, Space, message, Row, Col, Statistic } from 'antd';
-import { CheckCircleOutlined, ClockCircleOutlined } from '@ant-design/icons';
+import React, { useEffect, useState } from 'react';
+import { Card, Table, Button, DatePicker, Tag, Space, message, Row, Col, Statistic, Input } from 'antd';
+import { CheckCircleOutlined, ClockCircleOutlined, SearchOutlined } from '@ant-design/icons';
 import { chamCongApi } from '../api/chamCongApi';
 import { ChamCong } from '../types';
 import dayjs from 'dayjs';
@@ -9,6 +9,7 @@ export const ChamCongPage: React.FC = () => {
   const [data, setData] = useState<ChamCong[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState<dayjs.Dayjs>(dayjs());
+  const [searchKeyword, setSearchKeyword] = useState<string>('');
   const [currentTime, setCurrentTime] = useState(dayjs().format('HH:mm:ss'));
 
   useEffect(() => {
@@ -66,6 +67,17 @@ export const ChamCongPage: React.FC = () => {
     },
   ];
 
+  const filteredData = data.filter((item) => {
+    if (!searchKeyword) return true;
+    const kw = searchKeyword.toLowerCase();
+    return (
+      (item.ngay || '').toLowerCase().includes(kw) ||
+      (item.trangThai || '').toLowerCase().includes(kw) ||
+      (item.gioVao || '').toLowerCase().includes(kw) ||
+      (item.gioRa || '').toLowerCase().includes(kw)
+    );
+  });
+
   return (
     <div>
       <Row gutter={16} style={{ marginBottom: 24 }}>
@@ -97,7 +109,15 @@ export const ChamCongPage: React.FC = () => {
       <Card
         title="LỊCH SỬ CHẤM CÔNG CÁ NHÂN"
         extra={
-          <Space>
+          <Space wrap>
+            <Input
+              placeholder="Tìm theo ngày, trạng thái..."
+              prefix={<SearchOutlined />}
+              value={searchKeyword}
+              onChange={(e) => setSearchKeyword(e.target.value)}
+              allowClear
+              style={{ width: 220 }}
+            />
             <span>Chọn tháng:</span>
             <DatePicker
               picker="month"
@@ -109,7 +129,7 @@ export const ChamCongPage: React.FC = () => {
         }
       >
         <Table
-          dataSource={data}
+          dataSource={filteredData}
           columns={columns}
           rowKey="maChamCong"
           loading={loading}

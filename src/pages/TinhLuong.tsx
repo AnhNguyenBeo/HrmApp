@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Card, Table, Button, DatePicker, Space, message, Tag, Alert, Popconfirm } from 'antd';
-import { CalculatorOutlined, DownloadOutlined, DollarCircleOutlined, CheckCircleOutlined, CheckOutlined } from '@ant-design/icons';
+import { Card, Table, Button, DatePicker, Space, message, Tag, Alert, Popconfirm, Input, Select, Row, Col } from 'antd';
+import { CalculatorOutlined, DownloadOutlined, DollarCircleOutlined, CheckCircleOutlined, CheckOutlined, SearchOutlined } from '@ant-design/icons';
 import { bangLuongApi } from '../api/bangLuongApi';
 import { exportApi } from '../api/exportApi';
 import { nhanVienApi } from '../api/nhanVienApi';
@@ -14,6 +14,8 @@ export const TinhLuongPage: React.FC = () => {
   const [approving, setApproving] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState<dayjs.Dayjs>(dayjs());
   const [departmentName, setDepartmentName] = useState<string>('');
+  const [searchKeyword, setSearchKeyword] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<string>('ALL');
 
   const userStr = localStorage.getItem('user');
   const currentUser = userStr ? JSON.parse(userStr) : null;
@@ -129,8 +131,22 @@ export const TinhLuongPage: React.FC = () => {
     }
   };
 
-  const filteredData = data.filter((b) => b.thoiGian === monthStr);
-  const pendingCount = filteredData.filter((b) => b.trangThaiChiTra !== 'Đã chi trả').length;
+  const monthRecords = data.filter((b) => b.thoiGian === monthStr);
+  const pendingCount = monthRecords.filter((b) => b.trangThaiChiTra !== 'Đã chi trả').length;
+
+  const filteredData = monthRecords.filter((b) => {
+    if (statusFilter !== 'ALL' && (b.trangThaiChiTra || 'Chờ duyệt') !== statusFilter) {
+      return false;
+    }
+    if (!searchKeyword) return true;
+    const kw = searchKeyword.toLowerCase();
+    return (
+      (b.hoTen || '').toLowerCase().includes(kw) ||
+      (b.tenPhongBan || '').toLowerCase().includes(kw) ||
+      (b.tenChucVu || '').toLowerCase().includes(kw) ||
+      (b.trangThaiChiTra || '').toLowerCase().includes(kw)
+    );
+  });
 
   const columns = [
     { title: 'Nhân viên', dataIndex: 'hoTen', key: 'hoTen', render: (val: string) => <strong>{val}</strong> },
@@ -314,6 +330,34 @@ export const TinhLuongPage: React.FC = () => {
           </Space>
         }
       >
+        <Row justify="space-between" align="middle" style={{ marginBottom: 16 }} gutter={[16, 16]}>
+          <Col xs={24} md={16}>
+            <Space wrap size="middle">
+              <Input
+                placeholder="Tìm theo tên nhân viên, phòng ban, chức vụ..."
+                prefix={<SearchOutlined />}
+                value={searchKeyword}
+                onChange={(e) => setSearchKeyword(e.target.value)}
+                style={{ width: 320 }}
+                allowClear
+              />
+              <Select
+                value={statusFilter}
+                onChange={setStatusFilter}
+                style={{ width: 170 }}
+              >
+                <Select.Option value="ALL">Tất cả trạng thái</Select.Option>
+                <Select.Option value="Chờ duyệt">Chờ duyệt</Select.Option>
+                <Select.Option value="Đã chi trả">Đã chi trả</Select.Option>
+              </Select>
+            </Space>
+          </Col>
+          <Col xs={24} md={8} style={{ textAlign: 'right' }}>
+            <span style={{ color: '#888', fontSize: 13 }}>
+              Hiển thị: <strong>{filteredData.length}</strong> / {monthRecords.length} nhân sự
+            </span>
+          </Col>
+        </Row>
         <Table dataSource={filteredData} columns={columns} rowKey="maBangLuong" loading={loading} />
       </Card>
     </div>

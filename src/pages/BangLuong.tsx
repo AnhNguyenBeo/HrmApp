@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Card, Table, Button, message, Space, Modal, Descriptions, Tag, DatePicker, Row, Col, Divider } from 'antd';
-import { DownloadOutlined, EyeOutlined, PrinterOutlined } from '@ant-design/icons';
+import { Card, Table, Button, message, Space, Modal, Descriptions, Tag, DatePicker, Row, Col, Divider, Input } from 'antd';
+import { DownloadOutlined, EyeOutlined, PrinterOutlined, SearchOutlined } from '@ant-design/icons';
 import { bangLuongApi } from '../api/bangLuongApi';
 import { exportApi } from '../api/exportApi';
 import { BangLuong } from '../types';
@@ -14,6 +14,7 @@ export const BangLuongPage: React.FC = () => {
 
   const [exportMonth, setExportMonth] = useState<dayjs.Dayjs>(dayjs());
   const [exportYear, setExportYear] = useState<dayjs.Dayjs>(dayjs());
+  const [searchKeyword, setSearchKeyword] = useState<string>('');
 
   const fetchData = async () => {
     try {
@@ -140,6 +141,15 @@ export const BangLuongPage: React.FC = () => {
     },
   ];
 
+  const filteredData = data.filter((item) => {
+    if (!searchKeyword) return true;
+    const kw = searchKeyword.toLowerCase();
+    return (
+      (item.thoiGian || '').toLowerCase().includes(kw) ||
+      (item.trangThaiChiTra || '').toLowerCase().includes(kw)
+    );
+  });
+
   return (
     <div>
       <Row gutter={16} style={{ marginBottom: 16 }}>
@@ -165,8 +175,20 @@ export const BangLuongPage: React.FC = () => {
         </Col>
       </Row>
 
-      <Card title="LỊCH SỬ BẢNG LƯƠNG CỦA TÔI">
-        <Table dataSource={data} columns={columns} rowKey="maBangLuong" loading={loading} />
+      <Card
+        title="LỊCH SỬ BẢNG LƯƠNG CỦA TÔI"
+        extra={
+          <Input
+            placeholder="Tìm theo kỳ lương (MM/YYYY), trạng thái..."
+            prefix={<SearchOutlined />}
+            value={searchKeyword}
+            onChange={(e) => setSearchKeyword(e.target.value)}
+            style={{ width: 300 }}
+            allowClear
+          />
+        }
+      >
+        <Table dataSource={filteredData} columns={columns} rowKey="maBangLuong" loading={loading} />
       </Card>
       <Modal
         title={'CHI TIẾT CÁCH TÍNH LƯƠNG KỲ: ' + (selectedSlip?.thoiGian || '')}
