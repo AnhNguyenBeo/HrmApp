@@ -23,7 +23,6 @@ namespace HrmApp.Api.Controllers
             var roleClaim = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role || c.Type == "role");
             var role = roleClaim?.Value;
             if (role == "Chủ doanh nghiệp") return true;
-            if (role != "Quản lý") return false;
 
             var maNhanVienStr = User.FindFirst("MaNhanVien")?.Value;
             if (!Guid.TryParse(maNhanVienStr, out var maNhanVien)) return false;
@@ -37,12 +36,12 @@ namespace HrmApp.Api.Controllers
         }
 
         [HttpPost("tinh-luong")]
-        [Authorize(Roles = "Chủ doanh nghiệp, Quản lý")]
+        [Authorize]
         public async Task<IActionResult> CalculateSalary([FromBody] TinhLuongRequestDto request)
         {
             if (!await CanManageSalaryAsync())
             {
-                return StatusCode(403, new { message = "Chỉ Quản lý phòng Kế toán và Chủ doanh nghiệp mới có quyền tính toán và quản lý lương." });
+                return StatusCode(403, new { message = "Chỉ các thành viên phòng Kế toán và Chủ doanh nghiệp mới có quyền tính toán và quản lý lương." });
             }
 
             if (string.IsNullOrEmpty(request.ThoiGian)) return BadRequest("ThoiGian is required");
@@ -145,12 +144,12 @@ namespace HrmApp.Api.Controllers
         }
 
         [HttpGet]
-        [Authorize(Roles = "Chủ doanh nghiệp, Quản lý")]
+        [Authorize]
         public async Task<IActionResult> GetAllSalaries([FromQuery] string? thoiGian)
         {
             if (!await CanManageSalaryAsync())
             {
-                return StatusCode(403, new { message = "Chỉ Quản lý phòng Kế toán và Chủ doanh nghiệp mới có quyền xem thông tin lương nhân viên." });
+                return StatusCode(403, new { message = "Chỉ các thành viên phòng Kế toán và Chủ doanh nghiệp mới có quyền xem thông tin lương nhân viên." });
             }
 
             var query = _context.BangLuongs.Include(b => b.MaNhanVienNavigation).AsQueryable();
@@ -169,12 +168,12 @@ namespace HrmApp.Api.Controllers
         }
 
         [HttpPut("{id}/trang-thai")]
-        [Authorize(Roles = "Chủ doanh nghiệp, Quản lý")]
+        [Authorize]
         public async Task<IActionResult> UpdateTrangThai(Guid id, [FromBody] UpdateTrangThaiDto dto)
         {
             if (!await CanManageSalaryAsync())
             {
-                return StatusCode(403, new { message = "Chỉ Quản lý phòng Kế toán và Chủ doanh nghiệp mới có quyền chi trả lương." });
+                return StatusCode(403, new { message = "Chỉ các thành viên phòng Kế toán và Chủ doanh nghiệp mới có quyền chi trả lương." });
             }
 
             var bangLuong = await _context.BangLuongs.FindAsync(id);
@@ -186,12 +185,12 @@ namespace HrmApp.Api.Controllers
         }
 
         [HttpPost("phe-duyet-ky-luong")]
-        [Authorize(Roles = "Chủ doanh nghiệp, Quản lý")]
+        [Authorize]
         public async Task<IActionResult> PheDuyetKyLuong([FromBody] PheDuyetKyLuongDto dto)
         {
             if (!await CanManageSalaryAsync())
             {
-                return StatusCode(403, new { message = "Chỉ Quản lý phòng Kế toán và Chủ doanh nghiệp mới có quyền phê duyệt và chi trả lương." });
+                return StatusCode(403, new { message = "Chỉ các thành viên phòng Kế toán và Chủ doanh nghiệp mới có quyền phê duyệt và chi trả lương." });
             }
 
             if (string.IsNullOrEmpty(dto.ThoiGian)) return BadRequest(new { message = "Vui lòng cung cấp kỳ lương (MM/yyyy)." });

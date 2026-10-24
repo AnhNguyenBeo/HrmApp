@@ -28,15 +28,12 @@ namespace HrmApp.Api.Controllers
 
             var query = _context.BangLuongs.Include(b => b.MaNhanVienNavigation).AsQueryable();
 
-            bool isAccountingManager = false;
-            if (role == "Quản lý")
-            {
-                var nv = await _context.NhanViens.Include(n => n.MaPhongBanNavigation).FirstOrDefaultAsync(n => n.MaNhanVien == maNhanVien);
-                var tenPB = nv?.MaPhongBanNavigation?.TenPhongBan ?? "";
-                isAccountingManager = tenPB.ToLower().Contains("kế toán");
-            }
+            bool isAccounting = false;
+            var nv = await _context.NhanViens.Include(n => n.MaPhongBanNavigation).FirstOrDefaultAsync(n => n.MaNhanVien == maNhanVien);
+            var tenPB = nv?.MaPhongBanNavigation?.TenPhongBan ?? "";
+            isAccounting = tenPB.ToLower().Contains("kế toán");
 
-            if (role != "Chủ doanh nghiệp" && !isAccountingManager) {
+            if (role != "Chủ doanh nghiệp" && !isAccounting) {
                 query = query.Where(b => b.MaNhanVien == maNhanVien);
             }
 
