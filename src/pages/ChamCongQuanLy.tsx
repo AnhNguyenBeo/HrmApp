@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { Card, Table, Tag, message, DatePicker, Select, Input, Row, Col, Space, Alert, Statistic } from 'antd';
-import { ClockCircleOutlined, SearchOutlined, CheckCircleOutlined, AlertOutlined, RiseOutlined } from '@ant-design/icons';
+﻿import React, { useEffect, useState } from 'react';
+import { Card, Table, Tag, message, DatePicker, Select, Input, Row, Col, Space, Alert } from 'antd';
+import { ClockCircleOutlined, SearchOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { chamCongApi } from '../api/chamCongApi';
 import { nhanVienApi } from '../api/nhanVienApi';
@@ -82,11 +82,6 @@ export const ChamCongQuanLyPage: React.FC = () => {
     );
   });
 
-  const totalRecords = displayData.length;
-  const completedRecords = displayData.filter((d) => d.trangThai?.includes('Hoàn thành') || d.trangThai === 'Đã check-in').length;
-  const otRecords = displayData.filter((d) => (d.soGioTangCa || 0) > 0).length;
-  const missingRecords = displayData.filter((d) => d.trangThai?.includes('Thiếu')).length;
-
   const columns = [
     {
       title: 'Nhân viên',
@@ -154,29 +149,6 @@ export const ChamCongQuanLyPage: React.FC = () => {
         icon={<ClockCircleOutlined />}
         style={{ marginBottom: 16 }}
       />
-
-      <Row gutter={16} style={{ marginBottom: 16 }}>
-        <Col xs={12} sm={6}>
-          <Card>
-            <Statistic title="Tổng lượt chấm công" value={totalRecords} prefix={<ClockCircleOutlined />} />
-          </Card>
-        </Col>
-        <Col xs={12} sm={6}>
-          <Card>
-            <Statistic title="Đã điểm danh / Hoàn thành" value={completedRecords} valueStyle={{ color: '#52c41a' }} prefix={<CheckCircleOutlined />} />
-          </Card>
-        </Col>
-        <Col xs={12} sm={6}>
-          <Card>
-            <Statistic title="Có tăng ca (OT)" value={otRecords} valueStyle={{ color: '#fa8c16' }} prefix={<RiseOutlined />} />
-          </Card>
-        </Col>
-        <Col xs={12} sm={6}>
-          <Card>
-            <Statistic title="Thiếu giờ / Chưa check-out" value={missingRecords} valueStyle={{ color: '#f5222d' }} prefix={<AlertOutlined />} />
-          </Card>
-        </Col>
-      </Row>
 
       <Card
         title={
