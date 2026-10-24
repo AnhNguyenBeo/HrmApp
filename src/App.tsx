@@ -13,6 +13,7 @@ import { DuyetDonTuPage } from './pages/DuyetDonTu';
 import { ChamCongQuanLyPage } from './pages/ChamCongQuanLy';
 import { TinhLuongPage } from './pages/TinhLuong';
 import { TaiKhoanPage } from './pages/TaiKhoan';
+import { NhatKyPage } from './pages/NhatKy';
 import { AppLayout } from './components/AppLayout';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
@@ -60,6 +61,10 @@ export const App: React.FC = () => {
 
               <Route element={<ProtectedRoute allowedRoles={['Quản trị viên']} />}>
                 <Route path="/tai-khoan" element={<TaiKhoanPage />} />
+              </Route>
+
+              <Route element={<ProtectedRoute allowedRoles={['Quản trị viên', 'Chủ doanh nghiệp']} />}>
+                <Route path="/nhat-ky" element={<NhatKyPage />} />
               </Route>
             </Route>
           </Route>

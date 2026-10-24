@@ -14,6 +14,7 @@ import {
   KeyOutlined,
   SolutionOutlined,
   CrownOutlined,
+  HistoryOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { chamCongApi } from '../api/chamCongApi';
@@ -75,6 +76,7 @@ export const AppLayout: React.FC = () => {
   if (role === 'Quản trị viên') {
     menuItems = [
       { key: '/tai-khoan', icon: <KeyOutlined />, label: 'Quản lý tài khoản & Phân quyền' },
+      { key: '/nhat-ky', icon: <HistoryOutlined />, label: 'Nhật ký hoạt động' },
       { key: '/profile', icon: <UserOutlined />, label: 'Hồ sơ quản trị viên' },
     ];
   } else if (role === 'Chủ doanh nghiệp') {
@@ -84,6 +86,7 @@ export const AppLayout: React.FC = () => {
       { key: '/don-tu/quan-ly', icon: <SolutionOutlined />, label: 'Phê duyệt đơn từ toàn cty' },
       { key: '/cham-cong-quan-ly', icon: <ClockCircleOutlined />, label: 'Theo dõi chấm công' },
       { key: '/tinh-luong', icon: <DollarOutlined />, label: 'Tính & Quản lý lương' },
+      { key: '/nhat-ky', icon: <HistoryOutlined />, label: 'Nhật ký hoạt động' },
       { type: 'divider' as const },
       { key: '/profile', icon: <CrownOutlined />, label: 'Hồ sơ Chủ doanh nghiệp' },
     ];

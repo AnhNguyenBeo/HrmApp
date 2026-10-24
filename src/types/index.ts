@@ -144,3 +144,23 @@ export interface TaiKhoan {
   trangThai: string;
   ngayTao: string;
 }
+
+
+export interface NhatKyHoatDong {
+  maLog: string;
+  thoiGian: string;
+  tenDangNhap: string;
+  hoTen?: string;
+  hanhDong: string;
+  chiTiet?: string;
+  trangThai: string;
+  diaChiIP?: string;
+}
+
+export interface NhatKyListResponse {
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  items: NhatKyHoatDong[];
+}
