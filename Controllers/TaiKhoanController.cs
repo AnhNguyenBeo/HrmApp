@@ -25,6 +25,14 @@ namespace HrmApp.Api.Controllers
             _nhatKyService = nhatKyService;
         }
 
+        private (bool IsOwner, Guid CallerTaiKhoanId) GetCallerContext()
+        {
+            var callerRole = User.FindFirst(ClaimTypes.Role)?.Value ?? User.FindFirst("role")?.Value;
+            var callerTaiKhoanIdStr = User.FindFirst("MaTaiKhoan")?.Value;
+            Guid.TryParse(callerTaiKhoanIdStr, out var callerTaiKhoanId);
+            return (callerRole == "Chủ doanh nghiệp", callerTaiKhoanId);
+        }
+
         [HttpGet]
         [Authorize(Roles = "Quản trị viên, Chủ doanh nghiệp")]
         public async Task<ActionResult<System.Collections.Generic.IEnumerable<TaiKhoanResponseDto>>> GetTaiKhoans()
@@ -91,35 +99,46 @@ namespace HrmApp.Api.Controllers
         [Authorize(Roles = "Quản trị viên, Chủ doanh nghiệp")]
         public async Task<ActionResult<TaiKhoanResponseDto>> PostTaiKhoan([FromBody] CreateTaiKhoanDto dto)
         {
-            var exists = await _context.TaiKhoans.AnyAsync(t => t.TenDangNhap == dto.TenDangNhap);
+            var tenDangNhap = dto.TenDangNhap.Trim();
+            if (tenDangNhap.Contains(" "))
+            {
+                return BadRequest(new { message = "Tên đăng nhập không được chứa khoảng trắng." });
+            }
+
+            if (dto.TrangThai != "Hoạt động" && dto.TrangThai != "Bị khóa")
+            {
+                return BadRequest(new { message = "Trạng thái tài khoản không hợp lệ, chỉ chấp nhận 'Hoạt động' hoặc 'Bị khóa'." });
+            }
+
+            var exists = await _context.TaiKhoans.AnyAsync(t => t.TenDangNhap == tenDangNhap);
             if (exists)
             {
-                return BadRequest("Tên đăng nhập đã tồn tại.");
+                return BadRequest(new { message = "Tên đăng nhập đã tồn tại." });
             }
 
             var nhanVien = await _context.NhanViens.FindAsync(dto.MaNhanVien);
             if (nhanVien == null)
             {
-                return BadRequest("Nhân viên không tồn tại trong hệ thống.");
+                return BadRequest(new { message = "Nhân viên không tồn tại trong hệ thống." });
             }
 
             var vaiTro = await _context.VaiTros.FindAsync(dto.MaVaiTro);
             if (vaiTro == null)
             {
-                return BadRequest("Vai trò không tồn tại trong hệ thống.");
+                return BadRequest(new { message = "Vai trò không tồn tại trong hệ thống." });
             }
 
-            var callerRole = User.FindFirst(ClaimTypes.Role)?.Value ?? User.FindFirst("role")?.Value;
-            if (vaiTro.TenVaiTro == "Chủ doanh nghiệp" && callerRole != "Chủ doanh nghiệp")
+            var (isOwner, _) = GetCallerContext();
+            if (vaiTro.TenVaiTro == "Chủ doanh nghiệp" && !isOwner)
             {
-                return StatusCode(403, "Chỉ Chủ doanh nghiệp mới có quyền gán vai trò Chủ doanh nghiệp.");
+                return StatusCode(403, new { message = "Chỉ Chủ doanh nghiệp mới có quyền gán vai trò Chủ doanh nghiệp." });
             }
 
             var taiKhoan = new TaiKhoan
             {
                 MaTaiKhoan = Guid.NewGuid(),
                 MaNhanVien = dto.MaNhanVien,
-                TenDangNhap = dto.TenDangNhap,
+                TenDangNhap = tenDangNhap,
                 MatKhauHash = BCrypt.Net.BCrypt.HashPassword(dto.MatKhau),
                 MaVaiTro = dto.MaVaiTro,
                 TrangThai = dto.TrangThai,
@@ -141,22 +160,47 @@ namespace HrmApp.Api.Controllers
         [Authorize(Roles = "Quản trị viên, Chủ doanh nghiệp")]
         public async Task<IActionResult> PutTaiKhoan(Guid id, [FromBody] UpdateTaiKhoanDto dto)
         {
-            var taiKhoan = await _context.TaiKhoans.FindAsync(id);
+            if (dto.TrangThai != "Hoạt động" && dto.TrangThai != "Bị khóa")
+            {
+                return BadRequest(new { message = "Trạng thái tài khoản không hợp lệ, chỉ chấp nhận 'Hoạt động' hoặc 'Bị khóa'." });
+            }
+
+            var taiKhoan = await _context.TaiKhoans
+                .Include(t => t.MaVaiTroNavigation)
+                .FirstOrDefaultAsync(t => t.MaTaiKhoan == id);
+
             if (taiKhoan == null)
             {
-                return NotFound("Không tìm thấy tài khoản.");
+                return NotFound(new { message = "Không tìm thấy tài khoản." });
+            }
+
+            var (isOwner, callerTaiKhoanId) = GetCallerContext();
+
+            bool targetIsOwner = taiKhoan.MaVaiTroNavigation?.TenVaiTro == "Chủ doanh nghiệp";
+            if (targetIsOwner && !isOwner)
+            {
+                return StatusCode(403, new { message = "Chỉ Chủ doanh nghiệp mới có quyền thao tác trên tài khoản Chủ doanh nghiệp." });
+            }
+
+            if (id == callerTaiKhoanId && dto.TrangThai == "Bị khóa")
+            {
+                return BadRequest(new { message = "Bạn không thể tự khóa tài khoản của chính mình." });
+            }
+
+            if (id == callerTaiKhoanId && dto.MaVaiTro != taiKhoan.MaVaiTro)
+            {
+                return BadRequest(new { message = "Bạn không thể tự đổi vai trò của chính mình." });
             }
 
             var vaiTro = await _context.VaiTros.FindAsync(dto.MaVaiTro);
             if (vaiTro == null)
             {
-                return BadRequest("Vai trò không tồn tại.");
+                return BadRequest(new { message = "Vai trò không tồn tại." });
             }
 
-            var callerRole = User.FindFirst(ClaimTypes.Role)?.Value ?? User.FindFirst("role")?.Value;
-            if (vaiTro.TenVaiTro == "Chủ doanh nghiệp" && callerRole != "Chủ doanh nghiệp")
+            if (vaiTro.TenVaiTro == "Chủ doanh nghiệp" && !isOwner)
             {
-                return StatusCode(403, "Chỉ Chủ doanh nghiệp mới có quyền gán vai trò Chủ doanh nghiệp.");
+                return StatusCode(403, new { message = "Chỉ Chủ doanh nghiệp mới có quyền gán vai trò Chủ doanh nghiệp." });
             }
 
             taiKhoan.MaVaiTro = dto.MaVaiTro;
@@ -179,13 +223,13 @@ namespace HrmApp.Api.Controllers
             var callerTaiKhoanIdStr = User.FindFirst("MaTaiKhoan")?.Value;
             if (!Guid.TryParse(callerTaiKhoanIdStr, out var callerTaiKhoanId) || callerTaiKhoanId != id)
             {
-                return StatusCode(403, "Bạn không có quyền đổi mật khẩu của tài khoản khác.");
+                return StatusCode(403, new { message = "Bạn không có quyền đổi mật khẩu của tài khoản khác." });
             }
 
             var taiKhoan = await _context.TaiKhoans.FindAsync(id);
             if (taiKhoan == null)
             {
-                return NotFound("Không tìm thấy tài khoản.");
+                return NotFound(new { message = "Không tìm thấy tài khoản." });
             }
 
             var callerUser = User.FindFirst("TenDangNhap")?.Value ?? User.Identity?.Name ?? taiKhoan.TenDangNhap;
@@ -210,22 +254,37 @@ namespace HrmApp.Api.Controllers
         [Authorize(Roles = "Quản trị viên, Chủ doanh nghiệp")]
         public async Task<IActionResult> ChangeRole(Guid id, [FromBody] Guid maVaiTro)
         {
-            var taiKhoan = await _context.TaiKhoans.FindAsync(id);
+            var taiKhoan = await _context.TaiKhoans
+                .Include(t => t.MaVaiTroNavigation)
+                .FirstOrDefaultAsync(t => t.MaTaiKhoan == id);
+
             if (taiKhoan == null)
             {
-                return NotFound("Không tìm thấy tài khoản.");
+                return NotFound(new { message = "Không tìm thấy tài khoản." });
+            }
+
+            var (isOwner, callerTaiKhoanId) = GetCallerContext();
+
+            bool targetIsOwner = taiKhoan.MaVaiTroNavigation?.TenVaiTro == "Chủ doanh nghiệp";
+            if (targetIsOwner && !isOwner)
+            {
+                return StatusCode(403, new { message = "Chỉ Chủ doanh nghiệp mới có quyền thao tác trên tài khoản Chủ doanh nghiệp." });
+            }
+
+            if (id == callerTaiKhoanId)
+            {
+                return BadRequest(new { message = "Bạn không thể tự đổi vai trò của chính mình." });
             }
 
             var vaiTro = await _context.VaiTros.FindAsync(maVaiTro);
             if (vaiTro == null)
             {
-                return BadRequest("Vai trò không tồn tại.");
+                return BadRequest(new { message = "Vai trò không tồn tại." });
             }
 
-            var callerRole = User.FindFirst(ClaimTypes.Role)?.Value ?? User.FindFirst("role")?.Value;
-            if (vaiTro.TenVaiTro == "Chủ doanh nghiệp" && callerRole != "Chủ doanh nghiệp")
+            if (vaiTro.TenVaiTro == "Chủ doanh nghiệp" && !isOwner)
             {
-                return StatusCode(403, "Chỉ Chủ doanh nghiệp mới có quyền gán vai trò Chủ doanh nghiệp.");
+                return StatusCode(403, new { message = "Chỉ Chủ doanh nghiệp mới có quyền gán vai trò Chủ doanh nghiệp." });
             }
 
             taiKhoan.MaVaiTro = maVaiTro;
@@ -243,10 +302,26 @@ namespace HrmApp.Api.Controllers
         [Authorize(Roles = "Quản trị viên, Chủ doanh nghiệp")]
         public async Task<IActionResult> DeleteTaiKhoan(Guid id)
         {
-            var taiKhoan = await _context.TaiKhoans.FindAsync(id);
+            var taiKhoan = await _context.TaiKhoans
+                .Include(t => t.MaVaiTroNavigation)
+                .FirstOrDefaultAsync(t => t.MaTaiKhoan == id);
+
             if (taiKhoan == null)
             {
-                return NotFound("Không tìm thấy tài khoản.");
+                return NotFound(new { message = "Không tìm thấy tài khoản." });
+            }
+
+            var (isOwner, callerTaiKhoanId) = GetCallerContext();
+
+            bool targetIsOwner = taiKhoan.MaVaiTroNavigation?.TenVaiTro == "Chủ doanh nghiệp";
+            if (targetIsOwner && !isOwner)
+            {
+                return StatusCode(403, new { message = "Chỉ Chủ doanh nghiệp mới có quyền thao tác trên tài khoản Chủ doanh nghiệp." });
+            }
+
+            if (id == callerTaiKhoanId)
+            {
+                return BadRequest(new { message = "Bạn không thể tự khóa tài khoản của chính mình." });
             }
 
             taiKhoan.TrangThai = "Bị khóa";
@@ -264,10 +339,26 @@ namespace HrmApp.Api.Controllers
         [Authorize(Roles = "Quản trị viên, Chủ doanh nghiệp")]
         public async Task<IActionResult> KhoaTaiKhoan(Guid id)
         {
-            var taiKhoan = await _context.TaiKhoans.FindAsync(id);
+            var taiKhoan = await _context.TaiKhoans
+                .Include(t => t.MaVaiTroNavigation)
+                .FirstOrDefaultAsync(t => t.MaTaiKhoan == id);
+
             if (taiKhoan == null)
             {
-                return NotFound("Không tìm thấy tài khoản.");
+                return NotFound(new { message = "Không tìm thấy tài khoản." });
+            }
+
+            var (isOwner, callerTaiKhoanId) = GetCallerContext();
+
+            bool targetIsOwner = taiKhoan.MaVaiTroNavigation?.TenVaiTro == "Chủ doanh nghiệp";
+            if (targetIsOwner && !isOwner)
+            {
+                return StatusCode(403, new { message = "Chỉ Chủ doanh nghiệp mới có quyền thao tác trên tài khoản Chủ doanh nghiệp." });
+            }
+
+            if (id == callerTaiKhoanId)
+            {
+                return BadRequest(new { message = "Bạn không thể tự khóa tài khoản của chính mình." });
             }
 
             taiKhoan.TrangThai = "Bị khóa";
@@ -285,10 +376,21 @@ namespace HrmApp.Api.Controllers
         [Authorize(Roles = "Quản trị viên, Chủ doanh nghiệp")]
         public async Task<IActionResult> MoKhoaTaiKhoan(Guid id)
         {
-            var taiKhoan = await _context.TaiKhoans.FindAsync(id);
+            var taiKhoan = await _context.TaiKhoans
+                .Include(t => t.MaVaiTroNavigation)
+                .FirstOrDefaultAsync(t => t.MaTaiKhoan == id);
+
             if (taiKhoan == null)
             {
-                return NotFound("Không tìm thấy tài khoản.");
+                return NotFound(new { message = "Không tìm thấy tài khoản." });
+            }
+
+            var (isOwner, _) = GetCallerContext();
+
+            bool targetIsOwner = taiKhoan.MaVaiTroNavigation?.TenVaiTro == "Chủ doanh nghiệp";
+            if (targetIsOwner && !isOwner)
+            {
+                return StatusCode(403, new { message = "Chỉ Chủ doanh nghiệp mới có quyền thao tác trên tài khoản Chủ doanh nghiệp." });
             }
 
             taiKhoan.TrangThai = "Hoạt động";

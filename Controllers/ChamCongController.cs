@@ -1,4 +1,5 @@
-﻿using HrmApp.Api.Data;
+﻿using HrmApp.Api.Constants;
+using HrmApp.Api.Data;
 using HrmApp.Api.Data.Models;
 using HrmApp.Api.DTOs.ChamCong;
 using HrmApp.Api.Services;
@@ -47,6 +48,12 @@ namespace HrmApp.Api.Controllers
             string actionType;
             if (chamCong != null)
             {
+                var diffTime = nowTime.ToTimeSpan() - chamCong.GioVao.ToTimeSpan();
+                if (diffTime.TotalSeconds >= 0 && diffTime.TotalSeconds < 60)
+                {
+                    return BadRequest(new { message = "Bạn vừa check-in, vui lòng chờ ít nhất 1 phút trước khi check-out." });
+                }
+
                 actionType = "Check-out";
                 chamCong.GioRa = nowTime;
                 var gioVao = chamCong.GioVao.ToTimeSpan();
@@ -62,13 +69,13 @@ namespace HrmApp.Api.Controllers
                     chamCong.SoGioTangCa = 0;
                 }
                 
-                if (chamCong.TrangThai == "Thiếu giờ vào")
+                if (chamCong.TrangThai == TrangThaiChamCong.ThieuGioVao)
                 {
-                    chamCong.TrangThai = "Thiếu giờ vào (Đã ra)";
+                    chamCong.TrangThai = TrangThaiChamCong.ThieuGioVaoDaRa;
                 }
-                else if (chamCong.TrangThai != "Đi muộn")
+                else if (chamCong.TrangThai != TrangThaiChamCong.DiMuon)
                 {
-                    chamCong.TrangThai = "Hoàn thành";
+                    chamCong.TrangThai = TrangThaiChamCong.HoanThanh;
                 }
 
                 _context.ChamCongs.Update(chamCong);
@@ -87,20 +94,27 @@ namespace HrmApp.Api.Controllers
                 
                 if (nowTime.Hour >= 12)
                 {
-                    newChamCong.TrangThai = "Thiếu giờ vào";
+                    newChamCong.TrangThai = TrangThaiChamCong.ThieuGioVao;
                 }
                 else if (nowTime > new TimeOnly(8, 30))
                 {
-                    newChamCong.TrangThai = "Đi muộn";
+                    newChamCong.TrangThai = TrangThaiChamCong.DiMuon;
                 }
                 else
                 {
-                    newChamCong.TrangThai = "Đã check-in";
+                    newChamCong.TrangThai = TrangThaiChamCong.DaCheckIn;
                 }
                 await _context.ChamCongs.AddAsync(newChamCong);
             }
 
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException)
+            {
+                return Conflict(new { message = "Yêu cầu chấm công bị trùng, vui lòng thử lại." });
+            }
 
             var callerUser = User.FindFirst("TenDangNhap")?.Value ?? User.Identity?.Name ?? "Hệ thống";
             var callerName = User.FindFirst("HoTen")?.Value;
@@ -116,6 +130,11 @@ namespace HrmApp.Api.Controllers
         {
             var maNhanVienStr = User.FindFirst("MaNhanVien")?.Value;
             if (string.IsNullOrEmpty(maNhanVienStr) || !Guid.TryParse(maNhanVienStr, out var maNhanVien)) return Unauthorized();
+
+            if ((month.HasValue && !year.HasValue) || (!month.HasValue && year.HasValue))
+            {
+                return BadRequest(new { message = "Vui lòng cung cấp cả tháng và năm để lọc dữ liệu." });
+            }
 
             var query = _context.ChamCongs
                 .Include(c => c.MaNhanVienNavigation)
@@ -150,6 +169,11 @@ namespace HrmApp.Api.Controllers
             var userRole = User.FindFirst(ClaimTypes.Role)?.Value ?? User.FindFirst("role")?.Value;
             var maNhanVienStr = User.FindFirst("MaNhanVien")?.Value;
             Guid.TryParse(maNhanVienStr, out var currentNhanVienId);
+
+            if ((month.HasValue && !year.HasValue) || (!month.HasValue && year.HasValue))
+            {
+                return BadRequest(new { message = "Vui lòng cung cấp cả tháng và năm để lọc dữ liệu." });
+            }
 
             var query = _context.ChamCongs
                 .Include(c => c.MaNhanVienNavigation)

@@ -1,4 +1,4 @@
-using System.IdentityModel.Tokens.Jwt;
+﻿using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using HrmApp.Api.Data.Models;
@@ -18,7 +18,15 @@ public class JwtService : IJwtService
     public string GenerateToken(TaiKhoan taiKhoan)
     {
         var jwtSettings = _config.GetSection("JwtSettings");
-        var secretKey = jwtSettings["SecretKey"]!;
+        var secretKey = _config["JwtSettings:SecretKey"]
+    ?? _config["JwtSettings__SecretKey"]
+    ?? Environment.GetEnvironmentVariable("JwtSettings__SecretKey")
+    ?? jwtSettings["SecretKey"];
+
+if (string.IsNullOrWhiteSpace(secretKey) || secretKey.Length < 32)
+{
+    throw new InvalidOperationException("JwtSettings:SecretKey chưa được cấu hình hoặc ngắn hơn 32 ký tự.");
+}
         var issuer = jwtSettings["Issuer"]!;
         var audience = jwtSettings["Audience"]!;
         var expiresInMin = int.Parse(jwtSettings["ExpiresInMinutes"]!);

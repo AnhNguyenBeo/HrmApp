@@ -1,9 +1,10 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>64228346-9f0e-4967-b6ec-bec92ab5a55f</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
@@ -22,4 +23,10 @@
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Remove="HrmApp.Tests\**" />
+    <Content Remove="HrmApp.Tests\**" />
+    <EmbeddedResource Remove="HrmApp.Tests\**" />
+    <None Remove="HrmApp.Tests\**" />
+  </ItemGroup>
 </Project>

@@ -2,6 +2,7 @@
 using HrmApp.Api.DTOs.Auth;
 using HrmApp.Api.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using System;
@@ -27,6 +28,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("login")]
+    [EnableRateLimiting("login")]
     public async Task<IActionResult> Login([FromBody] LoginRequestDto request)
     {
         if (!ModelState.IsValid)

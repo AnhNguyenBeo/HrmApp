@@ -416,6 +416,11 @@ namespace HrmApp.Api.Controllers
             var currentUserRole = User.FindFirst(ClaimTypes.Role)?.Value ?? User.FindFirst("role")?.Value;
             Guid.TryParse(currentUserIdStr, out var currentNhanVienId);
 
+            if (nhanVien.MaNhanVien == currentNhanVienId)
+            {
+                return BadRequest(new { message = "Bạn không thể tự cấp chức cho chính mình!" });
+            }
+
             var currentNhanVien = await _context.NhanViens
                 .Include(n => n.MaChucVuNavigation)
                 .Include(n => n.MaPhongBanNavigation)
@@ -435,7 +440,7 @@ namespace HrmApp.Api.Controllers
                 var targetChucVu = nhanVien.MaChucVuNavigation?.TenChucVu ?? "";
                 var targetPhongBan = nhanVien.MaPhongBanNavigation?.TenPhongBan ?? "";
 
-                if (targetChucVu.Contains("Giám đốc") || targetPhongBan.Contains("Ban Giám đốc"))
+                if (targetChucVu.Contains("Giám đốc") || targetChucVu.Contains("Chủ doanh nghiệp") || targetPhongBan.Contains("Ban Giám đốc"))
                 {
                     return StatusCode(403, new { message = "Không thể thay đổi chức vụ của Ban Giám đốc / Chủ doanh nghiệp!" });
                 }
@@ -448,6 +453,12 @@ namespace HrmApp.Api.Controllers
                 if (targetPhongBan.Contains("Nhân sự") && targetChucVu.Contains("Trưởng"))
                 {
                     return StatusCode(403, new { message = "Chỉ có Chủ doanh nghiệp mới có thẩm quyền thay đổi chức vụ của Trưởng phòng Nhân sự!" });
+                }
+
+                if ((targetPhongBan.Contains("Nhân sự") && newChucVu.TenChucVu.Contains("Trưởng")) ||
+                    (newChucVu.TenChucVu.Contains("Trưởng") && newChucVu.TenChucVu.Contains("Nhân sự")))
+                {
+                    return StatusCode(403, new { message = "Chỉ có Chủ doanh nghiệp mới có quyền bổ nhiệm Trưởng phòng Nhân sự!" });
                 }
             }
 
