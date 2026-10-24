@@ -1,4 +1,4 @@
-using HrmApp.Api.Data;
+﻿using HrmApp.Api.Data;
 using HrmApp.Api.Data.Models;
 using System;
 using System.Threading.Tasks;
@@ -14,6 +14,13 @@ public class NhatKyService : INhatKyService
         _context = context;
     }
 
+    private static string NormalizeIp(string? ip)
+    {
+        if (string.IsNullOrEmpty(ip) || ip == "::1") return "127.0.0.1";
+        if (ip.StartsWith("::ffff:")) return ip.Substring(7);
+        return ip;
+    }
+
     public async Task GhiLogAsync(string tenDangNhap, string? hoTen, string hanhDong, string chiTiet, string trangThai = "Thành công", string? diaChiIp = null)
     {
         try
@@ -27,7 +34,7 @@ public class NhatKyService : INhatKyService
                 HanhDong = hanhDong,
                 ChiTiet = chiTiet,
                 TrangThai = trangThai,
-                DiaChiIP = diaChiIp ?? "127.0.0.1"
+                DiaChiIP = NormalizeIp(diaChiIp)
             };
 
             await _context.NhatKyHoatDongs.AddAsync(log);
