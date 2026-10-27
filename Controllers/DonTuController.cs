@@ -36,7 +36,10 @@ namespace HrmApp.Api.Controllers
             var maNhanVienStr = User.FindFirst("MaNhanVien")?.Value;
             if (string.IsNullOrEmpty(maNhanVienStr) || !Guid.TryParse(maNhanVienStr, out var maNhanVien)) return Unauthorized();
 
-            var nhanVien = await _context.NhanViens.FindAsync(maNhanVien);
+            var nhanVien = await _context.NhanViens
+                .Include(n => n.MaPhongBanNavigation)
+                .Include(n => n.MaChucVuNavigation)
+                .FirstOrDefaultAsync(n => n.MaNhanVien == maNhanVien);
             if (nhanVien == null) return NotFound(new { message = "Không tìm thấy nhân viên." });
 
             var validLoaiDon = new[] { "Nghỉ phép", "Nghỉ phép năm", "Nghỉ không lương", "Thai sản", "Nghỉ ốm" };
@@ -125,6 +128,8 @@ namespace HrmApp.Api.Controllers
                 MaNhanVien = donTu.MaNhanVien,
                 HoTen = donTu.HoTen,
                 MaPhongBan = nhanVien.MaPhongBan,
+                TenPhongBan = nhanVien.MaPhongBanNavigation?.TenPhongBan,
+                TenChucVu = nhanVien.MaChucVuNavigation?.TenChucVu,
                 LoaiDon = donTu.LoaiDon,
                 LoaiNghi = donTu.LoaiNghi,
                 NgayBatDau = donTu.NgayBatDau,
@@ -147,6 +152,9 @@ namespace HrmApp.Api.Controllers
             var donTus = await _context.DonTus
                 .Include(d => d.NguoiDuyetMaNavigation)
                 .Include(d => d.MaNhanVienNavigation)
+                    .ThenInclude(nv => nv.MaPhongBanNavigation)
+                .Include(d => d.MaNhanVienNavigation)
+                    .ThenInclude(nv => nv.MaChucVuNavigation)
                 .Where(d => d.MaNhanVien == maNhanVien)
                 .OrderByDescending(d => d.NgayBatDau)
                 .Select(d => new DonTuResponseDto
@@ -155,6 +163,12 @@ namespace HrmApp.Api.Controllers
                     MaNhanVien = d.MaNhanVien,
                     HoTen = d.HoTen,
                     MaPhongBan = d.MaNhanVienNavigation != null ? d.MaNhanVienNavigation.MaPhongBan : null,
+                    TenPhongBan = d.MaNhanVienNavigation != null && d.MaNhanVienNavigation.MaPhongBanNavigation != null
+                        ? d.MaNhanVienNavigation.MaPhongBanNavigation.TenPhongBan
+                        : null,
+                    TenChucVu = d.MaNhanVienNavigation != null && d.MaNhanVienNavigation.MaChucVuNavigation != null
+                        ? d.MaNhanVienNavigation.MaChucVuNavigation.TenChucVu
+                        : null,
                     LoaiDon = d.LoaiDon,
                     LoaiNghi = d.LoaiNghi,
                     NgayBatDau = d.NgayBatDau,
@@ -213,6 +227,12 @@ namespace HrmApp.Api.Controllers
                     MaNhanVien = d.MaNhanVien,
                     HoTen = d.HoTen,
                     MaPhongBan = d.MaNhanVienNavigation != null ? d.MaNhanVienNavigation.MaPhongBan : null,
+                    TenPhongBan = d.MaNhanVienNavigation != null && d.MaNhanVienNavigation.MaPhongBanNavigation != null
+                        ? d.MaNhanVienNavigation.MaPhongBanNavigation.TenPhongBan
+                        : null,
+                    TenChucVu = d.MaNhanVienNavigation != null && d.MaNhanVienNavigation.MaChucVuNavigation != null
+                        ? d.MaNhanVienNavigation.MaChucVuNavigation.TenChucVu
+                        : null,
                     LoaiDon = d.LoaiDon,
                     LoaiNghi = d.LoaiNghi,
                     NgayBatDau = d.NgayBatDau,

@@ -41,7 +41,8 @@ namespace HrmApp.Api.Controllers
             }
 
             var today = DateOnly.FromDateTime(DateTime.Now);
-            var nowTime = TimeOnly.FromDateTime(DateTime.Now);
+            var now = DateTime.Now;
+            var nowTime = new TimeOnly(now.Hour, now.Minute, now.Second);
 
             var chamCong = await _context.ChamCongs.FirstOrDefaultAsync(c => c.MaNhanVien == maNhanVien && c.Ngay == today);
 
