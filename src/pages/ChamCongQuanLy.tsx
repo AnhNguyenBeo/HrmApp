@@ -82,6 +82,11 @@ export const ChamCongQuanLyPage: React.FC = () => {
     );
   });
 
+  const formatTime = (val?: string) => {
+    if (!val || val === '00:00:00' || val.startsWith('00:00:00')) return '-';
+    return val.split('.')[0];
+  };
+
   const columns = [
     {
       title: 'Nhân viên',
@@ -108,12 +113,12 @@ export const ChamCongQuanLyPage: React.FC = () => {
       render: (val: string) => <Tag color="blue">{val || 'Chưa gán'}</Tag>,
     },
     { title: 'Ngày', dataIndex: 'ngay', key: 'ngay' },
-    { title: 'Giờ vào', dataIndex: 'gioVao', key: 'gioVao' },
+    { title: 'Giờ vào', dataIndex: 'gioVao', key: 'gioVao', render: (val: string) => formatTime(val) },
     {
       title: 'Giờ ra',
       dataIndex: 'gioRa',
       key: 'gioRa',
-      render: (val: string) => (val === '00:00:00' || !val ? '-' : val),
+      render: (val: string) => formatTime(val),
     },
     {
       title: 'Tăng ca (OT)',

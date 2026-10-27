@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { Card, Table, Button, DatePicker, Tag, Space, message, Row, Col, Statistic, Input } from 'antd';
 import { CheckCircleOutlined, ClockCircleOutlined, SearchOutlined } from '@ant-design/icons';
 import { chamCongApi } from '../api/chamCongApi';
@@ -44,10 +44,15 @@ export const ChamCongPage: React.FC = () => {
     }
   };
 
+  const formatTime = (val?: string) => {
+    if (!val || val === '00:00:00' || val.startsWith('00:00:00')) return '-';
+    return val.split('.')[0];
+  };
+
   const columns = [
     { title: 'Ngày', dataIndex: 'ngay', key: 'ngay' },
-    { title: 'Giờ vào', dataIndex: 'gioVao', key: 'gioVao' },
-    { title: 'Giờ ra', dataIndex: 'gioRa', key: 'gioRa', render: (val: string) => val === '00:00:00' ? '-' : val },
+    { title: 'Giờ vào', dataIndex: 'gioVao', key: 'gioVao', render: (val: string) => formatTime(val) },
+    { title: 'Giờ ra', dataIndex: 'gioRa', key: 'gioRa', render: (val: string) => formatTime(val) },
     {
       title: 'Tăng ca (OT)',
       dataIndex: 'soGioTangCa',
