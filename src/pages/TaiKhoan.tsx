@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { Card, Table, Button, Modal, Form, Input, Select, Tag, Space, message, Popconfirm, Row, Col } from 'antd';
 import { UserAddOutlined, LockOutlined, UnlockOutlined, SafetyCertificateOutlined, SearchOutlined, KeyOutlined } from '@ant-design/icons';
 import { taiKhoanApi } from '../api/taiKhoanApi';
@@ -115,28 +115,24 @@ export const TaiKhoanPage: React.FC = () => {
       title: 'Tên đăng nhập',
       dataIndex: 'tenDangNhap',
       key: 'tenDangNhap',
-      sorter: (a: TaiKhoan, b: TaiKhoan) => a.tenDangNhap.localeCompare(b.tenDangNhap),
       render: (val: string) => <strong>{val}</strong>,
     },
     {
       title: 'Chủ sở hữu (Nhân viên)',
       dataIndex: 'tenNhanVien',
       key: 'tenNhanVien',
-      sorter: (a: TaiKhoan, b: TaiKhoan) => (a.tenNhanVien || '').localeCompare(b.tenNhanVien || ''),
       render: (val: string) => val || 'Chưa gán',
     },
     {
       title: 'Phòng ban',
       dataIndex: 'tenPhongBan',
       key: 'tenPhongBan',
-      sorter: (a: TaiKhoan, b: TaiKhoan) => (a.tenPhongBan || '').localeCompare(b.tenPhongBan || ''),
       render: (val: string) => <Tag color="blue">{val || 'Chưa gán'}</Tag>,
     },
     {
       title: 'Chức vụ',
       dataIndex: 'tenChucVu',
       key: 'tenChucVu',
-      sorter: (a: TaiKhoan, b: TaiKhoan) => (a.tenChucVu || '').localeCompare(b.tenChucVu || ''),
       render: (val: string) => {
         let color = 'default';
         if (val?.includes('Chủ doanh nghiệp') || val?.includes('Giám đốc')) color = 'gold';
@@ -172,7 +168,6 @@ export const TaiKhoanPage: React.FC = () => {
       title: 'Ngày tạo',
       dataIndex: 'ngayTao',
       key: 'ngayTao',
-      sorter: (a: TaiKhoan, b: TaiKhoan) => a.ngayTao.localeCompare(b.ngayTao),
     },
     {
       title: 'Thao tác (Admin)',
