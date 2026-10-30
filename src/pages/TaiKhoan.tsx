@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, Table, Button, Modal, Form, Input, Select, Tag, Space, message, Popconfirm, Row, Col } from 'antd';
 import { UserAddOutlined, LockOutlined, UnlockOutlined, SafetyCertificateOutlined, SearchOutlined, KeyOutlined } from '@ant-design/icons';
 import { taiKhoanApi } from '../api/taiKhoanApi';
@@ -71,7 +71,15 @@ export const TaiKhoanPage: React.FC = () => {
       createForm.resetFields();
       fetchData();
     } catch (err: any) {
-      message.error(err.response?.data?.message || err.response?.data || 'Cấp tài khoản thất bại.');
+      const serverErrors = err.response?.data?.errors;
+      let errMsg = err.response?.data?.message;
+      if (!errMsg && serverErrors && typeof serverErrors === 'object') {
+        const firstKey = Object.keys(serverErrors)[0];
+        if (firstKey && Array.isArray(serverErrors[firstKey])) {
+          errMsg = serverErrors[firstKey][0];
+        }
+      }
+      message.error(errMsg || (typeof err.response?.data === 'string' ? err.response?.data : 'Cấp tài khoản thất bại.'));
     }
   };
 
@@ -89,11 +97,16 @@ export const TaiKhoanPage: React.FC = () => {
 
   const handleToggleLock = async (record: TaiKhoan) => {
     try {
-      const res = await taiKhoanApi.lock(record.maTaiKhoan);
-      message.success(res.data?.message || 'Cập nhật trạng thái tài khoản thành công!');
+      if (record.trangThai === 'Bị khóa') {
+        const res = await taiKhoanApi.unlock(record.maTaiKhoan);
+        message.success(res.data?.message || 'Mở khóa tài khoản thành công!');
+      } else {
+        const res = await taiKhoanApi.lock(record.maTaiKhoan);
+        message.success(res.data?.message || 'Khóa tài khoản thành công!');
+      }
       fetchData();
-    } catch {
-      message.error('Thao tác thất bại.');
+    } catch (err: any) {
+      message.error(err.response?.data?.message || 'Thao tác thất bại.');
     }
   };
 
@@ -276,18 +289,42 @@ export const TaiKhoanPage: React.FC = () => {
         <Form form={createForm} layout="vertical" onFinish={handleCreate}>
           <Form.Item name="maNhanVien" label="Chọn nhân sự" rules={[{ required: true, message: 'Vui lòng chọn nhân sự!' }]}>
             <Select showSearch placeholder="Chọn nhân sự cần cấp tài khoản" optionFilterProp="label">
-              {nhanViens.map((nv) => (
-                <Select.Option key={nv.maNhanVien} value={nv.maNhanVien} label={nv.hoTen}>
-                  {nv.hoTen} ({nv.tenPhongBan || 'Chưa gán'} - {nv.tenChucVu || 'Chưa gán'})
-                </Select.Option>
-              ))}
+              {nhanViens.map((nv) => {
+                const hasAccount = data.some((tk) => tk.maNhanVien === nv.maNhanVien);
+                const isResigned = nv.trangThaiLamViec === 'Đã nghỉ việc';
+                return (
+                  <Select.Option
+                    key={nv.maNhanVien}
+                    value={nv.maNhanVien}
+                    label={nv.hoTen}
+                    disabled={hasAccount || isResigned}
+                  >
+                    {nv.hoTen} ({nv.tenPhongBan || 'Chưa gán'} - {nv.tenChucVu || 'Chưa gán'})
+                    {hasAccount ? ' [Đã có tài khoản]' : isResigned ? ' [Đã nghỉ việc]' : ''}
+                  </Select.Option>
+                );
+              })}
             </Select>
           </Form.Item>
-          <Form.Item name="tenDangNhap" label="Tên đăng nhập" rules={[{ required: true, message: 'Nhập tên đăng nhập!' }]}>
+          <Form.Item
+            name="tenDangNhap"
+            label="Tên đăng nhập"
+            rules={[
+              { required: true, message: 'Nhập tên đăng nhập!' },
+              { pattern: /^\S+$/, message: 'Tên đăng nhập không được chứa khoảng trắng!' }
+            ]}
+          >
             <Input placeholder="ví dụ: nam.tran" />
           </Form.Item>
-          <Form.Item name="matKhau" label="Mật khẩu khởi tạo" rules={[{ required: true, message: 'Nhập mật khẩu!' }]}>
-            <Input.Password placeholder="Mật khẩu mặc định" />
+          <Form.Item
+            name="matKhau"
+            label="Mật khẩu khởi tạo"
+            rules={[
+              { required: true, message: 'Nhập mật khẩu!' },
+              { min: 8, message: 'Mật khẩu phải có ít nhất 8 ký tự!' }
+            ]}
+          >
+            <Input.Password placeholder="Mật khẩu mặc định (tối thiểu 8 ký tự)" />
           </Form.Item>
           <Form.Item name="maVaiTro" label="Vai trò / Phân quyền" rules={[{ required: true, message: 'Chọn vai trò!' }]}>
             <Select placeholder="Chọn vai trò">

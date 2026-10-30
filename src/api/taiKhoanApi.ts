@@ -4,7 +4,7 @@ import { TaiKhoan } from '../types';
 export const taiKhoanApi = {
   getAll: () => axiosClient.get<TaiKhoan[]>('/taikhoan'),
   getById: (id: string) => axiosClient.get<TaiKhoan>('/taikhoan/' + id),
-  create: (data: { maNhanVien: string; tenDangNhap: string; matKhau: string; maVaiTro: string }) =>
+  create: (data: { maNhanVien: string; tenDangNhap: string; matKhau: string; maVaiTro: string; trangThai?: string }) =>
     axiosClient.post('/taikhoan', data),
   changeRole: (id: string, maVaiTro: string) =>
     axiosClient.put('/taikhoan/' + id + '/vai-tro', maVaiTro, {
