@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
@@ -288,13 +288,20 @@ namespace HrmApp.Api.Controllers
                 }
             }
 
+            var cccdTrimmed = dto.Cccd.Trim();
+            var cccdExists = await _context.NhanViens.AnyAsync(n => n.Cccd == cccdTrimmed);
+            if (cccdExists)
+            {
+                return BadRequest(new { message = "Số CCCD này đã tồn tại trong hệ thống, không được trùng lặp." });
+            }
+
             var nhanVien = new NhanVien
             {
                 MaNhanVien = Guid.NewGuid(),
                 HoTen = dto.HoTen,
                 NgaySinh = dto.NgaySinh,
                 GioiTinh = dto.GioiTinh,
-                Cccd = dto.Cccd,
+                Cccd = cccdTrimmed,
                 Email = dto.Email,
                 SoDienThoai = dto.SoDienThoai,
                 DiaChi = dto.DiaChi,
@@ -366,10 +373,17 @@ namespace HrmApp.Api.Controllers
                 }
             }
 
+            var cccdTrimmed = dto.Cccd.Trim();
+            var cccdExists = await _context.NhanViens.AnyAsync(n => n.Cccd == cccdTrimmed && n.MaNhanVien != id);
+            if (cccdExists)
+            {
+                return BadRequest(new { message = "Số CCCD này đã tồn tại ở nhân viên khác trong hệ thống." });
+            }
+
             nhanVien.HoTen = dto.HoTen;
             nhanVien.NgaySinh = dto.NgaySinh;
             nhanVien.GioiTinh = dto.GioiTinh;
-            nhanVien.Cccd = dto.Cccd;
+            nhanVien.Cccd = cccdTrimmed;
             nhanVien.Email = dto.Email;
             nhanVien.SoDienThoai = dto.SoDienThoai;
             nhanVien.DiaChi = dto.DiaChi;
@@ -377,6 +391,11 @@ namespace HrmApp.Api.Controllers
             nhanVien.MaPhongBan = dto.MaPhongBan;
             if (dto.MaChucVu.HasValue && dto.MaChucVu.Value != Guid.Empty && isOwner)
             {
+                var targetChucVu = await _context.ChucVus.FindAsync(dto.MaChucVu.Value);
+                if (targetChucVu != null && targetChucVu.TenChucVu.Contains("Thực tập") && nhanVien.MaChucVuNavigation?.TenChucVu != "Thực tập sinh")
+                {
+                    return BadRequest(new { message = "Nhân viên không thể chuyển chức vụ thành Thực tập sinh!" });
+                }
                 nhanVien.MaChucVu = dto.MaChucVu.Value;
             }
             if (!string.IsNullOrEmpty(dto.TrangThaiLamViec) && isOwner)
@@ -414,6 +433,11 @@ namespace HrmApp.Api.Controllers
             if (newChucVu == null)
             {
                 return NotFound(new { message = "Không tìm thấy chức vụ." });
+            }
+
+            if (newChucVu.TenChucVu.Contains("Thực tập") || newChucVu.TenChucVu.Contains("Thực tập sinh"))
+            {
+                return BadRequest(new { message = "Không thể cấp chức thành Thực tập sinh!" });
             }
 
             var currentUserIdStr = User.FindFirst("MaNhanVien")?.Value;
