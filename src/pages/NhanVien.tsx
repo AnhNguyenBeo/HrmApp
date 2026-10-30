@@ -246,7 +246,7 @@ export const NhanVienPage: React.FC = () => {
                 icon={<UpCircleOutlined />}
                 onClick={() => {
                   setSelectedNv(record);
-                  promoteForm.setFieldsValue({ maChucVu: record.maChucVu });
+                  promoteForm.resetFields();
                   setPromoteModal(true);
                 }}
               >
@@ -601,6 +601,7 @@ export const NhanVienPage: React.FC = () => {
               {chucVus
                 .filter((cv) => {
                   if (cv.tenChucVu.includes('Thực tập')) return false;
+                  if (cv.maChucVu === selectedNv?.maChucVu) return false;
                   if (isOwner) return true;
                   if (cv.tenChucVu.includes('Giám đốc') || cv.tenChucVu.includes('Chủ doanh nghiệp')) return false;
                   if (selectedNv?.tenPhongBan?.includes('Nhân sự') && cv.tenChucVu.includes('Trưởng')) return false;
