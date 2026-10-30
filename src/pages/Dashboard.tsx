@@ -1,15 +1,13 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, Row, Col, Statistic, Spin, Table, Tag, Tabs, Badge, Progress, DatePicker, Space, Input } from 'antd';
 import {
   TeamOutlined,
   UserAddOutlined,
-  FileTextOutlined,
   DollarOutlined,
   SolutionOutlined,
   UserDeleteOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
-  RiseOutlined,
   PieChartOutlined,
   SearchOutlined,
 } from '@ant-design/icons';
@@ -48,8 +46,6 @@ export const DashboardPage: React.FC = () => {
   if (loading && !data) return <div style={{ textAlign: 'center', padding: 50 }}><Spin size="large" /></div>;
 
   const totalActive = data?.tongSoNhanVien || 1;
-  const totalProfiles = (data?.tongSoNhanVien || 0) + (data?.tinhHinhNhanSu?.daNghiViec?.length || 0);
-  const retentionRate = totalProfiles > 0 ? Math.round(((data?.tongSoNhanVien || 0) / totalProfiles) * 100) : 100;
 
   const percentPaid = (data?.tongQuyLuongThang || 0) > 0
     ? Math.round(((data?.luongDaChiTraThang || 0) / (data?.tongQuyLuongThang || 1)) * 100)
@@ -247,7 +243,7 @@ export const DashboardPage: React.FC = () => {
       )}
 
       <Row gutter={[16, 16]}>
-        <Col xs={24} sm={12} md={6}>
+        <Col xs={24} sm={12} md={12}>
           <Card style={{ borderRadius: 10, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
             <Statistic
               title={<span style={{ fontSize: 14, fontWeight: 500, color: '#595959' }}>Nhân sự đang công tác</span>}
@@ -260,7 +256,7 @@ export const DashboardPage: React.FC = () => {
             </div>
           </Card>
         </Col>
-        <Col xs={24} sm={12} md={6}>
+        <Col xs={24} sm={12} md={12}>
           <Card style={{ borderRadius: 10, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
             <Statistic
               title={<span style={{ fontSize: 14, fontWeight: 500, color: '#595959' }}>Tuyển mới trong tháng</span>}
@@ -270,33 +266,6 @@ export const DashboardPage: React.FC = () => {
             />
             <div style={{ fontSize: 12, color: '#52c41a', marginTop: 4 }}>
               Nhân viên mới gia nhập
-            </div>
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} md={6}>
-          <Card style={{ borderRadius: 10, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
-            <Statistic
-              title={<span style={{ fontSize: 14, fontWeight: 500, color: '#595959' }}>Đơn từ chờ duyệt</span>}
-              value={data?.donTuChoDuyet || 0}
-              prefix={<FileTextOutlined style={{ color: '#faad14' }} />}
-              valueStyle={{ color: '#faad14', fontWeight: 700, fontSize: 26 }}
-            />
-            <div style={{ fontSize: 12, color: (data?.donTuChoDuyet || 0) > 0 ? '#fa8c16' : '#8c8c8c', marginTop: 4 }}>
-              {(data?.donTuChoDuyet || 0) > 0 ? 'Cần cấp quản lý xử lý' : 'Đã duyệt tất cả đơn'}
-            </div>
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} md={6}>
-          <Card style={{ borderRadius: 10, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
-            <Statistic
-              title={<span style={{ fontSize: 14, fontWeight: 500, color: '#595959' }}>Tỷ lệ gắn kết nhân sự</span>}
-              value={retentionRate}
-              prefix={<RiseOutlined style={{ color: '#722ed1' }} />}
-              suffix="%"
-              valueStyle={{ color: '#722ed1', fontWeight: 700, fontSize: 26 }}
-            />
-            <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 4 }}>
-              Tỷ lệ nhân sự duy trì ổn định
             </div>
           </Card>
         </Col>
