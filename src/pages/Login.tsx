@@ -43,7 +43,9 @@ export const Login: React.FC = () => {
 
       message.success('Đăng nhập thành công! Xin chào ' + data.hoTen);
 
-      if (data.vaiTro === 'Quản trị viên' || data.vaiTro === 'Quản lý') {
+      if (data.vaiTro === 'Quản trị viên') {
+        navigate('/tai-khoan');
+      } else if (data.vaiTro === 'Chủ doanh nghiệp' || data.vaiTro === 'Quản lý') {
         navigate('/dashboard');
       } else {
         navigate('/profile');

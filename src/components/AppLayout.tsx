@@ -149,7 +149,10 @@ export const AppLayout: React.FC = () => {
   return (
     <Layout style={{ minHeight: '100vh' }}>
       <Sider trigger={null} collapsible collapsed={collapsed} theme="dark" width={260}>
-        <div style={{ height: 64, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 16, fontWeight: 'bold', background: '#001529' }}>
+        <div
+          style={{ height: 64, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 16, fontWeight: 'bold', background: '#001529', cursor: 'pointer' }}
+          onClick={() => navigate('/')}
+        >
           {collapsed ? 'HRM' : 'QUẢN TRỊ NHÂN SỰ'}
         </div>
         <Menu

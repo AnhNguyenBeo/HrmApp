@@ -1,5 +1,6 @@
 import React from 'react';
-import { Navigate, Outlet } from 'react-router-dom';
+import { Navigate, Outlet, useNavigate } from 'react-router-dom';
+import { Button, Result } from 'antd';
 
 interface ProtectedRouteProps {
   allowedRoles?: string[];
@@ -9,6 +10,7 @@ interface ProtectedRouteProps {
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles, allowDepartments }) => {
   const token = localStorage.getItem('token');
   const userStr = localStorage.getItem('user');
+  const navigate = useNavigate();
 
   if (!token || !userStr) {
     return <Navigate to="/login" replace />;
@@ -23,8 +25,16 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles, al
       if (!hasRole && !hasDept) {
         return (
           <div style={{ padding: 50, textAlign: 'center' }}>
-            <h2>403 - Không có quyền truy cập</h2>
-            <p>Bạn không có quyền xem trang này với vai trò hiện tại: {user.vaiTro}</p>
+            <Result
+              status="403"
+              title="403 - Không có quyền truy cập"
+              subTitle={`Bạn không có quyền xem trang này với vai trò hiện tại: ${user.vaiTro}`}
+              extra={
+                <Button type="primary" onClick={() => navigate('/')}>
+                  Về trang chủ của bạn
+                </Button>
+              }
+            />
           </div>
         );
       }
