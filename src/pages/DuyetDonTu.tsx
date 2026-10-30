@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Card, Table, Button, Modal, Form, Input, Select, Tag, Space, message, Alert, Row, Col, Segmented } from 'antd';
+import { Card, Table, Button, Modal, Form, Input, Select, Tag, Space, message, Row, Col, Segmented } from 'antd';
 import { CheckOutlined, CloseOutlined, FileTextOutlined, SafetyCertificateOutlined, SearchOutlined } from '@ant-design/icons';
 import { donTuApi } from '../api/donTuApi';
 import { nhanVienApi } from '../api/nhanVienApi';
@@ -210,20 +210,6 @@ export const DuyetDonTuPage: React.FC = () => {
 
   return (
     <div>
-      <Alert
-        message="Quy định phân quyền phê duyệt đơn từ doanh nghiệp"
-        description={
-          <div>
-            <div>• <strong>Chủ doanh nghiệp:</strong> Thẩm quyền cao nhất, phê duyệt đơn từ của toàn bộ nhân viên công ty và các Quản lý (Trưởng phòng, Phó phòng).</div>
-            <div>• <strong>Trưởng phòng / Quản lý:</strong> Quản lý và phê duyệt toàn bộ đơn từ của nhân sự thuộc đúng phòng ban của mình phụ trách. Không tự duyệt đơn của chính mình. Đơn của Trưởng/Phó phòng do Chủ doanh nghiệp trực tiếp phê duyệt.</div>
-          </div>
-        }
-        type="info"
-        showIcon
-        icon={<SafetyCertificateOutlined />}
-        style={{ marginBottom: 16 }}
-      />
-
       <Card
         title={
           <span>

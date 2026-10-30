@@ -277,20 +277,6 @@ export const TinhLuongPage: React.FC = () => {
 
   return (
     <div>
-      <Alert
-        message="Phân quyền phê duyệt & chi trả lương theo cấp bậc"
-        description={
-          <div>
-            <div>• <strong>Nhân viên phòng Kế toán:</strong> Lập bảng lương tự động từ dữ liệu chấm công; phê duyệt chi trả lương cho nhân sự các phòng ban khác. Nhân viên kế toán không được tự duyệt lương của mình hay nhân viên kế toán khác.</div>
-            <div>• <strong>Quản lý phòng Kế toán:</strong> Phê duyệt chi trả lương cho toàn bộ nhân viên phòng Kế toán và nhân sự các phòng ban khác. Bảng lương của Quản lý kế toán phải do Chủ doanh nghiệp phê duyệt.</div>
-            <div>• <strong>Chủ doanh nghiệp:</strong> Phê duyệt chi trả lương cho Quản lý phòng Kế toán và toàn thể nhân sự công ty.</div>
-          </div>
-        }
-        type="info"
-        showIcon
-        style={{ marginBottom: 16 }}
-      />
-
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col xs={24} sm={12} md={6}>
           <Card size="small" style={{ borderRadius: 8, borderLeft: '4px solid #1890ff', boxShadow: '0 2px 6px rgba(0,0,0,0.04)' }}>

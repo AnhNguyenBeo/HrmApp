@@ -14,7 +14,6 @@ import {
   DatePicker,
   Row,
   Col,
-  Alert,
 } from 'antd';
 import {
   UserAddOutlined,
@@ -301,21 +300,6 @@ export const NhanVienPage: React.FC = () => {
 
   return (
     <div>
-      <Alert
-        message="Phân quyền quản lý thông tin nhân sự"
-        description={
-          <div>
-            <div>• <strong>Chủ doanh nghiệp:</strong> Toàn quyền quản lý và phê duyệt nhân sự tất cả cấp bậc.</div>
-            <div>• <strong>Phòng Nhân sự:</strong> Được quyền thêm mới, cập nhật thông tin, cấp chức và cho thôi việc tất cả nhân sự (trừ Ban Giám đốc và Trưởng phòng Nhân sự do Chủ DN phê duyệt).</div>
-            <div>• <strong>Quản lý phòng ban khác ({myDeptName || 'Hiện tại'}):</strong> Được xem và theo dõi danh sách nhân sự trực thuộc phòng ban mình phụ trách (Chế độ chỉ xem - Read-only).</div>
-          </div>
-        }
-        type="info"
-        showIcon
-        icon={<TeamOutlined />}
-        style={{ marginBottom: 16 }}
-      />
-
       <Card
         title={
           <span>

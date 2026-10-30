@@ -1,5 +1,5 @@
-﻿import React, { useEffect, useState } from 'react';
-import { Card, Table, Tag, message, DatePicker, Select, Input, Row, Col, Space, Alert } from 'antd';
+import React, { useEffect, useState } from 'react';
+import { Card, Table, Tag, message, DatePicker, Select, Input, Row, Col, Space } from 'antd';
 import { ClockCircleOutlined, SearchOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { chamCongApi } from '../api/chamCongApi';
@@ -141,20 +141,6 @@ export const ChamCongQuanLyPage: React.FC = () => {
 
   return (
     <div>
-      <Alert
-        message="Phân quyền theo dõi chấm công theo phòng ban"
-        description={
-          <div>
-            <div>• <strong>Chủ doanh nghiệp:</strong> Theo dõi toàn bộ lịch sử chấm công của nhân sự các phòng ban trong toàn công ty.</div>
-            <div>• <strong>Trưởng phòng / Quản lý:</strong> Chỉ theo dõi bảng chấm công của nhân sự trực thuộc phòng ban mình quản lý.</div>
-          </div>
-        }
-        type="info"
-        showIcon
-        icon={<ClockCircleOutlined />}
-        style={{ marginBottom: 16 }}
-      />
-
       <Card
         title={
           <span>
