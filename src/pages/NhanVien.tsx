@@ -46,7 +46,7 @@ export const NhanVienPage: React.FC = () => {
   const isHR = (myDeptName || currentUser?.tenPhongBan || '').includes('Nhân sự');
   const isHRManager = isHR && (currentUser?.vaiTro === 'Quản lý' || currentUser?.vaiTro === 'Chủ doanh nghiệp');
   const canManageHR = isOwner || isHRManager;
-  const canViewAllDepts = isOwner || isHR;
+  const canViewAllDepts = isOwner;
 
   const [selectedPhongBan, setSelectedPhongBan] = useState<string>('ALL');
 
