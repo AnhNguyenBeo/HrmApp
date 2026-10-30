@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Card,
   Table,
@@ -108,6 +108,18 @@ export const NhanVienPage: React.FC = () => {
     return true;
   });
 
+  const getErrorMessage = (err: any, fallback: string) => {
+    const serverErrors = err.response?.data?.errors;
+    let errMsg = err.response?.data?.message;
+    if (!errMsg && serverErrors && typeof serverErrors === 'object') {
+      const firstKey = Object.keys(serverErrors)[0];
+      if (firstKey && Array.isArray(serverErrors[firstKey])) {
+        errMsg = serverErrors[firstKey][0];
+      }
+    }
+    return errMsg || (typeof err.response?.data === 'string' ? err.response?.data : fallback);
+  };
+
   const openCreateModal = () => {
     createForm.resetFields();
     setCreateModal(true);
@@ -127,7 +139,7 @@ export const NhanVienPage: React.FC = () => {
       createForm.resetFields();
       fetchData();
     } catch (err: any) {
-      message.error(err.response?.data?.message || 'Thêm nhân sự thất bại.');
+      message.error(getErrorMessage(err, 'Thêm nhân sự thất bại.'));
     }
   };
 
@@ -146,7 +158,7 @@ export const NhanVienPage: React.FC = () => {
       setEditModal(false);
       fetchData();
     } catch (err: any) {
-      message.error(err.response?.data?.message || 'Cập nhật thất bại.');
+      message.error(getErrorMessage(err, 'Cập nhật thất bại.'));
     }
   };
 
@@ -160,7 +172,7 @@ export const NhanVienPage: React.FC = () => {
       setPromoteModal(false);
       fetchData();
     } catch (err: any) {
-      message.error(err.response?.data?.message || 'Thao tác thất bại.');
+      message.error(getErrorMessage(err, 'Thao tác thất bại.'));
     }
   };
 
@@ -389,7 +401,23 @@ export const NhanVienPage: React.FC = () => {
 
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item name="cccd" label="Số CCCD" rules={[{ required: true, message: 'Nhập CCCD!' }]}>
+              <Form.Item
+                name="cccd"
+                label="Số CCCD"
+                rules={[
+                  { required: true, message: 'Nhập CCCD!' },
+                  { pattern: /^[0-9]{9,12}$/, message: 'Số CCCD phải gồm 9 đến 12 chữ số!' },
+                  {
+                    validator: (_, value) => {
+                      if (!value) return Promise.resolve();
+                      if (data.some((nv) => nv.cccd === value.trim())) {
+                        return Promise.reject(new Error('Số CCCD này đã tồn tại trong danh sách nhân sự!'));
+                      }
+                      return Promise.resolve();
+                    }
+                  }
+                ]}
+              >
                 <Input placeholder="07920..." />
               </Form.Item>
             </Col>
@@ -495,7 +523,23 @@ export const NhanVienPage: React.FC = () => {
 
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item name="cccd" label="Số CCCD" rules={[{ required: true, message: 'Nhập CCCD!' }]}>
+              <Form.Item
+                name="cccd"
+                label="Số CCCD"
+                rules={[
+                  { required: true, message: 'Nhập CCCD!' },
+                  { pattern: /^[0-9]{9,12}$/, message: 'Số CCCD phải gồm 9 đến 12 chữ số!' },
+                  {
+                    validator: (_, value) => {
+                      if (!value || !selectedNv) return Promise.resolve();
+                      if (data.some((nv) => nv.cccd === value.trim() && nv.maNhanVien !== selectedNv.maNhanVien)) {
+                        return Promise.reject(new Error('Số CCCD này đã tồn tại ở nhân sự khác!'));
+                      }
+                      return Promise.resolve();
+                    }
+                  }
+                ]}
+              >
                 <Input placeholder="07920..." />
               </Form.Item>
             </Col>
@@ -572,6 +616,7 @@ export const NhanVienPage: React.FC = () => {
             <Select placeholder="Chọn chức vụ mới">
               {chucVus
                 .filter((cv) => {
+                  if (cv.tenChucVu.includes('Thực tập')) return false;
                   if (isOwner) return true;
                   if (cv.tenChucVu.includes('Giám đốc') || cv.tenChucVu.includes('Chủ doanh nghiệp')) return false;
                   if (selectedNv?.tenPhongBan?.includes('Nhân sự') && cv.tenChucVu.includes('Trưởng')) return false;
