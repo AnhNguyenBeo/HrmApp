@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Security.Claims;
 using System.Threading.Tasks;
@@ -157,7 +157,7 @@ public class ChangeChucVuTests
     }
 
     [Fact]
-    public async Task GetNhanViens_HrEmployee_CanViewAllEmployees()
+    public async Task GetNhanViens_HrEmployeeWithoutManagerRole_ReturnsForbidden()
     {
         using var context = CreateDbContext();
         var pbHr = new PhongBan { MaPhongBan = Guid.NewGuid(), TenPhongBan = "Phòng Nhân sự" };
@@ -178,9 +178,8 @@ public class ChangeChucVuTests
         var result = await controller.GetNhanViens(new NhanVienSearchDto());
 
         var actionResult = Assert.IsType<ActionResult<PagedResultDto<NhanVienResponseDto>>>(result);
-        var okResult = Assert.IsType<OkObjectResult>(actionResult.Result);
-        var paged = Assert.IsType<PagedResultDto<NhanVienResponseDto>>(okResult.Value);
-        Assert.Equal(2, paged.TotalCount);
+        var forbiddenResult = Assert.IsType<ObjectResult>(actionResult.Result);
+        Assert.Equal(403, forbiddenResult.StatusCode);
     }
 
     [Fact]
@@ -205,5 +204,116 @@ public class ChangeChucVuTests
         var actionResult = Assert.IsType<ActionResult<PagedResultDto<NhanVienResponseDto>>>(result);
         var objectResult = Assert.IsType<ObjectResult>(actionResult.Result);
         Assert.Equal(403, objectResult.StatusCode);
+    }
+
+    [Fact]
+    public async Task ChangeChucVu_PromoteToIntern_ReturnsBadRequest()
+    {
+        using var context = CreateDbContext();
+        var pbHr = new PhongBan { MaPhongBan = Guid.NewGuid(), TenPhongBan = "Phòng Nhân sự" };
+        var cvOwner = new ChucVu { MaChucVu = Guid.NewGuid(), TenChucVu = "Chủ doanh nghiệp" };
+        var cvNhanVien = new ChucVu { MaChucVu = Guid.NewGuid(), TenChucVu = "Nhân viên" };
+        var cvIntern = new ChucVu { MaChucVu = Guid.NewGuid(), TenChucVu = "Thực tập sinh" };
+
+        var ownerId = Guid.NewGuid();
+        var owner = CreateEmployee(ownerId, "Chủ Doanh Nghiệp", pbHr.MaPhongBan, cvOwner.MaChucVu);
+
+        var targetStaffId = Guid.NewGuid();
+        var targetStaff = CreateEmployee(targetStaffId, "Trần Thị Nhân Viên", pbHr.MaPhongBan, cvNhanVien.MaChucVu);
+
+        context.PhongBans.Add(pbHr);
+        context.ChucVus.AddRange(cvOwner, cvNhanVien, cvIntern);
+        context.NhanViens.AddRange(owner, targetStaff);
+        await context.SaveChangesAsync();
+
+        var controller = CreateController(context, ownerId, "Chủ doanh nghiệp");
+
+        var result = await controller.ChangeChucVu(targetStaffId, cvIntern.MaChucVu);
+
+        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Equal(400, badRequestResult.StatusCode);
+    }
+
+    [Fact]
+    public async Task PostNhanVien_DuplicateCccd_ReturnsBadRequest()
+    {
+        using var context = CreateDbContext();
+        var pbHr = new PhongBan { MaPhongBan = Guid.NewGuid(), TenPhongBan = "Phòng Nhân sự" };
+        var cvOwner = new ChucVu { MaChucVu = Guid.NewGuid(), TenChucVu = "Chủ doanh nghiệp" };
+        var cvNhanVien = new ChucVu { MaChucVu = Guid.NewGuid(), TenChucVu = "Nhân viên" };
+
+        var ownerId = Guid.NewGuid();
+        var owner = CreateEmployee(ownerId, "Chủ Doanh Nghiệp", pbHr.MaPhongBan, cvOwner.MaChucVu);
+        owner.Cccd = "079200000001";
+
+        context.PhongBans.Add(pbHr);
+        context.ChucVus.AddRange(cvOwner, cvNhanVien);
+        context.NhanViens.Add(owner);
+        await context.SaveChangesAsync();
+
+        var controller = CreateController(context, ownerId, "Chủ doanh nghiệp");
+
+        var dto = new CreateNhanVienDto
+        {
+            HoTen = "Nhân viên mới",
+            NgaySinh = new DateOnly(2000, 1, 1),
+            GioiTinh = "Nam",
+            Cccd = "079200000001",
+            Email = "new@example.com",
+            SoDienThoai = "0901234567",
+            DiaChi = "Hà Nội",
+            TrinhDoHocVan = "Đại học",
+            MaPhongBan = pbHr.MaPhongBan,
+            MaChucVu = cvNhanVien.MaChucVu,
+            NgayVaoLam = new DateOnly(2026, 1, 1),
+            TrangThaiLamViec = "Đang làm việc"
+        };
+
+        var result = await controller.PostNhanVien(dto);
+
+        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result.Result);
+        Assert.Equal(400, badRequestResult.StatusCode);
+    }
+
+    [Fact]
+    public async Task PutNhanVien_DuplicateCccd_ReturnsBadRequest()
+    {
+        using var context = CreateDbContext();
+        var pbHr = new PhongBan { MaPhongBan = Guid.NewGuid(), TenPhongBan = "Phòng Nhân sự" };
+        var cvOwner = new ChucVu { MaChucVu = Guid.NewGuid(), TenChucVu = "Chủ doanh nghiệp" };
+        var cvNhanVien = new ChucVu { MaChucVu = Guid.NewGuid(), TenChucVu = "Nhân viên" };
+
+        var ownerId = Guid.NewGuid();
+        var owner = CreateEmployee(ownerId, "Chủ Doanh Nghiệp", pbHr.MaPhongBan, cvOwner.MaChucVu);
+        owner.Cccd = "079200000001";
+
+        var targetId = Guid.NewGuid();
+        var target = CreateEmployee(targetId, "Nhân Viên A", pbHr.MaPhongBan, cvNhanVien.MaChucVu);
+        target.Cccd = "079200000002";
+
+        context.PhongBans.Add(pbHr);
+        context.ChucVus.AddRange(cvOwner, cvNhanVien);
+        context.NhanViens.AddRange(owner, target);
+        await context.SaveChangesAsync();
+
+        var controller = CreateController(context, ownerId, "Chủ doanh nghiệp");
+
+        var dto = new UpdateNhanVienDto
+        {
+            HoTen = "Nhân Viên A",
+            NgaySinh = new DateOnly(2000, 1, 1),
+            GioiTinh = "Nam",
+            Cccd = "079200000001",
+            Email = "target@example.com",
+            SoDienThoai = "0901234567",
+            DiaChi = "Hà Nội",
+            TrinhDoHocVan = "Đại học",
+            MaPhongBan = pbHr.MaPhongBan
+        };
+
+        var result = await controller.PutNhanVien(targetId, dto);
+
+        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Equal(400, badRequestResult.StatusCode);
     }
 }

@@ -42,7 +42,7 @@ namespace HrmApp.Api.Controllers
                 .FirstOrDefaultAsync(n => n.MaNhanVien == maNhanVien);
             if (nhanVien == null) return NotFound(new { message = "Không tìm thấy nhân viên." });
 
-            var validLoaiDon = new[] { "Nghỉ phép", "Nghỉ phép năm", "Nghỉ không lương", "Thai sản", "Nghỉ ốm" };
+            var validLoaiDon = new[] { "Nghỉ phép", "Nghỉ phép năm", "Nghỉ không lương", "Thai sản", "Nghỉ thai sản", "Nghỉ ốm", "Nghỉ ốm đau", "Nghỉ việc", "Thôi việc" };
             if (string.IsNullOrEmpty(request.LoaiDon) || !validLoaiDon.Contains(request.LoaiDon))
             {
                 return BadRequest(new { message = "Loại đơn không hợp lệ." });
@@ -54,7 +54,7 @@ namespace HrmApp.Api.Controllers
             }
 
             int songaynghi = 0;
-            if (request.LoaiDon == "Thai sản")
+            if (request.LoaiDon == "Thai sản" || request.LoaiDon == "Nghỉ thai sản")
             {
                 songaynghi = request.NgayKetThuc.DayNumber - request.NgayBatDau.DayNumber + 1;
                 if (songaynghi > 180)
@@ -312,6 +312,30 @@ namespace HrmApp.Api.Controllers
             donTu.NguoiDuyetMa = nguoiDuyetMa;
             donTu.NgayDuyet = DateOnly.FromDateTime(DateTime.Now);
             donTu.GhiChuDuyet = request.GhiChuDuyet;
+
+            if (request.TrangThai == "Đã duyệt" && (donTu.LoaiDon == "Nghỉ việc" || donTu.LoaiDon == "Thôi việc"))
+            {
+                nguoiLamDon.TrangThaiLamViec = "Đã nghỉ việc";
+                nguoiLamDon.NgayNghiViec = donTu.NgayKetThuc;
+
+                var taiKhoans = await _context.TaiKhoans
+                    .Where(t => t.MaNhanVien == nguoiLamDon.MaNhanVien)
+                    .ToListAsync();
+                foreach (var taiKhoan in taiKhoans)
+                {
+                    taiKhoan.TrangThai = "Bị khóa";
+                }
+
+                var hopDongs = await _context.HopDongLaoDongs
+                    .Where(h => h.MaNhanVien == nguoiLamDon.MaNhanVien &&
+                                (h.TrangThai == "Có hiệu lực" || h.TrangThai == "Đang hiệu lực"))
+                    .ToListAsync();
+                foreach (var hopDong in hopDongs)
+                {
+                    hopDong.TrangThai = "Đã thanh lý";
+                    hopDong.NgayKetThuc = donTu.NgayKetThuc;
+                }
+            }
 
             _context.DonTus.Update(donTu);
             await _context.SaveChangesAsync();

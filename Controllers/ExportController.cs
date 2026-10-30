@@ -48,7 +48,7 @@ namespace HrmApp.Api.Controllers
             bool isAccounting = false;
             var nv = await _context.NhanViens.Include(n => n.MaPhongBanNavigation).FirstOrDefaultAsync(n => n.MaNhanVien == maNhanVien);
             var tenPB = nv?.MaPhongBanNavigation?.TenPhongBan ?? "";
-            isAccounting = tenPB.ToLower().Contains("kế toán");
+            isAccounting = role == "Quản lý" && tenPB.ToLower().Contains("kế toán");
 
             if (role != "Chủ doanh nghiệp" && !isAccounting)
             {

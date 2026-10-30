@@ -33,6 +33,7 @@ builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<INhatKyService, NhatKyService>();
 builder.Services.Configure<PayrollOptions>(builder.Configuration.GetSection("Payroll"));
 builder.Services.AddScoped<IPayrollTaxCalculator, PayrollTaxCalculator>();
+builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
 
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 var secretKey = builder.Configuration["JwtSettings:SecretKey"]

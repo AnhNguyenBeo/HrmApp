@@ -19,11 +19,13 @@ namespace HrmApp.Api.Controllers
     {
         private readonly QuanLyNhanSuDbContext _context;
         private readonly INhatKyService _nhatKyService;
+        private readonly TimeProvider _timeProvider;
 
-        public ChamCongController(QuanLyNhanSuDbContext context, INhatKyService nhatKyService)
+        public ChamCongController(QuanLyNhanSuDbContext context, INhatKyService nhatKyService, TimeProvider? timeProvider = null)
         {
             _context = context;
             _nhatKyService = nhatKyService;
+            _timeProvider = timeProvider ?? TimeProvider.System;
         }
 
         [HttpPost("check-in-out")]
@@ -40,8 +42,8 @@ namespace HrmApp.Api.Controllers
                 return BadRequest(new { message = "Tài khoản Chủ doanh nghiệp và Quản trị viên không yêu cầu chấm công cá nhân." });
             }
 
-            var today = DateOnly.FromDateTime(DateTime.Now);
-            var now = DateTime.Now;
+            var now = _timeProvider.GetLocalNow().DateTime;
+            var today = DateOnly.FromDateTime(now);
             var nowTime = new TimeOnly(now.Hour, now.Minute, now.Second);
 
             var chamCong = await _context.ChamCongs.FirstOrDefaultAsync(c => c.MaNhanVien == maNhanVien && c.Ngay == today);

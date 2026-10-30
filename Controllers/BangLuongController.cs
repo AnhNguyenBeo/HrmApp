@@ -94,6 +94,7 @@ namespace HrmApp.Api.Controllers
             var roleClaim = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role || c.Type == "role");
             var role = roleClaim?.Value;
             if (role == "Chủ doanh nghiệp") return true;
+            if (role != "Quản lý") return false;
 
             var maNhanVienStr = User.FindFirst("MaNhanVien")?.Value;
             if (!Guid.TryParse(maNhanVienStr, out var maNhanVien)) return false;
@@ -114,6 +115,11 @@ namespace HrmApp.Api.Controllers
             Guid approverMaNhanVien)
         {
             var isOwner = role == "Chủ doanh nghiệp";
+
+            if (!isOwner && role != "Quản lý")
+            {
+                return (false, "Chỉ người quản lý được phép phê duyệt chi trả bảng lương.");
+            }
 
             if (approverMaNhanVien != Guid.Empty && bangLuong.MaNhanVien == approverMaNhanVien)
             {

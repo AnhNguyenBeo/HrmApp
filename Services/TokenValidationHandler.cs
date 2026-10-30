@@ -14,7 +14,7 @@ namespace HrmApp.Api.Services;
 public static class TokenValidationHandler
 {
     public const string DisabledAccountItemKey = "IsAccountDisabled";
-    public const string DisabledAccountMessage = "Tài khoản đã bị khóa hoặc không còn hiệu lực, vui lòng đăng nhập lại.";
+    public const string DisabledAccountMessage = "Tài khoản của bạn đã bị khóa";
 
     public static async Task ValidateTokenAsync(TokenValidatedContext context)
     {

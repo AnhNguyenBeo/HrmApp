@@ -1,5 +1,6 @@
 ﻿using HrmApp.Api.Constants;
 using HrmApp.Api.Data;
+using HrmApp.Api.Data.Models;
 using HrmApp.Api.DTOs.ThongKe;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -38,6 +39,8 @@ namespace HrmApp.Api.Controllers
             }
 
             var currentMonthStr = $"{targetMonth:D2}/{targetYear}";
+            var startOfMonth = new DateOnly(targetYear, targetMonth, 1);
+            var endOfMonth = new DateOnly(targetYear, targetMonth, DateTime.DaysInMonth(targetYear, targetMonth));
 
             var callerRole = User.FindFirst(ClaimTypes.Role)?.Value ?? User.FindFirst("role")?.Value;
             var callerMaNhanVienStr = User.FindFirst("MaNhanVien")?.Value;
@@ -48,28 +51,43 @@ namespace HrmApp.Api.Controllers
                 .FirstOrDefaultAsync(n => n.MaNhanVien == callerMaNhanVien);
 
             var myDept = callerNv?.MaPhongBanNavigation?.TenPhongBan ?? "";
-            bool canViewPayroll = callerRole == "Chủ doanh nghiệp" || myDept.ToLower().Contains("kế toán");
+            bool canViewPayroll = callerRole == "Chủ doanh nghiệp" ||
+                                  (callerRole == "Quản lý" && myDept.ToLower().Contains("kế toán"));
 
-            var allActive = await _context.NhanViens
+            var allEmployees = await _context.NhanViens
                 .Include(nv => nv.MaPhongBanNavigation)
                 .Include(nv => nv.MaChucVuNavigation)
-                .Where(nv => nv.TrangThaiLamViec != "Đã nghỉ việc")
                 .ToListAsync();
 
-            var allResigned = await _context.NhanViens
-                .Include(nv => nv.MaPhongBanNavigation)
-                .Include(nv => nv.MaChucVuNavigation)
-                .Where(nv => nv.TrangThaiLamViec == "Đã nghỉ việc")
-                .ToListAsync();
+            var activeInMonth = allEmployees
+                .Where(nv => nv.NgayVaoLam <= endOfMonth &&
+                             ((nv.TrangThaiLamViec != "Đã nghỉ việc" && !nv.NgayNghiViec.HasValue) ||
+                              (nv.NgayNghiViec.HasValue && nv.NgayNghiViec.Value > endOfMonth)))
+                .ToList();
+
+            var resignedInMonth = allEmployees
+                .Where(nv => nv.TrangThaiLamViec == "Đã nghỉ việc" &&
+                             nv.NgayNghiViec.HasValue &&
+                             nv.NgayNghiViec.Value >= startOfMonth &&
+                             nv.NgayNghiViec.Value <= endOfMonth)
+                .ToList();
 
             var approvedLeavesInMonth = await _context.DonTus
                 .Include(d => d.MaNhanVienNavigation)
                 .ThenInclude(nv => nv.MaPhongBanNavigation)
                 .Where(d => d.TrangThai == "Đã duyệt" &&
-                            d.LoaiDon != "Làm thêm giờ" &&
-                            ((d.NgayBatDau.Month == targetMonth && d.NgayBatDau.Year == targetYear) ||
-                             (d.NgayKetThuc.Month == targetMonth && d.NgayKetThuc.Year == targetYear)))
+                            (d.LoaiDon == "Nghỉ phép" || d.LoaiDon == "Nghỉ phép năm" ||
+                             d.LoaiDon == "Nghỉ không lương" || d.LoaiDon == "Thai sản" ||
+                             d.LoaiDon == "Nghỉ thai sản" || d.LoaiDon == "Nghỉ ốm" ||
+                             d.LoaiDon == "Nghỉ ốm đau") &&
+                            d.NgayBatDau <= endOfMonth && d.NgayKetThuc >= startOfMonth)
                 .ToListAsync();
+
+            var employeeIdsInMonth = activeInMonth.Select(nv => nv.MaNhanVien).ToHashSet();
+            approvedLeavesInMonth = approvedLeavesInMonth
+                .Where(d => employeeIdsInMonth.Contains(d.MaNhanVien))
+                .ToList();
+            var employeeIdsOnLeave = approvedLeavesInMonth.Select(d => d.MaNhanVien).ToHashSet();
 
             var bangLuongsThang = await _context.BangLuongs
                 .Where(b => b.ThoiGian == currentMonthStr)
@@ -91,18 +109,32 @@ namespace HrmApp.Api.Controllers
             var activeSalaries = new List<decimal>();
             if (canViewPayroll)
             {
-                var activeEmpIds = allActive.Select(nv => nv.MaNhanVien).ToList();
-                activeSalaries = await _context.HopDongLaoDongs
-                    .Where(h => activeEmpIds.Contains(h.MaNhanVien) && (h.TrangThai == "Có hiệu lực" || h.TrangThai == "Đang hiệu lực"))
-                    .Select(h => h.LuongCoBan)
+                var activeEmpIds = activeInMonth.Select(nv => nv.MaNhanVien).ToList();
+                var contractsInMonth = await _context.HopDongLaoDongs
+                    .Where(h => activeEmpIds.Contains(h.MaNhanVien) &&
+                                h.NgayBatDau <= endOfMonth &&
+                                (!h.NgayKetThuc.HasValue || h.NgayKetThuc.Value >= startOfMonth) &&
+                                (h.TrangThai == "Có hiệu lực" || h.TrangThai == "Đang hiệu lực" || h.TrangThai == "Đã thanh lý"))
                     .ToListAsync();
+                activeSalaries = contractsInMonth
+                    .GroupBy(h => h.MaNhanVien)
+                    .Select(g => g.OrderByDescending(h => h.NgayBatDau).First().LuongCoBan)
+                    .ToList();
             }
+
+            var departments = await _context.PhongBans
+                .Select(pb => new { pb.MaPhongBan, pb.TenPhongBan })
+                .ToListAsync();
+            var employeeCountsByDepartment = activeInMonth
+                .GroupBy(nv => nv.MaPhongBan)
+                .ToDictionary(g => g.Key, g => g.Count());
+            int TenureMonths(NhanVien nv) => (targetYear - nv.NgayVaoLam.Year) * 12 + targetMonth - nv.NgayVaoLam.Month;
 
             var response = new DashboardResponseDto
             {
                 CanViewPayroll = canViewPayroll,
-                TongSoNhanVien = allActive.Count,
-                NhanVienMoiTrongThang = allActive.Count(nv => nv.NgayVaoLam.Month == targetMonth && nv.NgayVaoLam.Year == targetYear),
+                TongSoNhanVien = activeInMonth.Count,
+                NhanVienMoiTrongThang = allEmployees.Count(nv => nv.NgayVaoLam.Month == targetMonth && nv.NgayVaoLam.Year == targetYear),
                 DonTuChoDuyet = await _context.DonTus.CountAsync(d => d.TrangThai == "Chờ duyệt"),
                 TongQuyLuongThang = tongQuyLuong,
                 LuongDaChiTraThang = luongDaChiTra,
@@ -110,22 +142,23 @@ namespace HrmApp.Api.Controllers
                 SoBangLuongDaChiTra = soBangLuongDaChiTra,
                 SoBangLuongChoChiTra = soBangLuongChoChiTra,
                 
-                NhanVienTheoPhongBan = await _context.PhongBans.Select(pb => new ThongKePhongBanDto {
+                NhanVienTheoPhongBan = departments.Select(pb => new ThongKePhongBanDto
+                {
                     TenPhongBan = pb.TenPhongBan,
-                    SoLuongNhanVien = pb.NhanViens.Count(nv => nv.TrangThaiLamViec != "Đã nghỉ việc")
-                }).ToListAsync(),
+                    SoLuongNhanVien = employeeCountsByDepartment.TryGetValue(pb.MaPhongBan, out var count) ? count : 0
+                }).ToList(),
 
-                NhanVienTheoTrinhDo = allActive.GroupBy(nv => string.IsNullOrEmpty(nv.TrinhDoHocVan) ? "Chưa cập nhật" : nv.TrinhDoHocVan)
+                NhanVienTheoTrinhDo = activeInMonth.GroupBy(nv => string.IsNullOrEmpty(nv.TrinhDoHocVan) ? "Chưa cập nhật" : nv.TrinhDoHocVan)
                     .Select(g => new ThongKeTrinhDoDto { TrinhDo = g.Key, SoLuong = g.Count() }).ToList(),
 
                 NhanVienTheoThamNien = new List<ThongKeThamNienDto>
                 {
-                    new ThongKeThamNienDto { NhomThamNien = "Dưới 1 năm", SoLuong = allActive.Count(nv => (now.Year - nv.NgayVaoLam.Year) * 12 + now.Month - nv.NgayVaoLam.Month < 12) },
-                    new ThongKeThamNienDto { NhomThamNien = "1 - 3 năm", SoLuong = allActive.Count(nv => {
-                        var m = (now.Year - nv.NgayVaoLam.Year) * 12 + now.Month - nv.NgayVaoLam.Month;
+                    new ThongKeThamNienDto { NhomThamNien = "Dưới 1 năm", SoLuong = activeInMonth.Count(nv => TenureMonths(nv) < 12) },
+                    new ThongKeThamNienDto { NhomThamNien = "1 - 3 năm", SoLuong = activeInMonth.Count(nv => {
+                        var m = TenureMonths(nv);
                         return m >= 12 && m <= 36;
                     })},
-                    new ThongKeThamNienDto { NhomThamNien = "Trên 3 năm", SoLuong = allActive.Count(nv => (now.Year - nv.NgayVaoLam.Year) * 12 + now.Month - nv.NgayVaoLam.Month > 36) }
+                    new ThongKeThamNienDto { NhomThamNien = "Trên 3 năm", SoLuong = activeInMonth.Count(nv => TenureMonths(nv) > 36) }
                 },
 
                 NhanVienTheoMucLuong = canViewPayroll ? new List<ThongKeMucLuongDto>
@@ -138,7 +171,7 @@ namespace HrmApp.Api.Controllers
 
                 TinhHinhNhanSu = new TinhHinhNhanSuThangDto
                 {
-                    DangLamViec = allActive.Select(nv => new NhanSuStatusDto
+                    DangLamViec = activeInMonth.Where(nv => !employeeIdsOnLeave.Contains(nv.MaNhanVien)).Select(nv => new NhanSuStatusDto
                     {
                         MaNhanVien = nv.MaNhanVien,
                         HoTen = nv.HoTen,
@@ -158,7 +191,7 @@ namespace HrmApp.Api.Controllers
                         NgayKetThuc = d.NgayKetThuc
                     }).ToList(),
 
-                    DaNghiViec = allResigned.Select(nv => new NhanSuStatusDto
+                    DaNghiViec = resignedInMonth.Select(nv => new NhanSuStatusDto
                     {
                         MaNhanVien = nv.MaNhanVien,
                         HoTen = nv.HoTen,

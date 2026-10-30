@@ -34,7 +34,7 @@ namespace HrmApp.Api.Controllers
         }
 
         [HttpGet]
-        [Authorize(Roles = "Quản trị viên, Chủ doanh nghiệp")]
+        [Authorize(Roles = "Quản trị viên")]
         public async Task<ActionResult<System.Collections.Generic.IEnumerable<TaiKhoanResponseDto>>> GetTaiKhoans()
         {
             var result = await _context.TaiKhoans
@@ -62,7 +62,7 @@ namespace HrmApp.Api.Controllers
         }
 
         [HttpGet("{id}")]
-        [Authorize(Roles = "Quản trị viên, Chủ doanh nghiệp")]
+        [Authorize(Roles = "Quản trị viên")]
         public async Task<ActionResult<TaiKhoanResponseDto>> GetTaiKhoan(Guid id)
         {
             var taiKhoan = await _context.TaiKhoans
@@ -96,7 +96,7 @@ namespace HrmApp.Api.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "Quản trị viên, Chủ doanh nghiệp")]
+        [Authorize(Roles = "Quản trị viên")]
         public async Task<ActionResult<TaiKhoanResponseDto>> PostTaiKhoan([FromBody] CreateTaiKhoanDto dto)
         {
             var tenDangNhap = dto.TenDangNhap.Trim();
@@ -190,7 +190,7 @@ namespace HrmApp.Api.Controllers
         }
 
         [HttpPut("{id}")]
-        [Authorize(Roles = "Quản trị viên, Chủ doanh nghiệp")]
+        [Authorize(Roles = "Quản trị viên")]
         public async Task<IActionResult> PutTaiKhoan(Guid id, [FromBody] UpdateTaiKhoanDto dto)
         {
             if (dto.TrangThai != "Hoạt động" && dto.TrangThai != "Bị khóa")
@@ -284,7 +284,7 @@ namespace HrmApp.Api.Controllers
         }
 
         [HttpPut("{id}/vai-tro")]
-        [Authorize(Roles = "Quản trị viên, Chủ doanh nghiệp")]
+        [Authorize(Roles = "Quản trị viên")]
         public async Task<IActionResult> ChangeRole(Guid id, [FromBody] Guid maVaiTro)
         {
             var taiKhoan = await _context.TaiKhoans
@@ -332,7 +332,7 @@ namespace HrmApp.Api.Controllers
         }
 
         [HttpDelete("{id}")]
-        [Authorize(Roles = "Quản trị viên, Chủ doanh nghiệp")]
+        [Authorize(Roles = "Quản trị viên")]
         public async Task<IActionResult> DeleteTaiKhoan(Guid id)
         {
             var taiKhoan = await _context.TaiKhoans
@@ -369,7 +369,7 @@ namespace HrmApp.Api.Controllers
         }
 
         [HttpPut("{id}/khoa")]
-        [Authorize(Roles = "Quản trị viên, Chủ doanh nghiệp")]
+        [Authorize(Roles = "Quản trị viên")]
         public async Task<IActionResult> KhoaTaiKhoan(Guid id)
         {
             var taiKhoan = await _context.TaiKhoans
@@ -406,7 +406,7 @@ namespace HrmApp.Api.Controllers
         }
 
         [HttpPut("{id}/mo-khoa")]
-        [Authorize(Roles = "Quản trị viên, Chủ doanh nghiệp")]
+        [Authorize(Roles = "Quản trị viên")]
         public async Task<IActionResult> MoKhoaTaiKhoan(Guid id)
         {
             var taiKhoan = await _context.TaiKhoans
