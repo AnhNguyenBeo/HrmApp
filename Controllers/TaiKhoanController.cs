@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
@@ -105,6 +105,11 @@ namespace HrmApp.Api.Controllers
                 return BadRequest(new { message = "Tên đăng nhập không được chứa khoảng trắng." });
             }
 
+            if (string.IsNullOrWhiteSpace(dto.TrangThai))
+            {
+                dto.TrangThai = "Hoạt động";
+            }
+
             if (dto.TrangThai != "Hoạt động" && dto.TrangThai != "Bị khóa")
             {
                 return BadRequest(new { message = "Trạng thái tài khoản không hợp lệ, chỉ chấp nhận 'Hoạt động' hoặc 'Bị khóa'." });
@@ -116,10 +121,24 @@ namespace HrmApp.Api.Controllers
                 return BadRequest(new { message = "Tên đăng nhập đã tồn tại." });
             }
 
-            var nhanVien = await _context.NhanViens.FindAsync(dto.MaNhanVien);
+            var nhanVienHasAccount = await _context.TaiKhoans.AnyAsync(t => t.MaNhanVien == dto.MaNhanVien);
+            if (nhanVienHasAccount)
+            {
+                return BadRequest(new { message = "Nhân viên này đã được cấp tài khoản trong hệ thống." });
+            }
+
+            var nhanVien = await _context.NhanViens
+                .Include(nv => nv.MaPhongBanNavigation)
+                .Include(nv => nv.MaChucVuNavigation)
+                .FirstOrDefaultAsync(nv => nv.MaNhanVien == dto.MaNhanVien);
             if (nhanVien == null)
             {
                 return BadRequest(new { message = "Nhân viên không tồn tại trong hệ thống." });
+            }
+
+            if (nhanVien.TrangThaiLamViec == "Đã nghỉ việc")
+            {
+                return BadRequest(new { message = "Không thể cấp tài khoản cho nhân viên đã nghỉ việc." });
             }
 
             var vaiTro = await _context.VaiTros.FindAsync(dto.MaVaiTro);
@@ -153,7 +172,21 @@ namespace HrmApp.Api.Controllers
             var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
             await _nhatKyService.GhiLogAsync(callerUser, callerName, "Tạo tài khoản", $"Tạo mới tài khoản '{taiKhoan.TenDangNhap}' cho nhân viên '{nhanVien.HoTen}'", "Thành công", ip);
 
-            return CreatedAtAction(nameof(GetTaiKhoan), new { id = taiKhoan.MaTaiKhoan }, null);
+            var responseDto = new TaiKhoanResponseDto
+            {
+                MaTaiKhoan = taiKhoan.MaTaiKhoan,
+                MaNhanVien = taiKhoan.MaNhanVien,
+                TenNhanVien = nhanVien.HoTen,
+                TenPhongBan = nhanVien.MaPhongBanNavigation != null ? nhanVien.MaPhongBanNavigation.TenPhongBan : "",
+                TenChucVu = nhanVien.MaChucVuNavigation != null ? nhanVien.MaChucVuNavigation.TenChucVu : "",
+                TenDangNhap = taiKhoan.TenDangNhap,
+                MaVaiTro = taiKhoan.MaVaiTro,
+                TenVaiTro = vaiTro.TenVaiTro,
+                TrangThai = taiKhoan.TrangThai,
+                NgayTao = taiKhoan.NgayTao
+            };
+
+            return CreatedAtAction(nameof(GetTaiKhoan), new { id = taiKhoan.MaTaiKhoan }, responseDto);
         }
 
         [HttpPut("{id}")]

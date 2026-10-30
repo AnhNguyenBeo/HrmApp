@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel.DataAnnotations;
 
 namespace HrmApp.Api.DTOs.TaiKhoan
@@ -19,7 +19,6 @@ namespace HrmApp.Api.DTOs.TaiKhoan
         [Required(ErrorMessage = "Vai trò là bắt buộc")]
         public Guid MaVaiTro { get; set; }
         
-        [Required(ErrorMessage = "Trạng thái là bắt buộc")]
-        public string TrangThai { get; set; } = null!;
+        public string TrangThai { get; set; } = "Hoạt động";
     }
 }
