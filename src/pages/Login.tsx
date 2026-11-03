@@ -45,10 +45,19 @@ export const Login: React.FC = () => {
 
       message.success('Đăng nhập thành công! Xin chào ' + data.hoTen);
 
+      const dept = (data.tenPhongBan || '').toLowerCase();
+      const isHR = dept.includes('nhân sự');
+
       if (data.vaiTro === 'Quản trị viên') {
         navigate('/tai-khoan');
-      } else if (data.vaiTro === 'Chủ doanh nghiệp' || data.vaiTro === 'Quản lý') {
+      } else if (data.vaiTro === 'Chủ doanh nghiệp') {
         navigate('/dashboard');
+      } else if (data.vaiTro === 'Quản lý') {
+        if (isHR) {
+          navigate('/dashboard');
+        } else {
+          navigate('/nhan-vien');
+        }
       } else {
         navigate('/profile');
       }

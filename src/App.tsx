@@ -21,9 +21,15 @@ const HomeRedirect: React.FC = () => {
   const userStr = localStorage.getItem('user');
   const user = userStr ? JSON.parse(userStr) : null;
   const role = user?.vaiTro;
+  const dept = (user?.tenPhongBan || '').toLowerCase();
+  const isHR = dept.includes('nhân sự');
 
   if (role === 'Quản trị viên') return <Navigate to="/tai-khoan" replace />;
-  if (role === 'Chủ doanh nghiệp' || role === 'Quản lý') return <Navigate to="/dashboard" replace />;
+  if (role === 'Chủ doanh nghiệp') return <Navigate to="/dashboard" replace />;
+  if (role === 'Quản lý') {
+    if (isHR) return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/nhan-vien" replace />;
+  }
   return <Navigate to="/profile" replace />;
 };
 
@@ -45,7 +51,7 @@ export const App: React.FC = () => {
                 <Route path="/bang-luong" element={<BangLuongPage />} />
               </Route>
 
-              <Route element={<ProtectedRoute allowedRoles={['Chủ doanh nghiệp', 'Quản lý', 'Nhân viên']} allowDepartments={['Nhân sự']} />}>
+              <Route element={<ProtectedRoute allowedRoles={['Chủ doanh nghiệp', 'Quản lý', 'Nhân viên']} allowDepartments={['Nhân sự']} departmentExemptRoles={['Chủ doanh nghiệp', 'Quản lý']} />}>
                 <Route path="/nhan-vien" element={<NhanVienPage />} />
               </Route>
 
@@ -53,8 +59,11 @@ export const App: React.FC = () => {
                 <Route path="/tinh-luong" element={<TinhLuongPage />} />
               </Route>
 
-              <Route element={<ProtectedRoute allowedRoles={['Chủ doanh nghiệp', 'Quản lý']} />}>
+              <Route element={<ProtectedRoute allowedRoles={['Chủ doanh nghiệp', 'Quản lý']} allowDepartments={['Nhân sự']} />}>
                 <Route path="/dashboard" element={<DashboardPage />} />
+              </Route>
+
+              <Route element={<ProtectedRoute allowedRoles={['Chủ doanh nghiệp', 'Quản lý']} />}>
                 <Route path="/don-tu/quan-ly" element={<DuyetDonTuPage />} />
                 <Route path="/cham-cong-quan-ly" element={<ChamCongQuanLyPage />} />
               </Route>

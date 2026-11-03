@@ -5,9 +5,14 @@ import { Button, Result } from 'antd';
 interface ProtectedRouteProps {
   allowedRoles?: string[];
   allowDepartments?: string[];
+  departmentExemptRoles?: string[];
 }
 
-export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles, allowDepartments }) => {
+export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
+  allowedRoles,
+  allowDepartments,
+  departmentExemptRoles = ['Chủ doanh nghiệp'],
+}) => {
   const token = localStorage.getItem('token');
   const userStr = localStorage.getItem('user');
   const navigate = useNavigate();
@@ -22,8 +27,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles, al
       const hasRole = allowedRoles.includes(user.vaiTro);
       const hasDept = allowDepartments ? allowDepartments.some((d) => (user.tenPhongBan || '').includes(d)) : false;
 
-      const isManagerOrOwner = user.vaiTro === 'Chủ doanh nghiệp' || user.vaiTro === 'Quản lý';
-      const hasRequiredRoleAndDepartment = hasRole && (!allowDepartments || hasDept || isManagerOrOwner);
+      const isExempt = departmentExemptRoles.includes(user.vaiTro);
+      const hasRequiredRoleAndDepartment = hasRole && (!allowDepartments || hasDept || isExempt);
       if (!hasRequiredRoleAndDepartment) {
         return (
           <div style={{ padding: 50, textAlign: 'center' }}>

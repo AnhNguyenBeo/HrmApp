@@ -92,7 +92,7 @@ export const AppLayout: React.FC = () => {
     ];
   } else if (role === 'Quản lý') {
     menuItems = [
-      { key: '/dashboard', icon: <DashboardOutlined />, label: 'Báo cáo & Thống kê' },
+      ...(isHR ? [{ key: '/dashboard', icon: <DashboardOutlined />, label: 'Báo cáo & Thống kê' }] : []),
       { key: '/nhan-vien', icon: <TeamOutlined />, label: isHR ? 'Quản lý nhân sự' : 'Nhân sự phòng ban' },
       { key: '/don-tu/quan-ly', icon: <SolutionOutlined />, label: 'Duyệt đơn từ nhân viên' },
       { key: '/cham-cong-quan-ly', icon: <ClockCircleOutlined />, label: 'Theo dõi chấm công' },
