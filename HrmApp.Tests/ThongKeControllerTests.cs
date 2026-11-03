@@ -30,7 +30,7 @@ public class ThongKeControllerTests
         await db.SaveChangesAsync();
 
         var controller = new ThongKeController(db);
-        HrTestSupport.SetUser(controller, Guid.NewGuid(), "Quản lý");
+        HrTestSupport.SetUser(controller, Guid.NewGuid(), "Chủ doanh nghiệp");
         var response = Assert.IsType<DashboardResponseDto>(Assert.IsType<OkObjectResult>(
             await controller.GetDashboardStats("10/2026")).Value);
 
@@ -82,7 +82,7 @@ public class ThongKeControllerTests
         await db.SaveChangesAsync();
 
         var controller = new ThongKeController(db);
-        HrTestSupport.SetUser(controller, payrollManager.MaNhanVien, "Quản lý");
+        HrTestSupport.SetUser(controller, payrollManager.MaNhanVien, "Chủ doanh nghiệp");
         var response = Assert.IsType<DashboardResponseDto>(Assert.IsType<OkObjectResult>(
             await controller.GetDashboardStats($"{now.Month:D2}/{now.Year}")).Value);
 
@@ -95,6 +95,48 @@ public class ThongKeControllerTests
         Assert.Equal(1, response.NhanVienTheoThamNien.Single(x => x.NhomThamNien == "Dưới 1 năm").SoLuong);
         Assert.Equal(2, response.NhanVienTheoThamNien.Single(x => x.NhomThamNien == "1 - 3 năm").SoLuong);
         Assert.Equal(2, response.NhanVienTheoThamNien.Single(x => x.NhomThamNien == "Trên 3 năm").SoLuong);
+    }
+
+    [Fact]
+    public async Task Dashboard_HrManager_CanAccessStats()
+    {
+        using var db = HrTestSupport.CreateDbContext();
+        var hrDept = new PhongBan { MaPhongBan = Guid.NewGuid(), TenPhongBan = "Phòng Nhân sự" };
+        var pos = new ChucVu { MaChucVu = Guid.NewGuid(), TenChucVu = "Trưởng phòng" };
+        var hrMgr = NewEmployee("Trưởng phòng HR", hrDept, pos, "Đang làm việc", new DateOnly(2021, 1, 1));
+        db.PhongBans.Add(hrDept);
+        db.ChucVus.Add(pos);
+        db.NhanViens.Add(hrMgr);
+        await db.SaveChangesAsync();
+
+        var controller = new ThongKeController(db);
+        HrTestSupport.SetUser(controller, hrMgr.MaNhanVien, "Quản lý");
+
+        var result = await controller.GetDashboardStats("10/2026");
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        var dto = Assert.IsType<DashboardResponseDto>(okResult.Value);
+        Assert.Equal(1, dto.TongSoNhanVien);
+        Assert.False(dto.CanViewPayroll);
+    }
+
+    [Fact]
+    public async Task Dashboard_NonHrManager_Returns403Forbidden()
+    {
+        using var db = HrTestSupport.CreateDbContext();
+        var itDepartment = new PhongBan { MaPhongBan = Guid.NewGuid(), TenPhongBan = "Phòng Công nghệ thông tin" };
+        var position = new ChucVu { MaChucVu = Guid.NewGuid(), TenChucVu = "Trưởng phòng" };
+        var itManager = NewEmployee("Quản lý IT", itDepartment, position, "Đang làm việc", new DateOnly(2020, 1, 1));
+        db.PhongBans.Add(itDepartment);
+        db.ChucVus.Add(position);
+        db.NhanViens.Add(itManager);
+        await db.SaveChangesAsync();
+
+        var controller = new ThongKeController(db);
+        HrTestSupport.SetUser(controller, itManager.MaNhanVien, "Quản lý");
+
+        var result = await controller.GetDashboardStats("10/2026");
+        var objResult = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(403, objResult.StatusCode);
     }
 
     private static NhanVien NewEmployee(

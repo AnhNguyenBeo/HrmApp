@@ -51,8 +51,15 @@ namespace HrmApp.Api.Controllers
                 .FirstOrDefaultAsync(n => n.MaNhanVien == callerMaNhanVien);
 
             var myDept = callerNv?.MaPhongBanNavigation?.TenPhongBan ?? "";
-            bool canViewPayroll = callerRole == "Chủ doanh nghiệp" ||
-                                  (callerRole == "Quản lý" && myDept.ToLower().Contains("kế toán"));
+            bool isOwner = callerRole == "Chủ doanh nghiệp";
+            bool isHRManager = callerRole == "Quản lý" && myDept.ToLower().Contains("nhân sự");
+
+            if (!isOwner && !isHRManager)
+            {
+                return StatusCode(403, new { message = "Chỉ Chủ doanh nghiệp và Quản lý phòng Nhân sự mới có quyền xem Báo cáo & Thống kê." });
+            }
+
+            bool canViewPayroll = isOwner;
 
             var allEmployees = await _context.NhanViens
                 .Include(nv => nv.MaPhongBanNavigation)
