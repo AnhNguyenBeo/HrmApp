@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace HrmApp.Api.DTOs.ThongKe
@@ -18,7 +18,20 @@ namespace HrmApp.Api.DTOs.ThongKe
         public List<ThongKeTrinhDoDto> NhanVienTheoTrinhDo { get; set; } = new List<ThongKeTrinhDoDto>();
         public List<ThongKeThamNienDto> NhanVienTheoThamNien { get; set; } = new List<ThongKeThamNienDto>();
         public List<ThongKeMucLuongDto> NhanVienTheoMucLuong { get; set; } = new List<ThongKeMucLuongDto>();
+        public List<ThongKeLuongTheoQuyDto> LuongTheoQuy { get; set; } = new List<ThongKeLuongTheoQuyDto>();
         public TinhHinhNhanSuThangDto TinhHinhNhanSu { get; set; } = new TinhHinhNhanSuThangDto();
+    }
+
+    public class ThongKeLuongTheoQuyDto
+    {
+        public Guid MaNhanVien { get; set; }
+        public string HoTen { get; set; } = null!;
+        public string TenPhongBan { get; set; } = "";
+        public decimal LuongQuy1 { get; set; }
+        public decimal LuongQuy2 { get; set; }
+        public decimal LuongQuy3 { get; set; }
+        public decimal LuongQuy4 { get; set; }
+        public decimal TongThuNhapNam { get; set; }
     }
 
     public class ThongKePhongBanDto { public string TenPhongBan { get; set; } = null!; public int SoLuongNhanVien { get; set; } }

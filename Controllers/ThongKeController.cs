@@ -1,4 +1,4 @@
-﻿using HrmApp.Api.Constants;
+using HrmApp.Api.Constants;
 using HrmApp.Api.Data;
 using HrmApp.Api.Data.Models;
 using HrmApp.Api.DTOs.ThongKe;
@@ -137,6 +137,70 @@ namespace HrmApp.Api.Controllers
                 .ToDictionary(g => g.Key, g => g.Count());
             int TenureMonths(NhanVien nv) => (targetYear - nv.NgayVaoLam.Year) * 12 + targetMonth - nv.NgayVaoLam.Month;
 
+            var quarterlySalaries = new List<ThongKeLuongTheoQuyDto>();
+            if (canViewPayroll)
+            {
+                var activeEmpIds = activeInMonth.Select(nv => nv.MaNhanVien).ToList();
+                var hopDongsAll = await _context.HopDongLaoDongs
+                    .Where(h => activeEmpIds.Contains(h.MaNhanVien))
+                    .ToListAsync();
+                var contractsByEmp = hopDongsAll
+                    .GroupBy(h => h.MaNhanVien)
+                    .ToDictionary(g => g.Key, g => g.OrderByDescending(h => h.NgayBatDau).First());
+
+                var yearSuffix = $"/{targetYear}";
+                var bangLuongsYear = await _context.BangLuongs
+                    .Where(b => b.ThoiGian.EndsWith(yearSuffix) && activeEmpIds.Contains(b.MaNhanVien))
+                    .ToListAsync();
+
+                foreach (var emp in activeInMonth)
+                {
+                    var empSalaries = bangLuongsYear.Where(b => b.MaNhanVien == emp.MaNhanVien).ToList();
+                    decimal GetQuarterTotal(int q)
+                    {
+                        var months = q switch
+                        {
+                            1 => new[] { 1, 2, 3 },
+                            2 => new[] { 4, 5, 6 },
+                            3 => new[] { 7, 8, 9 },
+                            _ => new[] { 10, 11, 12 }
+                        };
+                        var matched = empSalaries.Where(b =>
+                        {
+                            var parts = b.ThoiGian.Split('/');
+                            return parts.Length == 2 && int.TryParse(parts[0], out var m) && months.Contains(m);
+                        }).ToList();
+
+                        if (matched.Any())
+                        {
+                            return matched.Sum(b => (b.ThucLinh.HasValue && b.ThucLinh.Value > 0) ? b.ThucLinh.Value : b.LuongCoBan);
+                        }
+                        if (contractsByEmp.TryGetValue(emp.MaNhanVien, out var c) && c.LuongCoBan > 0)
+                        {
+                            return c.LuongCoBan * 3;
+                        }
+                        return 0;
+                    }
+
+                    var q1 = GetQuarterTotal(1);
+                    var q2 = GetQuarterTotal(2);
+                    var q3 = GetQuarterTotal(3);
+                    var q4 = GetQuarterTotal(4);
+
+                    quarterlySalaries.Add(new ThongKeLuongTheoQuyDto
+                    {
+                        MaNhanVien = emp.MaNhanVien,
+                        HoTen = emp.HoTen,
+                        TenPhongBan = emp.MaPhongBanNavigation?.TenPhongBan ?? "",
+                        LuongQuy1 = q1,
+                        LuongQuy2 = q2,
+                        LuongQuy3 = q3,
+                        LuongQuy4 = q4,
+                        TongThuNhapNam = q1 + q2 + q3 + q4
+                    });
+                }
+            }
+
             var response = new DashboardResponseDto
             {
                 CanViewPayroll = canViewPayroll,
@@ -175,6 +239,7 @@ namespace HrmApp.Api.Controllers
                     new ThongKeMucLuongDto { MucLuong = "25 - 35 triệu", SoLuong = activeSalaries.Count(s => s >= 25_000_000 && s < 35_000_000) },
                     new ThongKeMucLuongDto { MucLuong = "Trên 35 triệu", SoLuong = activeSalaries.Count(s => s >= 35_000_000) }
                 } : new List<ThongKeMucLuongDto>(),
+                LuongTheoQuy = quarterlySalaries,
 
                 TinhHinhNhanSu = new TinhHinhNhanSuThangDto
                 {
