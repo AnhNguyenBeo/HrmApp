@@ -17,6 +17,15 @@ namespace HrmApp.Api.Controllers
     [ApiController]
     public class NhanVienController : ControllerBase
     {
+        private static bool IsBanGiamDocOrAdmin(NhanVien nhanVien)
+        {
+            var dept = nhanVien.MaPhongBanNavigation?.TenPhongBan ?? "";
+            var title = nhanVien.MaChucVuNavigation?.TenChucVu ?? "";
+            return dept.Contains("Ban Giám đốc") 
+                || title.Contains("Giám đốc") 
+                || title.Contains("Chủ doanh nghiệp") 
+                || title.Contains("Quản trị viên");
+        }
         private readonly QuanLyNhanSuDbContext _context;
         private readonly INhatKyService _nhatKyService;
 
@@ -39,11 +48,13 @@ namespace HrmApp.Api.Controllers
                 .Include(n => n.MaChucVuNavigation)
                 .FirstOrDefaultAsync(n => n.MaNhanVien == currentNhanVienId);
 
+            var myDeptName = currentNhanVien?.MaPhongBanNavigation?.TenPhongBan ?? "";
             bool isOwner = currentUserRole == "Chủ doanh nghiệp";
             bool isAdmin = currentUserRole == "Quản trị viên";
             bool isManager = currentUserRole == "Quản lý";
+            bool isHREmployee = currentUserRole == "Nhân viên" && myDeptName.Contains("Nhân sự");
 
-            if (!isOwner && !isAdmin && !isManager)
+            if (!isOwner && !isAdmin && !isManager && !isHREmployee)
             {
                 return StatusCode(403, new { message = "Bạn không có quyền truy cập danh sách nhân sự." });
             }
@@ -53,15 +64,7 @@ namespace HrmApp.Api.Controllers
                 .Include(n => n.MaChucVuNavigation)
                 .AsQueryable();
 
-            if (!isOwner && !isAdmin)
-            {
-                if (currentNhanVien == null || currentNhanVien.MaPhongBan == Guid.Empty)
-                {
-                    return StatusCode(403, new { message = "Không xác định được phòng ban của người dùng." });
-                }
-                query = query.Where(n => n.MaPhongBan == currentNhanVien.MaPhongBan);
-            }
-            else if (search.MaPhongBan.HasValue)
+            if (search.MaPhongBan.HasValue)
             {
                 query = query.Where(n => n.MaPhongBan == search.MaPhongBan.Value);
             }
@@ -170,25 +173,20 @@ namespace HrmApp.Api.Controllers
                 return NotFound("Không tìm thấy nhân viên.");
             }
 
+            var myDeptName = currentNhanVien?.MaPhongBanNavigation?.TenPhongBan ?? "";
+            bool isHREmployee = currentUserRole == "Nhân viên" && myDeptName.Contains("Nhân sự");
+
             if (currentNhanVienId != Guid.Empty && id == currentNhanVienId)
             {
                 return Ok(nhanVien);
             }
 
-            if (currentUserRole == "Nhân viên")
+            if (isOwner || isAdmin || currentUserRole == "Quản lý" || isHREmployee)
             {
-                return StatusCode(403, new { message = "Bạn chỉ có quyền xem hồ sơ của chính mình." });
+                return Ok(nhanVien);
             }
 
-            if (currentUserRole == "Quản lý")
-            {
-                if (currentNhanVien == null || currentNhanVien.MaPhongBan == Guid.Empty || nhanVien.MaPhongBan != currentNhanVien.MaPhongBan)
-                {
-                    return StatusCode(403, new { message = "Bạn chỉ có quyền xem thông tin nhân sự thuộc phòng ban của mình." });
-                }
-            }
-
-            return Ok(nhanVien);
+            return StatusCode(403, new { message = "Bạn chỉ có quyền xem hồ sơ của chính mình." });
         }
 
         [HttpGet("search")]
@@ -273,13 +271,12 @@ namespace HrmApp.Api.Controllers
                 .Include(n => n.MaPhongBanNavigation)
                 .FirstOrDefaultAsync(n => n.MaNhanVien == currentNhanVienId);
 
-            var myDeptName = currentNhanVien?.MaPhongBanNavigation?.TenPhongBan ?? "";
             bool isOwner = currentUserRole == "Chủ doanh nghiệp";
-            bool isHR = myDeptName.Contains("Nhân sự") && currentUserRole == "Quản lý";
+            bool isManager = currentUserRole == "Quản lý";
 
-            if (!isOwner && !isHR)
+            if (!isOwner && !isManager)
             {
-                return StatusCode(403, new { message = "Chỉ có Ban Giám đốc và Quản lý Phòng Nhân sự mới có quyền thêm nhân sự mới!" });
+                return StatusCode(403, new { message = "Nhân viên không có quyền thêm mới nhân sự. Chỉ dành cho Quản lý và Ban Giám Đốc." });
             }
 
             if (!isOwner)
@@ -287,13 +284,13 @@ namespace HrmApp.Api.Controllers
                 var targetPb = await _context.PhongBans.FindAsync(dto.MaPhongBan);
                 if (targetPb != null && targetPb.TenPhongBan.Contains("Ban Giám đốc"))
                 {
-                    return StatusCode(403, new { message = "Không có quyền thêm nhân sự vào Ban Giám đốc!" });
+                    return StatusCode(403, new { message = "Bạn không có quyền tác động hoặc thêm nhân sự vào Ban Giám Đốc." });
                 }
 
                 var newCv = await _context.ChucVus.FindAsync(dto.MaChucVu);
-                if (newCv != null && (newCv.TenChucVu.Contains("Giám đốc") || newCv.TenChucVu.Contains("Chủ doanh nghiệp")))
+                if (newCv != null && (newCv.TenChucVu.Contains("Giám đốc") || newCv.TenChucVu.Contains("Chủ doanh nghiệp") || newCv.TenChucVu.Contains("Quản trị viên")))
                 {
-                    return StatusCode(403, new { message = "Không có quyền tạo tài khoản thuộc Ban Giám đốc / Chủ doanh nghiệp!" });
+                    return StatusCode(403, new { message = "Bạn không có quyền cấp chức vụ thuộc Ban Giám Đốc." });
                 }
             }
 
@@ -356,29 +353,34 @@ namespace HrmApp.Api.Controllers
                 .Include(n => n.MaPhongBanNavigation)
                 .FirstOrDefaultAsync(n => n.MaNhanVien == currentNhanVienId);
 
-            var myDeptName = currentNhanVien?.MaPhongBanNavigation?.TenPhongBan ?? "";
             bool isOwner = currentUserRole == "Chủ doanh nghiệp";
-            bool isHR = myDeptName.Contains("Nhân sự") && currentUserRole == "Quản lý";
+            bool isManager = currentUserRole == "Quản lý";
 
-            if (!isOwner && !isHR)
+            if (!isOwner && !isManager)
             {
-                return StatusCode(403, new { message = "Quản lý các phòng ban chỉ có quyền xem thông tin. Chức năng cập nhật nhân sự do Quản lý Phòng Nhân sự xử lý!" });
+                return StatusCode(403, new { message = "Nhân viên không có quyền chỉnh sửa nhân sự khác. Chỉ xem hồ sơ của mình." });
             }
 
             if (!isOwner)
             {
-                var targetChucVu = nhanVien.MaChucVuNavigation?.TenChucVu ?? "";
-                var targetPhongBan = nhanVien.MaPhongBanNavigation?.TenPhongBan ?? "";
-
-                if (targetChucVu.Contains("Giám đốc") || targetPhongBan.Contains("Ban Giám đốc"))
+                if (IsBanGiamDocOrAdmin(nhanVien))
                 {
-                    return StatusCode(403, new { message = "Không thể chỉnh sửa thông tin của Ban Giám đốc / Chủ doanh nghiệp!" });
+                    return StatusCode(403, new { message = "Bạn không có quyền tác động đến nhân sự thuộc Ban Giám Đốc." });
                 }
 
                 var targetPb = await _context.PhongBans.FindAsync(dto.MaPhongBan);
                 if (targetPb != null && targetPb.TenPhongBan.Contains("Ban Giám đốc"))
                 {
-                    return StatusCode(403, new { message = "Không có quyền chuyển nhân sự sang Ban Giám đốc!" });
+                    return StatusCode(403, new { message = "Bạn không có quyền chuyển nhân sự sang Ban Giám đốc." });
+                }
+
+                if (dto.MaChucVu.HasValue && dto.MaChucVu.Value != Guid.Empty)
+                {
+                    var targetCv = await _context.ChucVus.FindAsync(dto.MaChucVu.Value);
+                    if (targetCv != null && (targetCv.TenChucVu.Contains("Giám đốc") || targetCv.TenChucVu.Contains("Chủ doanh nghiệp") || targetCv.TenChucVu.Contains("Quản trị viên")))
+                    {
+                        return StatusCode(403, new { message = "Bạn không có quyền cấp chức vụ thuộc Ban Giám Đốc." });
+                    }
                 }
             }
 
@@ -463,39 +465,24 @@ namespace HrmApp.Api.Controllers
                 .Include(n => n.MaPhongBanNavigation)
                 .FirstOrDefaultAsync(n => n.MaNhanVien == currentNhanVienId);
 
-            var myDeptName = currentNhanVien?.MaPhongBanNavigation?.TenPhongBan ?? "";
             bool isOwner = currentUserRole == "Chủ doanh nghiệp";
-            bool isHR = myDeptName.Contains("Nhân sự") && currentUserRole == "Quản lý";
+            bool isManager = currentUserRole == "Quản lý";
 
-            if (!isOwner && !isHR)
+            if (!isOwner && !isManager)
             {
-                return StatusCode(403, new { message = "Quản lý các phòng ban chỉ có quyền xem thông tin. Chức năng bổ nhiệm / thăng cấp do Quản lý Phòng Nhân sự xử lý!" });
+                return StatusCode(403, new { message = "Nhân viên không có quyền phân quyền hay thay đổi chức vụ." });
             }
 
             if (!isOwner)
             {
-                var targetChucVu = nhanVien.MaChucVuNavigation?.TenChucVu ?? "";
-                var targetPhongBan = nhanVien.MaPhongBanNavigation?.TenPhongBan ?? "";
-
-                if (targetChucVu.Contains("Giám đốc") || targetChucVu.Contains("Chủ doanh nghiệp") || targetPhongBan.Contains("Ban Giám đốc"))
+                if (IsBanGiamDocOrAdmin(nhanVien))
                 {
-                    return StatusCode(403, new { message = "Không thể thay đổi chức vụ của Ban Giám đốc / Chủ doanh nghiệp!" });
+                    return StatusCode(403, new { message = "Bạn không có quyền tác động đến nhân sự thuộc Ban Giám Đốc." });
                 }
 
-                if (newChucVu.TenChucVu.Contains("Giám đốc") || newChucVu.TenChucVu.Contains("Chủ doanh nghiệp"))
+                if (newChucVu.TenChucVu.Contains("Giám đốc") || newChucVu.TenChucVu.Contains("Chủ doanh nghiệp") || newChucVu.TenChucVu.Contains("Quản trị viên") || (newChucVu.TenChucVu.Contains("Trưởng") && newChucVu.TenChucVu.Contains("Nhân sự")))
                 {
-                    return StatusCode(403, new { message = "Không có quyền bổ nhiệm vào Ban Giám đốc!" });
-                }
-
-                if (targetPhongBan.Contains("Nhân sự") && targetChucVu.Contains("Trưởng"))
-                {
-                    return StatusCode(403, new { message = "Chỉ có Chủ doanh nghiệp mới có thẩm quyền thay đổi chức vụ của Trưởng phòng Nhân sự!" });
-                }
-
-                if ((targetPhongBan.Contains("Nhân sự") && newChucVu.TenChucVu.Contains("Trưởng")) ||
-                    (newChucVu.TenChucVu.Contains("Trưởng") && newChucVu.TenChucVu.Contains("Nhân sự")))
-                {
-                    return StatusCode(403, new { message = "Chỉ có Chủ doanh nghiệp mới có quyền bổ nhiệm Trưởng phòng Nhân sự!" });
+                    return StatusCode(403, new { message = "Bạn không có quyền cấp chức vụ thuộc Ban Giám Đốc hoặc Trưởng phòng Nhân sự." });
                 }
             }
 
@@ -539,28 +526,19 @@ namespace HrmApp.Api.Controllers
                 .Include(n => n.MaPhongBanNavigation)
                 .FirstOrDefaultAsync(n => n.MaNhanVien == currentNhanVienId);
 
-            var myDeptName = currentNhanVien?.MaPhongBanNavigation?.TenPhongBan ?? "";
             bool isOwner = currentUserRole == "Chủ doanh nghiệp";
-            bool isHR = myDeptName.Contains("Nhân sự") && currentUserRole == "Quản lý";
+            bool isManager = currentUserRole == "Quản lý";
 
-            if (!isOwner && !isHR)
+            if (!isOwner && !isManager)
             {
-                return StatusCode(403, new { message = "Quản lý các phòng ban chỉ có quyền xem thông tin. Chức năng thôi việc do Quản lý Phòng Nhân sự xử lý!" });
-            }
-
-            var targetChucVu = nhanVien.MaChucVuNavigation?.TenChucVu ?? "";
-            var targetPhongBan = nhanVien.MaPhongBanNavigation?.TenPhongBan ?? "";
-
-            if (targetChucVu.Contains("Giám đốc") || targetPhongBan.Contains("Ban Giám đốc") || targetChucVu.Contains("Chủ doanh nghiệp"))
-            {
-                return StatusCode(403, new { message = "Không thể cho Chủ doanh nghiệp / Ban Giám đốc thôi việc!" });
+                return StatusCode(403, new { message = "Nhân viên không có quyền xử lý thôi việc." });
             }
 
             if (!isOwner)
             {
-                if (targetPhongBan.Contains("Nhân sự") && targetChucVu.Contains("Trưởng"))
+                if (IsBanGiamDocOrAdmin(nhanVien))
                 {
-                    return StatusCode(403, new { message = "Chỉ có Chủ doanh nghiệp mới có thẩm quyền cho Trưởng phòng Nhân sự thôi việc!" });
+                    return StatusCode(403, new { message = "Bạn không có quyền tác động đến nhân sự thuộc Ban Giám Đốc." });
                 }
             }
 

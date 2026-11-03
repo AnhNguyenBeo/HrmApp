@@ -157,7 +157,7 @@ public class ChangeChucVuTests
     }
 
     [Fact]
-    public async Task GetNhanViens_HrEmployeeWithoutManagerRole_ReturnsForbidden()
+    public async Task GetNhanViens_HrEmployeeWithoutManagerRole_ReturnsOkReadOnly()
     {
         using var context = CreateDbContext();
         var pbHr = new PhongBan { MaPhongBan = Guid.NewGuid(), TenPhongBan = "Phòng Nhân sự" };
@@ -178,8 +178,9 @@ public class ChangeChucVuTests
         var result = await controller.GetNhanViens(new NhanVienSearchDto());
 
         var actionResult = Assert.IsType<ActionResult<PagedResultDto<NhanVienResponseDto>>>(result);
-        var forbiddenResult = Assert.IsType<ObjectResult>(actionResult.Result);
-        Assert.Equal(403, forbiddenResult.StatusCode);
+        var okResult = Assert.IsType<OkObjectResult>(actionResult.Result);
+        var page = Assert.IsType<PagedResultDto<NhanVienResponseDto>>(okResult.Value);
+        Assert.Equal(2, page.TotalCount);
     }
 
     [Fact]

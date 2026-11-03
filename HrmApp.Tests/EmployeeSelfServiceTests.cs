@@ -61,59 +61,95 @@ public class EmployeeSelfServiceTests
     }
 
     [Fact]
-    public async Task EmployeeInHrDepartmentCannotUseManagerDirectoryPrivileges()
+    public async Task EmployeeInHrDepartmentCanViewDirectoryReadOnly_CannotMutate()
     {
         using var db = HrTestSupport.CreateDbContext();
-        var (employeeA, _) = await AddEmployeePairAsync(db, "Phòng Nhân sự");
+        var (employeeA, employeeB) = await AddEmployeePairAsync(db, "Phòng Nhân sự");
         var controller = new NhanVienController(db, HrTestSupport.CreateAuditMock().Object);
         HrTestSupport.SetUser(controller, employeeA.MaNhanVien, "Nhân viên");
 
         var result = await controller.GetNhanViens(new NhanVienSearchDto());
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var page = Assert.IsType<PagedResultDto<NhanVienResponseDto>>(ok.Value);
+        Assert.Equal(2, page.TotalCount);
 
-        Assert.Equal(403, Assert.IsType<ObjectResult>(result.Result).StatusCode);
+        var addAttempt = await controller.PostNhanVien(new CreateNhanVienDto
+        {
+            HoTen = "Nhân viên mới",
+            NgaySinh = new DateOnly(2000, 1, 1),
+            GioiTinh = "Nam",
+            Cccd = "079200999888",
+            Email = "new.staff@example.test",
+            SoDienThoai = "0900000000",
+            DiaChi = "TP. HCM",
+            TrinhDoHocVan = "Đại học",
+            MaPhongBan = employeeA.MaPhongBan,
+            MaChucVu = employeeA.MaChucVu,
+            NgayVaoLam = new DateOnly(2025, 1, 1),
+            TrangThaiLamViec = "Đang làm việc"
+        });
+        Assert.Equal(403, Assert.IsType<ObjectResult>(addAttempt.Result).StatusCode);
+
+        var deleteAttempt = await controller.DeleteNhanVien(employeeB.MaNhanVien);
+        Assert.Equal(403, Assert.IsType<ObjectResult>(deleteAttempt).StatusCode);
     }
 
     [Fact]
-    public async Task ManagerCanViewOnlyEmployeesInTheirDepartment_InListSearchAndDetails()
+    public async Task ManagerCanManageAllDepartments_ExceptBoardOfDirectors()
     {
         using var db = HrTestSupport.CreateDbContext();
         var sales = new PhongBan { MaPhongBan = Guid.NewGuid(), TenPhongBan = "Phòng Kinh doanh" };
         var warehouse = new PhongBan { MaPhongBan = Guid.NewGuid(), TenPhongBan = "Phòng Kho" };
+        var board = new PhongBan { MaPhongBan = Guid.NewGuid(), TenPhongBan = "Ban Giám đốc" };
         var position = new ChucVu { MaChucVu = Guid.NewGuid(), TenChucVu = "Nhân viên" };
-        var manager = NewEmployee("Quản lý kinh doanh", "manager.sales@example.test", "079100000011", sales, position);
-        var coworker = NewEmployee("Nhân viên kinh doanh", "sales.staff@example.test", "079100000012", sales, position);
-        var otherDepartmentEmployee = NewEmployee("Nhân viên kho", "warehouse.staff@example.test", "079100000013", warehouse, position);
+        var directorPosition = new ChucVu { MaChucVu = Guid.NewGuid(), TenChucVu = "Giám đốc" };
 
-        db.PhongBans.AddRange(sales, warehouse);
-        db.ChucVus.Add(position);
-        db.NhanViens.AddRange(manager, coworker, otherDepartmentEmployee);
+        var manager = NewEmployee("Quản lý kinh doanh", "manager.sales@example.test", "079100000011", sales, position);
+        var warehouseStaff = NewEmployee("Nhân viên kho", "warehouse.staff@example.test", "079100000013", warehouse, position);
+        var director = NewEmployee("Giám đốc điều hành", "director@example.test", "079100000014", board, directorPosition);
+
+        db.PhongBans.AddRange(sales, warehouse, board);
+        db.ChucVus.AddRange(position, directorPosition);
+        db.NhanViens.AddRange(manager, warehouseStaff, director);
         await db.SaveChangesAsync();
 
         var controller = new NhanVienController(db, HrTestSupport.CreateAuditMock().Object);
         HrTestSupport.SetUser(controller, manager.MaNhanVien, "Quản lý");
 
-        var listResult = await controller.GetNhanViens(new NhanVienSearchDto
+        var allList = await controller.GetNhanViens(new NhanVienSearchDto { PageSize = 100 });
+        var allPage = Assert.IsType<PagedResultDto<NhanVienResponseDto>>(Assert.IsType<OkObjectResult>(allList.Result).Value);
+        Assert.Equal(3, allPage.TotalCount);
+
+        var editWarehouseStaff = await controller.PutNhanVien(warehouseStaff.MaNhanVien, new UpdateNhanVienDto
         {
-            MaPhongBan = warehouse.MaPhongBan,
-            PageSize = 100
+            HoTen = "Nhân viên kho đã sửa",
+            NgaySinh = warehouseStaff.NgaySinh,
+            GioiTinh = warehouseStaff.GioiTinh,
+            Cccd = warehouseStaff.Cccd,
+            Email = warehouseStaff.Email,
+            SoDienThoai = warehouseStaff.SoDienThoai,
+            DiaChi = warehouseStaff.DiaChi,
+            TrinhDoHocVan = warehouseStaff.TrinhDoHocVan,
+            MaPhongBan = warehouseStaff.MaPhongBan
         });
-        var page = Assert.IsType<PagedResultDto<NhanVienResponseDto>>(Assert.IsType<OkObjectResult>(listResult.Result).Value);
-        Assert.Equal(2, page.TotalCount);
-        Assert.Contains(page.Items, employee => employee.MaNhanVien == manager.MaNhanVien);
-        Assert.Contains(page.Items, employee => employee.MaNhanVien == coworker.MaNhanVien);
-        Assert.DoesNotContain(page.Items, employee => employee.MaNhanVien == otherDepartmentEmployee.MaNhanVien);
-        Assert.All(page.Items, employee => Assert.Equal(sales.MaPhongBan, employee.MaPhongBan));
+        Assert.IsType<OkObjectResult>(editWarehouseStaff);
 
-        var ownDepartmentDetail = await controller.GetNhanVien(coworker.MaNhanVien);
-        Assert.IsType<OkObjectResult>(ownDepartmentDetail.Result);
+        var editDirectorAttempt = await controller.PutNhanVien(director.MaNhanVien, new UpdateNhanVienDto
+        {
+            HoTen = "Sửa giám đốc trái phép",
+            NgaySinh = director.NgaySinh,
+            GioiTinh = director.GioiTinh,
+            Cccd = director.Cccd,
+            Email = director.Email,
+            SoDienThoai = director.SoDienThoai,
+            DiaChi = director.DiaChi,
+            TrinhDoHocVan = director.TrinhDoHocVan,
+            MaPhongBan = director.MaPhongBan
+        });
+        Assert.Equal(403, Assert.IsType<ObjectResult>(editDirectorAttempt).StatusCode);
 
-        var crossDepartmentDetail = await controller.GetNhanVien(otherDepartmentEmployee.MaNhanVien);
-        Assert.Equal(403, Assert.IsType<ObjectResult>(crossDepartmentDetail.Result).StatusCode);
-
-        var crossDepartmentSearch = await controller.Search(otherDepartmentEmployee.HoTen);
-        var searchResults = Assert.IsAssignableFrom<IEnumerable<NhanVienResponseDto>>(
-            Assert.IsType<OkObjectResult>(crossDepartmentSearch.Result).Value);
-        Assert.Empty(searchResults);
+        var deleteDirectorAttempt = await controller.DeleteNhanVien(director.MaNhanVien);
+        Assert.Equal(403, Assert.IsType<ObjectResult>(deleteDirectorAttempt).StatusCode);
     }
 
     [Fact]
