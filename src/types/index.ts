@@ -1,4 +1,4 @@
-﻿export interface LoginRequest {
+export interface LoginRequest {
   tenDangNhap: string;
   matKhau: string;
 }
@@ -101,6 +101,17 @@ export interface BangLuong {
   trangThaiChiTra?: string;
 }
 
+export interface ThongKeLuongTheoQuy {
+  maNhanVien: string;
+  hoTen: string;
+  tenPhongBan: string;
+  luongQuy1: number;
+  luongQuy2: number;
+  luongQuy3: number;
+  luongQuy4: number;
+  tongThuNhapNam: number;
+}
+
 export interface DashboardData {
   tongSoNhanVien: number;
   canViewPayroll?: boolean;
@@ -115,6 +126,7 @@ export interface DashboardData {
   nhanVienTheoTrinhDo: { trinhDo: string; soLuong: number }[];
   nhanVienTheoThamNien: { nhomThamNien: string; soLuong: number }[];
   nhanVienTheoMucLuong: { mucLuong: string; soLuong: number }[];
+  luongTheoQuy?: ThongKeLuongTheoQuy[];
   tinhHinhNhanSu: {
     dangLamViec: { maNhanVien: string; hoTen: string; tenPhongBan: string; tenChucVu: string; ngayVaoLam?: string }[];
     nghiPhep: { maNhanVien: string; hoTen: string; tenPhongBan: string; loaiDon: string; soNgayNghi: number; ngayBatDau: string; ngayKetThuc: string }[];
