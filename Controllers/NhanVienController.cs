@@ -40,9 +40,10 @@ namespace HrmApp.Api.Controllers
                 .FirstOrDefaultAsync(n => n.MaNhanVien == currentNhanVienId);
 
             bool isOwner = currentUserRole == "Chủ doanh nghiệp";
+            bool isAdmin = currentUserRole == "Quản trị viên";
             bool isManager = currentUserRole == "Quản lý";
 
-            if (!isOwner && !isManager)
+            if (!isOwner && !isAdmin && !isManager)
             {
                 return StatusCode(403, new { message = "Bạn không có quyền truy cập danh sách nhân sự." });
             }
@@ -52,7 +53,7 @@ namespace HrmApp.Api.Controllers
                 .Include(n => n.MaChucVuNavigation)
                 .AsQueryable();
 
-            if (!isOwner)
+            if (!isOwner && !isAdmin)
             {
                 if (currentNhanVien == null || currentNhanVien.MaPhongBan == Guid.Empty)
                 {
@@ -136,11 +137,7 @@ namespace HrmApp.Api.Controllers
                 .FirstOrDefaultAsync(n => n.MaNhanVien == currentNhanVienId);
 
             bool isOwner = currentUserRole == "Chủ doanh nghiệp";
-
-            if (currentUserRole == "Quản trị viên")
-            {
-                return StatusCode(403, new { message = "Quản trị viên chỉ truy cập khu vực quản trị tài khoản." });
-            }
+            bool isAdmin = currentUserRole == "Quản trị viên";
 
             var nhanVien = await _context.NhanViens
                 .Include(n => n.MaPhongBanNavigation)
@@ -173,7 +170,12 @@ namespace HrmApp.Api.Controllers
                 return NotFound("Không tìm thấy nhân viên.");
             }
 
-            if (currentUserRole == "Nhân viên" && currentNhanVienId != id)
+            if (currentNhanVienId != Guid.Empty && id == currentNhanVienId)
+            {
+                return Ok(nhanVien);
+            }
+
+            if (currentUserRole == "Nhân viên")
             {
                 return StatusCode(403, new { message = "Bạn chỉ có quyền xem hồ sơ của chính mình." });
             }
@@ -207,11 +209,7 @@ namespace HrmApp.Api.Controllers
                 .FirstOrDefaultAsync(n => n.MaNhanVien == currentNhanVienId);
 
             bool isOwner = currentUserRole == "Chủ doanh nghiệp";
-
-            if (currentUserRole == "Quản trị viên")
-            {
-                return StatusCode(403, new { message = "Quản trị viên chỉ truy cập khu vực quản trị tài khoản." });
-            }
+            bool isAdmin = currentUserRole == "Quản trị viên";
 
             var kw = keyword.ToLower();
             var query = _context.NhanViens
@@ -231,7 +229,7 @@ namespace HrmApp.Api.Controllers
                 }
                 query = query.Where(n => n.MaPhongBan == currentNhanVien.MaPhongBan);
             }
-            else if (!isOwner)
+            else if (!isOwner && !isAdmin)
             {
                 return StatusCode(403, new { message = "Bạn không có quyền tìm kiếm danh sách nhân sự." });
             }

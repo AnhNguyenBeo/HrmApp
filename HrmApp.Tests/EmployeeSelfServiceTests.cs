@@ -131,10 +131,10 @@ public class EmployeeSelfServiceTests
     }
 
     [Fact]
-    public async Task AdminCannotEnterManagerEmployeeDirectoryEndpoints()
+    public async Task AdminCanViewDirectoryAndProfile_ButCannotMutateHrRecords()
     {
         using var db = HrTestSupport.CreateDbContext();
-        var (employee, _) = await AddEmployeePairAsync(db, "Phòng Kinh doanh");
+        var (employee, otherEmployee) = await AddEmployeePairAsync(db, "Phòng Kinh doanh");
         var controller = new NhanVienController(db, HrTestSupport.CreateAuditMock().Object);
         HrTestSupport.SetUser(controller, employee.MaNhanVien, "Quản trị viên");
 
@@ -142,9 +142,26 @@ public class EmployeeSelfServiceTests
         var detail = await controller.GetNhanVien(employee.MaNhanVien);
         var search = await controller.Search(employee.HoTen);
 
-        Assert.Equal(403, Assert.IsType<ObjectResult>(list.Result).StatusCode);
-        Assert.Equal(403, Assert.IsType<ObjectResult>(detail.Result).StatusCode);
-        Assert.Equal(403, Assert.IsType<ObjectResult>(search.Result).StatusCode);
+        Assert.IsType<OkObjectResult>(list.Result);
+        Assert.IsType<OkObjectResult>(detail.Result);
+        Assert.IsType<OkObjectResult>(search.Result);
+
+        var mutateAttempt = await controller.PutNhanVien(otherEmployee.MaNhanVien, new UpdateNhanVienDto
+        {
+            HoTen = "Admin Chỉnh Sửa Trái Phép",
+            NgaySinh = otherEmployee.NgaySinh,
+            GioiTinh = otherEmployee.GioiTinh,
+            Cccd = otherEmployee.Cccd,
+            Email = otherEmployee.Email,
+            SoDienThoai = otherEmployee.SoDienThoai,
+            DiaChi = otherEmployee.DiaChi,
+            TrinhDoHocVan = otherEmployee.TrinhDoHocVan,
+            MaPhongBan = otherEmployee.MaPhongBan
+        });
+        Assert.Equal(403, Assert.IsType<ObjectResult>(mutateAttempt).StatusCode);
+
+        var deleteAttempt = await controller.DeleteNhanVien(otherEmployee.MaNhanVien);
+        Assert.Equal(403, Assert.IsType<ObjectResult>(deleteAttempt).StatusCode);
     }
 
     private static async Task<(NhanVien EmployeeA, NhanVien EmployeeB)> AddEmployeePairAsync(
