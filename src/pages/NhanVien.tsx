@@ -24,6 +24,7 @@ import {
   SearchOutlined,
   TeamOutlined,
   EyeOutlined,
+  UndoOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { nhanVienApi } from '../api/nhanVienApi';
@@ -180,6 +181,16 @@ export const NhanVienPage: React.FC = () => {
     }
   };
 
+  const handleRestore = async (id: string) => {
+    try {
+      await nhanVienApi.restore(id);
+      message.success('Khôi phục trạng thái làm việc và mở khóa tài khoản thành công!');
+      fetchData();
+    } catch (err: any) {
+      message.error(getErrorMessage(err, 'Khôi phục thất bại.'));
+    }
+  };
+
   const handleDelete = async (id: string) => {
     try {
       await nhanVienApi.softDelete(id);
@@ -302,6 +313,7 @@ export const NhanVienPage: React.FC = () => {
         }
 
         if (isResigned) {
+          const canRestore = canManageHR && (isOwner || !isTargetDirector);
           return (
             <Space size="small">
               <Button
@@ -312,8 +324,26 @@ export const NhanVienPage: React.FC = () => {
                   setViewModal(true);
                 }}
               >
-                Xem thông tin tổng quát
+                Xem tổng quát
               </Button>
+              {canRestore && (
+                <Popconfirm
+                  title="Xác nhận khôi phục nhân sự"
+                  description={`Khôi phục trạng thái làm việc và mở khóa tài khoản cho ${record.hoTen}?`}
+                  okText="Khôi phục"
+                  cancelText="Hủy"
+                  onConfirm={() => handleRestore(record.maNhanVien)}
+                >
+                  <Button
+                    size="small"
+                    type="primary"
+                    icon={<UndoOutlined />}
+                    style={{ background: '#52c41a', borderColor: '#52c41a' }}
+                  >
+                    Khôi phục
+                  </Button>
+                </Popconfirm>
+              )}
               <Tag color="red">Đã thôi việc</Tag>
             </Space>
           );
