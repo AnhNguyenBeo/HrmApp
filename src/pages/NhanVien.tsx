@@ -14,6 +14,7 @@ import {
   DatePicker,
   Row,
   Col,
+  Descriptions,
 } from 'antd';
 import {
   UserAddOutlined,
@@ -22,6 +23,7 @@ import {
   UpCircleOutlined,
   SearchOutlined,
   TeamOutlined,
+  EyeOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { nhanVienApi } from '../api/nhanVienApi';
@@ -55,6 +57,7 @@ export const NhanVienPage: React.FC = () => {
   const [createModal, setCreateModal] = useState(false);
   const [editModal, setEditModal] = useState(false);
   const [promoteModal, setPromoteModal] = useState(false);
+  const [viewModal, setViewModal] = useState(false);
   const [selectedNv, setSelectedNv] = useState<NhanVien | null>(null);
 
   const [createForm] = Form.useForm();
@@ -255,8 +258,33 @@ export const NhanVienPage: React.FC = () => {
       fixed: 'right' as const,
       align: 'center' as const,
       render: (_: any, record: NhanVien) => {
+        const isResigned =
+          record.trangThaiLamViec === 'Đã nghỉ việc' ||
+          record.trangThaiLamViec === 'Đã thôi việc' ||
+          record.trangThaiLamViec === 'Đã thôi việc / Nghỉ việc' ||
+          (record.trangThaiLamViec &&
+            (record.trangThaiLamViec.includes('thôi việc') || record.trangThaiLamViec.includes('nghỉ việc')));
+
         if (!canManageHR) {
-          return <Tag color="default">Chỉ xem</Tag>;
+          return (
+            <Space size="small">
+              <Button
+                size="small"
+                icon={<EyeOutlined />}
+                onClick={() => {
+                  setSelectedNv(record);
+                  setViewModal(true);
+                }}
+              >
+                Xem tổng quát
+              </Button>
+              {isResigned ? (
+                <Tag color="red">Đã thôi việc</Tag>
+              ) : (
+                <Tag color="default">Chỉ xem</Tag>
+              )}
+            </Space>
+          );
         }
 
         const isSelf = record.maNhanVien === currentUser?.maNhanVien;
@@ -271,6 +299,24 @@ export const NhanVienPage: React.FC = () => {
 
         if (isSelf) {
           return <Tag color="blue">Bản thân</Tag>;
+        }
+
+        if (isResigned) {
+          return (
+            <Space size="small">
+              <Button
+                size="small"
+                icon={<EyeOutlined />}
+                onClick={() => {
+                  setSelectedNv(record);
+                  setViewModal(true);
+                }}
+              >
+                Xem thông tin tổng quát
+              </Button>
+              <Tag color="red">Đã thôi việc</Tag>
+            </Space>
+          );
         }
 
         const canPromote = isOwner || !isTargetDirector;
@@ -311,23 +357,19 @@ export const NhanVienPage: React.FC = () => {
               </Button>
             )}
 
-            {record.trangThaiLamViec !== 'Đã nghỉ việc' ? (
-              canTerminate && (
-                <Popconfirm
-                  title="Xác nhận thôi việc"
-                  description={`Cho ${record.hoTen} thôi việc? Hệ thống sẽ khóa tài khoản đăng nhập.`}
-                  okText="Đồng ý thôi việc"
-                  cancelText="Hủy"
-                  okButtonProps={{ danger: true }}
-                  onConfirm={() => handleDelete(record.maNhanVien)}
-                >
-                  <Button size="small" danger icon={<DeleteOutlined />}>
-                    Thôi việc
-                  </Button>
-                </Popconfirm>
-              )
-            ) : (
-              <Tag color="red">Đã thôi việc</Tag>
+            {canTerminate && (
+              <Popconfirm
+                title="Xác nhận thôi việc"
+                description={`Cho ${record.hoTen} thôi việc? Hệ thống sẽ khóa tài khoản đăng nhập.`}
+                okText="Đồng ý thôi việc"
+                cancelText="Hủy"
+                okButtonProps={{ danger: true }}
+                onConfirm={() => handleDelete(record.maNhanVien)}
+              >
+                <Button size="small" danger icon={<DeleteOutlined />}>
+                  Thôi việc
+                </Button>
+              </Popconfirm>
             )}
           </Space>
         );
@@ -682,6 +724,46 @@ export const NhanVienPage: React.FC = () => {
             </Button>
           </Form.Item>
         </Form>
+      </Modal>
+
+      <Modal
+        title={'Thông tin tổng quát nhân sự: ' + (selectedNv?.hoTen || '')}
+        open={viewModal}
+        onCancel={() => setViewModal(false)}
+        footer={[
+          <Button key="close" type="primary" onClick={() => setViewModal(false)}>
+            Đóng
+          </Button>,
+        ]}
+        width={720}
+      >
+        <Descriptions bordered column={2} size="small">
+          <Descriptions.Item label="Mã nhân viên">{selectedNv?.maNhanVien || '---'}</Descriptions.Item>
+          <Descriptions.Item label="Họ và tên">{selectedNv?.hoTen || '---'}</Descriptions.Item>
+          <Descriptions.Item label="Giới tính">{selectedNv?.gioiTinh || '---'}</Descriptions.Item>
+          <Descriptions.Item label="Ngày sinh">
+            {selectedNv?.ngaySinh ? dayjs(selectedNv.ngaySinh).format('DD/MM/YYYY') : '---'}
+          </Descriptions.Item>
+          <Descriptions.Item label="Số CCCD">{selectedNv?.cccd || '---'}</Descriptions.Item>
+          <Descriptions.Item label="Số điện thoại">{selectedNv?.soDienThoai || '---'}</Descriptions.Item>
+          <Descriptions.Item label="Email" span={2}>{selectedNv?.email || '---'}</Descriptions.Item>
+          <Descriptions.Item label="Địa chỉ" span={2}>{selectedNv?.diaChi || '---'}</Descriptions.Item>
+          <Descriptions.Item label="Phòng ban">{selectedNv?.tenPhongBan || '---'}</Descriptions.Item>
+          <Descriptions.Item label="Chức vụ">{selectedNv?.tenChucVu || '---'}</Descriptions.Item>
+          <Descriptions.Item label="Trình độ">{selectedNv?.trinhDoHocVan || '---'}</Descriptions.Item>
+          <Descriptions.Item label="Trạng thái">
+            <Tag color={selectedNv?.trangThaiLamViec?.includes('nghỉ') || selectedNv?.trangThaiLamViec?.includes('thôi') ? 'red' : 'green'}>
+              {selectedNv?.trangThaiLamViec || 'Đang làm việc'}
+            </Tag>
+          </Descriptions.Item>
+          <Descriptions.Item label="Ngày vào làm">
+            {selectedNv?.ngayVaoLam ? dayjs(selectedNv.ngayVaoLam).format('DD/MM/YYYY') : '---'}
+          </Descriptions.Item>
+          <Descriptions.Item label="Ngày thôi việc">
+            {selectedNv?.ngayNghiViec ? dayjs(selectedNv.ngayNghiViec).format('DD/MM/YYYY') : '---'}
+          </Descriptions.Item>
+          <Descriptions.Item label="Ghi chú" span={2}>{selectedNv?.ghiChu || 'Không có'}</Descriptions.Item>
+        </Descriptions>
       </Modal>
     </div>
   );
