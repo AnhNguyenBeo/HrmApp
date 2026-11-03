@@ -14,5 +14,6 @@ namespace HrmApp.Api.DTOs.TaiKhoan
         public string TenVaiTro { get; set; } = null!;
         public string TrangThai { get; set; } = null!;
         public DateOnly NgayTao { get; set; }
+        public string? TrangThaiLamViec { get; set; }
     }
 }

@@ -1,4 +1,4 @@
-﻿using HrmApp.Api.Data;
+using HrmApp.Api.Data;
 using HrmApp.Api.DTOs.Auth;
 using HrmApp.Api.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -55,7 +55,14 @@ public class AuthController : ControllerBase
             return Unauthorized(new { message = "Tên đăng nhập hoặc mật khẩu không đúng." });
         }
 
-        if (taiKhoan.TrangThai != "Hoạt động" || taiKhoan.MaNhanVienNavigation?.TrangThaiLamViec == "Đã nghỉ việc")
+        var isResigned = taiKhoan.MaNhanVienNavigation?.TrangThaiLamViec != null &&
+            (taiKhoan.MaNhanVienNavigation.TrangThaiLamViec == "Đã nghỉ việc" ||
+             taiKhoan.MaNhanVienNavigation.TrangThaiLamViec == "Đã thôi việc" ||
+             taiKhoan.MaNhanVienNavigation.TrangThaiLamViec == "Đã thôi việc / Nghỉ việc" ||
+             taiKhoan.MaNhanVienNavigation.TrangThaiLamViec.Contains("nghỉ việc") ||
+             taiKhoan.MaNhanVienNavigation.TrangThaiLamViec.Contains("thôi việc"));
+
+        if (taiKhoan.TrangThai != "Hoạt động" || isResigned)
         {
             await _nhatKyService.GhiLogAsync(request.TenDangNhap, taiKhoan.MaNhanVienNavigation?.HoTen, "Đăng nhập thất bại", "Cố gắng đăng nhập khi tài khoản đã bị khóa", "Cảnh báo", ip);
             return Unauthorized(new { message = "Tài khoản đã bị khóa, liên hệ phòng nhân sự để biết thêm chi tiết." });

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Security.Claims;
@@ -54,7 +54,14 @@ public static class TokenValidationHandler
             return;
         }
 
-        if (accountInfo.TrangThai != "Hoạt động" || accountInfo.TrangThaiLamViec == "Đã nghỉ việc")
+        var isResigned = accountInfo.TrangThaiLamViec != null &&
+            (accountInfo.TrangThaiLamViec == "Đã nghỉ việc" ||
+             accountInfo.TrangThaiLamViec == "Đã thôi việc" ||
+             accountInfo.TrangThaiLamViec == "Đã thôi việc / Nghỉ việc" ||
+             accountInfo.TrangThaiLamViec.Contains("nghỉ việc") ||
+             accountInfo.TrangThaiLamViec.Contains("thôi việc"));
+
+        if (accountInfo.TrangThai != "Hoạt động" || isResigned)
         {
             context.HttpContext.Items[DisabledAccountItemKey] = true;
             context.Fail(DisabledAccountMessage);

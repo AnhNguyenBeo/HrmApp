@@ -61,12 +61,12 @@ namespace HrmApp.Api.Controllers
 
             var activeInMonth = allEmployees
                 .Where(nv => nv.NgayVaoLam <= endOfMonth &&
-                             ((nv.TrangThaiLamViec != "Đã nghỉ việc" && !nv.NgayNghiViec.HasValue) ||
+                             ((nv.TrangThaiLamViec != "Đã nghỉ việc" && nv.TrangThaiLamViec != "Đã thôi việc / Nghỉ việc" && !nv.TrangThaiLamViec.Contains("nghỉ") && !nv.TrangThaiLamViec.Contains("thôi việc") && !nv.NgayNghiViec.HasValue) ||
                               (nv.NgayNghiViec.HasValue && nv.NgayNghiViec.Value > endOfMonth)))
                 .ToList();
 
             var resignedInMonth = allEmployees
-                .Where(nv => nv.TrangThaiLamViec == "Đã nghỉ việc" &&
+                .Where(nv => (nv.TrangThaiLamViec == "Đã nghỉ việc" || nv.TrangThaiLamViec == "Đã thôi việc / Nghỉ việc" || nv.TrangThaiLamViec.Contains("nghỉ") || nv.TrangThaiLamViec.Contains("thôi việc")) &&
                              nv.NgayNghiViec.HasValue &&
                              nv.NgayNghiViec.Value >= startOfMonth &&
                              nv.NgayNghiViec.Value <= endOfMonth)

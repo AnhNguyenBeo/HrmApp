@@ -54,7 +54,8 @@ namespace HrmApp.Api.Controllers
                     MaVaiTro = t.MaVaiTro,
                     TenVaiTro = t.MaVaiTroNavigation != null ? t.MaVaiTroNavigation.TenVaiTro : "",
                     TrangThai = t.TrangThai,
-                    NgayTao = t.NgayTao
+                    NgayTao = t.NgayTao,
+                    TrangThaiLamViec = t.MaNhanVienNavigation != null ? t.MaNhanVienNavigation.TrangThaiLamViec : ""
                 })
                 .ToListAsync();
 
@@ -83,7 +84,8 @@ namespace HrmApp.Api.Controllers
                     MaVaiTro = t.MaVaiTro,
                     TenVaiTro = t.MaVaiTroNavigation != null ? t.MaVaiTroNavigation.TenVaiTro : "",
                     TrangThai = t.TrangThai,
-                    NgayTao = t.NgayTao
+                    NgayTao = t.NgayTao,
+                    TrangThaiLamViec = t.MaNhanVienNavigation != null ? t.MaNhanVienNavigation.TrangThaiLamViec : ""
                 })
                 .FirstOrDefaultAsync();
 
@@ -183,7 +185,8 @@ namespace HrmApp.Api.Controllers
                 MaVaiTro = taiKhoan.MaVaiTro,
                 TenVaiTro = vaiTro.TenVaiTro,
                 TrangThai = taiKhoan.TrangThai,
-                NgayTao = taiKhoan.NgayTao
+                NgayTao = taiKhoan.NgayTao,
+                TrangThaiLamViec = nhanVien.TrangThaiLamViec
             };
 
             return CreatedAtAction(nameof(GetTaiKhoan), new { id = taiKhoan.MaTaiKhoan }, responseDto);
@@ -200,6 +203,7 @@ namespace HrmApp.Api.Controllers
 
             var taiKhoan = await _context.TaiKhoans
                 .Include(t => t.MaVaiTroNavigation)
+                .Include(t => t.MaNhanVienNavigation)
                 .FirstOrDefaultAsync(t => t.MaTaiKhoan == id);
 
             if (taiKhoan == null)
@@ -213,6 +217,19 @@ namespace HrmApp.Api.Controllers
             if (targetIsOwner && !isOwner)
             {
                 return StatusCode(403, new { message = "Chỉ Chủ doanh nghiệp mới có quyền thao tác trên tài khoản Chủ doanh nghiệp." });
+            }
+
+            if (dto.TrangThai == "Hoạt động")
+            {
+                var nhanVien = taiKhoan.MaNhanVienNavigation ?? await _context.NhanViens.FindAsync(taiKhoan.MaNhanVien);
+                if (nhanVien != null)
+                {
+                    var tt = nhanVien.TrangThaiLamViec ?? string.Empty;
+                    if (tt == "Đã nghỉ việc" || tt == "Đã thôi việc" || tt == "Đã thôi việc / Nghỉ việc" || tt.Contains("thôi việc") || tt.Contains("nghỉ việc"))
+                    {
+                        return BadRequest(new { message = "Nhân viên này đã thôi việc, không thể mở khóa tài khoản!" });
+                    }
+                }
             }
 
             if (id == callerTaiKhoanId && dto.TrangThai == "Bị khóa")
@@ -411,6 +428,7 @@ namespace HrmApp.Api.Controllers
         {
             var taiKhoan = await _context.TaiKhoans
                 .Include(t => t.MaVaiTroNavigation)
+                .Include(t => t.MaNhanVienNavigation)
                 .FirstOrDefaultAsync(t => t.MaTaiKhoan == id);
 
             if (taiKhoan == null)
@@ -424,6 +442,16 @@ namespace HrmApp.Api.Controllers
             if (targetIsOwner && !isOwner)
             {
                 return StatusCode(403, new { message = "Chỉ Chủ doanh nghiệp mới có quyền thao tác trên tài khoản Chủ doanh nghiệp." });
+            }
+
+            var nhanVien = taiKhoan.MaNhanVienNavigation ?? await _context.NhanViens.FindAsync(taiKhoan.MaNhanVien);
+            if (nhanVien != null)
+            {
+                var tt = nhanVien.TrangThaiLamViec ?? string.Empty;
+                if (tt == "Đã nghỉ việc" || tt == "Đã thôi việc" || tt == "Đã thôi việc / Nghỉ việc" || tt.Contains("thôi việc") || tt.Contains("nghỉ việc"))
+                {
+                    return BadRequest(new { message = "Nhân viên này đã thôi việc, không thể mở khóa tài khoản!" });
+                }
             }
 
             taiKhoan.TrangThai = "Hoạt động";

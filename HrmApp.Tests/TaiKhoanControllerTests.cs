@@ -56,6 +56,81 @@ public class TaiKhoanControllerTests
         Assert.Equal(adminRole.MaVaiTro, (await db.TaiKhoans.SingleAsync()).MaVaiTro);
     }
 
+    [Fact]
+    public async Task AdminUnlocksResignedEmployeeAccount_ReturnsBadRequest()
+    {
+        using var db = HrTestSupport.CreateDbContext();
+        var employeeRole = new VaiTro { MaVaiTro = Guid.NewGuid(), TenVaiTro = "Nhân viên" };
+        var employee = NewEmployee("Nhân viên Thôi Việc");
+        employee.TrangThaiLamViec = "Đã thôi việc / Nghỉ việc";
+        var account = NewAccount(employee, employeeRole, "employee.resigned");
+        account.TrangThai = "Bị khóa";
+        db.VaiTros.Add(employeeRole);
+        db.NhanViens.Add(employee);
+        db.TaiKhoans.Add(account);
+        await db.SaveChangesAsync();
+
+        var audit = HrTestSupport.CreateAuditMock();
+        var controller = new TaiKhoanController(db, audit.Object);
+        HrTestSupport.SetUser(controller, Guid.NewGuid(), "Quản trị viên", Guid.NewGuid());
+        var result = await controller.MoKhoaTaiKhoan(account.MaTaiKhoan);
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Contains("Nhân viên này đã thôi việc, không thể mở khóa tài khoản!", badRequest.Value?.ToString() ?? "");
+    }
+
+    [Fact]
+    public async Task AdminUpdatesResignedEmployeeAccountToActive_ReturnsBadRequest()
+    {
+        using var db = HrTestSupport.CreateDbContext();
+        var employeeRole = new VaiTro { MaVaiTro = Guid.NewGuid(), TenVaiTro = "Nhân viên" };
+        var employee = NewEmployee("Nhân viên Nghỉ Việc");
+        employee.TrangThaiLamViec = "Đã nghỉ việc";
+        var account = NewAccount(employee, employeeRole, "employee.resigned2");
+        account.TrangThai = "Bị khóa";
+        db.VaiTros.Add(employeeRole);
+        db.NhanViens.Add(employee);
+        db.TaiKhoans.Add(account);
+        await db.SaveChangesAsync();
+
+        var audit = HrTestSupport.CreateAuditMock();
+        var controller = new TaiKhoanController(db, audit.Object);
+        HrTestSupport.SetUser(controller, Guid.NewGuid(), "Quản trị viên", Guid.NewGuid());
+        var result = await controller.PutTaiKhoan(account.MaTaiKhoan, new HrmApp.Api.DTOs.TaiKhoan.UpdateTaiKhoanDto
+        {
+            MaVaiTro = employeeRole.MaVaiTro,
+            TrangThai = "Hoạt động"
+        });
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Contains("Nhân viên này đã thôi việc, không thể mở khóa tài khoản!", badRequest.Value?.ToString() ?? "");
+    }
+
+    [Fact]
+    public async Task AdminUnlocksActiveEmployeeAccount_Succeeds()
+    {
+        using var db = HrTestSupport.CreateDbContext();
+        var employeeRole = new VaiTro { MaVaiTro = Guid.NewGuid(), TenVaiTro = "Nhân viên" };
+        var employee = NewEmployee("Nhân viên Đang Làm");
+        employee.TrangThaiLamViec = "Đang làm việc";
+        var account = NewAccount(employee, employeeRole, "employee.active");
+        account.TrangThai = "Bị khóa";
+        db.VaiTros.Add(employeeRole);
+        db.NhanViens.Add(employee);
+        db.TaiKhoans.Add(account);
+        await db.SaveChangesAsync();
+
+        var audit = HrTestSupport.CreateAuditMock();
+        var controller = new TaiKhoanController(db, audit.Object);
+        HrTestSupport.SetUser(controller, Guid.NewGuid(), "Quản trị viên", Guid.NewGuid());
+        var result = await controller.MoKhoaTaiKhoan(account.MaTaiKhoan);
+
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.Contains("Mở khóa tài khoản thành công", okResult.Value?.ToString() ?? "");
+        var updated = await db.TaiKhoans.SingleAsync(t => t.MaTaiKhoan == account.MaTaiKhoan);
+        Assert.Equal("Hoạt động", updated.TrangThai);
+    }
+
     private static NhanVien NewEmployee(string name) => new()
     {
         MaNhanVien = Guid.NewGuid(),

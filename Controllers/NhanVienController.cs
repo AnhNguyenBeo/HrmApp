@@ -542,7 +542,7 @@ namespace HrmApp.Api.Controllers
                 }
             }
 
-            nhanVien.TrangThaiLamViec = "Đã nghỉ việc";
+            nhanVien.TrangThaiLamViec = "Đã thôi việc / Nghỉ việc";
             nhanVien.NgayNghiViec = DateOnly.FromDateTime(DateTime.Now);
 
             var taiKhoans = await _context.TaiKhoans.Where(t => t.MaNhanVien == nhanVien.MaNhanVien).ToListAsync();
