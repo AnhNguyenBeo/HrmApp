@@ -45,7 +45,7 @@ export const App: React.FC = () => {
                 <Route path="/bang-luong" element={<BangLuongPage />} />
               </Route>
 
-              <Route element={<ProtectedRoute allowedRoles={['Chủ doanh nghiệp', 'Quản lý']} />}>
+              <Route element={<ProtectedRoute allowedRoles={['Chủ doanh nghiệp', 'Quản lý', 'Nhân viên']} allowDepartments={['Nhân sự']} />}>
                 <Route path="/nhan-vien" element={<NhanVienPage />} />
               </Route>
 

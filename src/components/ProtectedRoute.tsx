@@ -22,8 +22,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles, al
       const hasRole = allowedRoles.includes(user.vaiTro);
       const hasDept = allowDepartments ? allowDepartments.some((d) => (user.tenPhongBan || '').includes(d)) : false;
 
-      const isOwnerRole = user.vaiTro === 'Chủ doanh nghiệp';
-      const hasRequiredRoleAndDepartment = hasRole && (!allowDepartments || hasDept || isOwnerRole);
+      const isManagerOrOwner = user.vaiTro === 'Chủ doanh nghiệp' || user.vaiTro === 'Quản lý';
+      const hasRequiredRoleAndDepartment = hasRole && (!allowDepartments || hasDept || isManagerOrOwner);
       if (!hasRequiredRoleAndDepartment) {
         return (
           <div style={{ padding: 50, textAlign: 'center' }}>

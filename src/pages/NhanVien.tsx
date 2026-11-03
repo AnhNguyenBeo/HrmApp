@@ -39,14 +39,15 @@ export const NhanVienPage: React.FC = () => {
   const userStr = localStorage.getItem('user');
   const currentUser = userStr ? JSON.parse(userStr) : null;
   const isOwner = currentUser?.vaiTro === 'Chủ doanh nghiệp';
+  const isManager = currentUser?.vaiTro === 'Quản lý';
+  const isEmployee = currentUser?.vaiTro === 'Nhân viên';
 
   const [myDeptId, setMyDeptId] = useState<string | undefined>(currentUser?.maPhongBan);
   const [myDeptName, setMyDeptName] = useState<string | undefined>(currentUser?.tenPhongBan);
 
   const isHR = (myDeptName || currentUser?.tenPhongBan || '').includes('Nhân sự');
-  const isHRManager = isHR && (currentUser?.vaiTro === 'Quản lý' || currentUser?.vaiTro === 'Chủ doanh nghiệp');
-  const canManageHR = isOwner || isHRManager;
-  const canViewAllDepts = isOwner;
+  const canManageHR = isOwner || isManager;
+  const canViewAllDepts = true;
 
   const [selectedPhongBan, setSelectedPhongBan] = useState<string>('ALL');
 
@@ -231,12 +232,22 @@ export const NhanVienPage: React.FC = () => {
         }
 
         const isSelf = record.maNhanVien === currentUser?.maNhanVien;
-        const isTargetDirector = (record.tenChucVu || '').includes('Giám đốc') || (record.tenPhongBan || '').includes('Ban Giám đốc') || (record.tenChucVu || '').includes('Chủ doanh nghiệp');
-        const isTargetHeadOfHR = (record.tenPhongBan || '').includes('Nhân sự') && (record.tenChucVu || '').includes('Trưởng');
+        const isTargetDirector = (record.tenChucVu || '').includes('Giám đốc') 
+          || (record.tenPhongBan || '').includes('Ban Giám đốc') 
+          || (record.tenChucVu || '').includes('Chủ doanh nghiệp')
+          || (record.tenChucVu || '').includes('Quản trị viên');
 
-        const canPromote = isOwner || (!isSelf && !isTargetDirector && !isTargetHeadOfHR);
-        const canEdit = isOwner || (!isSelf && !isTargetDirector && !isTargetHeadOfHR);
-        const canTerminate = !isSelf && (isOwner || (!isTargetDirector && !isTargetHeadOfHR));
+        if (!isOwner && isTargetDirector) {
+          return <Tag color="error">Ban Giám Đốc</Tag>;
+        }
+
+        if (isSelf) {
+          return <Tag color="blue">Bản thân</Tag>;
+        }
+
+        const canPromote = isOwner || !isTargetDirector;
+        const canEdit = isOwner || !isTargetDirector;
+        const canTerminate = isOwner || !isTargetDirector;
 
         return (
           <Space size="small">
@@ -273,7 +284,7 @@ export const NhanVienPage: React.FC = () => {
             )}
 
             {record.trangThaiLamViec !== 'Đã nghỉ việc' ? (
-              canTerminate ? (
+              canTerminate && (
                 <Popconfirm
                   title="Xác nhận thôi việc"
                   description={`Cho ${record.hoTen} thôi việc? Hệ thống sẽ khóa tài khoản đăng nhập.`}
@@ -286,9 +297,7 @@ export const NhanVienPage: React.FC = () => {
                     Thôi việc
                   </Button>
                 </Popconfirm>
-              ) : (isTargetHeadOfHR || isTargetDirector) && !isOwner ? (
-                <Tag color="default">Không có quyền</Tag>
-              ) : null
+              )
             ) : (
               <Tag color="red">Đã thôi việc</Tag>
             )}
@@ -435,11 +444,13 @@ export const NhanVienPage: React.FC = () => {
             <Col span={12}>
               <Form.Item name="maPhongBan" label="Phòng ban" rules={[{ required: true, message: 'Chọn phòng ban!' }]}>
                 <Select placeholder="Chọn phòng ban">
-                  {phongBans.map((pb) => (
-                    <Select.Option key={pb.maPhongBan} value={pb.maPhongBan}>
-                      {pb.tenPhongBan}
-                    </Select.Option>
-                  ))}
+                  {phongBans
+                    .filter((pb) => isOwner || !pb.tenPhongBan.includes('Ban Giám đốc'))
+                    .map((pb) => (
+                      <Select.Option key={pb.maPhongBan} value={pb.maPhongBan}>
+                        {pb.tenPhongBan}
+                      </Select.Option>
+                    ))}
                 </Select>
               </Form.Item>
             </Col>
@@ -557,11 +568,13 @@ export const NhanVienPage: React.FC = () => {
             <Col span={12}>
               <Form.Item name="maPhongBan" label="Phòng ban" rules={[{ required: true, message: 'Chọn phòng ban!' }]}>
                 <Select placeholder="Chọn phòng ban">
-                  {phongBans.map((pb) => (
-                    <Select.Option key={pb.maPhongBan} value={pb.maPhongBan}>
-                      {pb.tenPhongBan}
-                    </Select.Option>
-                  ))}
+                  {phongBans
+                    .filter((pb) => isOwner || !pb.tenPhongBan.includes('Ban Giám đốc'))
+                    .map((pb) => (
+                      <Select.Option key={pb.maPhongBan} value={pb.maPhongBan}>
+                        {pb.tenPhongBan}
+                      </Select.Option>
+                    ))}
                 </Select>
               </Form.Item>
             </Col>
