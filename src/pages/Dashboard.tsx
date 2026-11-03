@@ -13,6 +13,7 @@ import {
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { thongKeApi } from '../api/thongKeApi';
+import { formatVND } from '../utils/format';
 import { DashboardData } from '../types';
 
 export const DashboardPage: React.FC = () => {
@@ -196,7 +197,7 @@ export const DashboardPage: React.FC = () => {
             <div style={{ padding: '14px 16px', background: '#f0f5ff', borderRadius: 8, borderLeft: '4px solid #1890ff' }}>
               <div style={{ color: '#595959', fontSize: 13, marginBottom: 4, fontWeight: 500 }}>Tổng quỹ lương tháng</div>
               <div style={{ fontSize: 20, fontWeight: 700, color: '#1890ff' }}>
-                {(data?.tongQuyLuongThang || 0).toLocaleString('vi-VN')} đ
+                {formatVND(data?.tongQuyLuongThang)}
               </div>
               <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 4 }}>
                 Tổng nghĩa vụ lương phải trả
@@ -207,7 +208,7 @@ export const DashboardPage: React.FC = () => {
             <div style={{ padding: '14px 16px', background: '#f6ffed', borderRadius: 8, borderLeft: '4px solid #52c41a' }}>
               <div style={{ color: '#595959', fontSize: 13, marginBottom: 4, fontWeight: 500 }}>Đã giải ngân chi trả</div>
               <div style={{ fontSize: 20, fontWeight: 700, color: '#52c41a' }}>
-                {(data?.luongDaChiTraThang || 0).toLocaleString('vi-VN')} đ
+                {formatVND(data?.luongDaChiTraThang)}
               </div>
               <div style={{ fontSize: 12, color: '#52c41a', marginTop: 4 }}>
                 Đã thanh toán cho <strong>{data?.soBangLuongDaChiTra || 0}</strong> nhân sự
@@ -218,7 +219,7 @@ export const DashboardPage: React.FC = () => {
             <div style={{ padding: '14px 16px', background: '#fffbe6', borderRadius: 8, borderLeft: '4px solid #faad14' }}>
               <div style={{ color: '#595959', fontSize: 13, marginBottom: 4, fontWeight: 500 }}>Còn lại chờ duyệt chi</div>
               <div style={{ fontSize: 20, fontWeight: 700, color: '#faad14' }}>
-                {(data?.luongChoChiTraThang || 0).toLocaleString('vi-VN')} đ
+                {formatVND(data?.luongChoChiTraThang)}
               </div>
               <div style={{ fontSize: 12, color: '#faad14', marginTop: 4 }}>
                 Chờ duyệt chi: <strong>{data?.soBangLuongChoChiTra || 0}</strong> nhân sự

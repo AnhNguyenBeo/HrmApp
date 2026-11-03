@@ -5,6 +5,7 @@ import { bangLuongApi } from '../api/bangLuongApi';
 import { exportApi } from '../api/exportApi';
 import { nhanVienApi } from '../api/nhanVienApi';
 import { BangLuong } from '../types';
+import { formatVND, formatDeductionVND, formatNumberVND } from '../utils/format';
 import dayjs from 'dayjs';
 
 export const TinhLuongPage: React.FC = () => {
@@ -178,24 +179,27 @@ export const TinhLuongPage: React.FC = () => {
       title: 'Lương cơ bản',
       dataIndex: 'luongCoBan',
       key: 'luongCoBan',
-      width: 140,
-      render: (val: number) => (val ? val.toLocaleString('vi-VN') + ' đ' : '0 đ'),
+      width: 135,
+      align: 'right' as const,
+      render: (val: number) => <span style={{ whiteSpace: 'nowrap' }}>{formatVND(val)}</span>,
     },
     {
       title: 'Ngày công',
       dataIndex: 'soNgayCong',
       key: 'soNgayCong',
-      width: 110,
-      render: (val: number, record: BangLuong) => (val || 0) + ' / ' + (record.ngayCongChuan || 22),
+      width: 100,
+      align: 'center' as const,
+      render: (val: number, record: BangLuong) => `${val || 0} / ${record.ngayCongChuan || 22}`,
     },
     {
       title: 'Lương OT',
       dataIndex: 'luongOt',
       key: 'luongOt',
       width: 140,
+      align: 'right' as const,
       render: (val: number, record: BangLuong) => (
-        <span>
-          {val ? val.toLocaleString('vi-VN') + ' đ' : '0 đ'}{' '}
+        <span style={{ whiteSpace: 'nowrap' }}>
+          {formatVND(val)}{' '}
           <small style={{ color: '#888' }}>({record.tongGioOt || 0}h)</small>
         </span>
       ),
@@ -204,28 +208,35 @@ export const TinhLuongPage: React.FC = () => {
       title: 'BHXH (10.5%)',
       dataIndex: 'baoHiemXaHoi',
       key: 'baoHiemXaHoi',
-      width: 140,
+      width: 130,
+      align: 'right' as const,
       render: (val: number) => (
-        <span style={{ color: '#fa8c16' }}>-{val ? val.toLocaleString('vi-VN') + ' đ' : '0 đ'}</span>
+        <span style={{ color: val > 0 ? '#fa8c16' : '#888', whiteSpace: 'nowrap' }}>
+          {formatDeductionVND(val)}
+        </span>
       ),
     },
     {
       title: 'Thuế TNCN',
       dataIndex: 'thueTncn',
       key: 'thueTncn',
-      width: 130,
+      width: 120,
+      align: 'right' as const,
       render: (val: number) => (
-        <span style={{ color: '#f5222d' }}>-{val ? val.toLocaleString('vi-VN') + ' đ' : '0 đ'}</span>
+        <span style={{ color: val > 0 ? '#f5222d' : '#888', whiteSpace: 'nowrap' }}>
+          {formatDeductionVND(val)}
+        </span>
       ),
     },
     {
       title: 'Thực lĩnh (Net)',
       dataIndex: 'thucLinh',
       key: 'thucLinh',
-      width: 150,
+      width: 145,
+      align: 'right' as const,
       render: (val: number) => (
-        <strong style={{ color: '#52c41a', fontSize: 15 }}>
-          {val ? val.toLocaleString('vi-VN') + ' đ' : '0 đ'}
+        <strong style={{ color: '#52c41a', fontSize: 14, whiteSpace: 'nowrap' }}>
+          {formatVND(val)}
         </strong>
       ),
     },
@@ -233,7 +244,8 @@ export const TinhLuongPage: React.FC = () => {
       title: 'Trạng thái',
       dataIndex: 'trangThaiChiTra',
       key: 'trangThaiChiTra',
-      width: 130,
+      width: 110,
+      align: 'center' as const,
       render: (val: string) => (
         <Tag color={val === 'Đã chi trả' ? 'green' : 'gold'}>
           {val || 'Chờ duyệt'}
@@ -241,9 +253,10 @@ export const TinhLuongPage: React.FC = () => {
       ),
     },
     {
-      title: 'Thao tác chi trả',
+      title: 'Thao tác',
       key: 'action',
-      width: 220,
+      width: 150,
+      align: 'center' as const,
       fixed: 'right' as const,
       render: (_: any, record: BangLuong) => {
         if (record.trangThaiChiTra === 'Đã chi trả') {
@@ -298,10 +311,11 @@ export const TinhLuongPage: React.FC = () => {
           <Card size="small" style={{ borderRadius: 8, borderLeft: '4px solid #1890ff', boxShadow: '0 2px 6px rgba(0,0,0,0.04)' }}>
             <Statistic
               title={<span style={{ fontSize: 13, color: '#666', fontWeight: 500 }}>Tổng quỹ lương ({monthStr})</span>}
-              value={totalMonthNet}
+              value={Math.round(totalMonthNet)}
+              formatter={(val) => formatNumberVND(Number(val))}
               prefix={<DollarCircleOutlined style={{ color: '#1890ff' }} />}
               suffix="đ"
-              valueStyle={{ fontSize: 18, fontWeight: 700, color: '#1890ff' }}
+              valueStyle={{ fontSize: 19, fontWeight: 700, color: '#1890ff' }}
             />
             <div style={{ fontSize: 12, color: '#888', marginTop: 4 }}>
               Quy mô: <strong>{monthRecords.length}</strong> nhân sự
@@ -312,10 +326,11 @@ export const TinhLuongPage: React.FC = () => {
           <Card size="small" style={{ borderRadius: 8, borderLeft: '4px solid #52c41a', boxShadow: '0 2px 6px rgba(0,0,0,0.04)' }}>
             <Statistic
               title={<span style={{ fontSize: 13, color: '#666', fontWeight: 500 }}>Đã giải ngân chi trả</span>}
-              value={paidAmount}
+              value={Math.round(paidAmount)}
+              formatter={(val) => formatNumberVND(Number(val))}
               prefix={<CheckCircleOutlined style={{ color: '#52c41a' }} />}
               suffix="đ"
-              valueStyle={{ fontSize: 18, fontWeight: 700, color: '#52c41a' }}
+              valueStyle={{ fontSize: 19, fontWeight: 700, color: '#52c41a' }}
             />
             <div style={{ fontSize: 12, color: '#52c41a', marginTop: 4 }}>
               Đã trả: <strong>{paidRecords.length}</strong> / {monthRecords.length} nhân sự
@@ -326,10 +341,11 @@ export const TinhLuongPage: React.FC = () => {
           <Card size="small" style={{ borderRadius: 8, borderLeft: '4px solid #faad14', boxShadow: '0 2px 6px rgba(0,0,0,0.04)' }}>
             <Statistic
               title={<span style={{ fontSize: 13, color: '#666', fontWeight: 500 }}>Còn lại chờ duyệt chi</span>}
-              value={pendingAmount}
+              value={Math.round(pendingAmount)}
+              formatter={(val) => formatNumberVND(Number(val))}
               prefix={<ClockCircleOutlined style={{ color: '#faad14' }} />}
               suffix="đ"
-              valueStyle={{ fontSize: 18, fontWeight: 700, color: '#faad14' }}
+              valueStyle={{ fontSize: 19, fontWeight: 700, color: '#faad14' }}
             />
             <div style={{ fontSize: 12, color: '#faad14', marginTop: 4 }}>
               Chờ duyệt: <strong>{pendingRecords.length}</strong> nhân sự
@@ -429,7 +445,7 @@ export const TinhLuongPage: React.FC = () => {
           columns={columns}
           rowKey="maBangLuong"
           loading={loading}
-          scroll={{ x: 1550 }}
+          scroll={{ x: 1450 }}
           pagination={{ pageSize: 10, showSizeChanger: true, showTotal: (t) => `Tổng cộng ${t} phiếu lương` }}
         />
       </Card>

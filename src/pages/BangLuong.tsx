@@ -4,6 +4,7 @@ import { DownloadOutlined, EyeOutlined, PrinterOutlined, SearchOutlined } from '
 import { bangLuongApi } from '../api/bangLuongApi';
 import { exportApi } from '../api/exportApi';
 import { BangLuong } from '../types';
+import { formatVND, formatDeductionVND } from '../utils/format';
 import dayjs from 'dayjs';
 
 export const BangLuongPage: React.FC = () => {
@@ -75,51 +76,63 @@ export const BangLuongPage: React.FC = () => {
       dataIndex: 'luongCoBan',
       key: 'luongCoBan',
       width: 140,
-      render: (val: number) => (val ? val.toLocaleString('vi-VN') + ' đ' : '0 đ'),
+      align: 'right' as const,
+      render: (val: number) => <span style={{ whiteSpace: 'nowrap' }}>{formatVND(val)}</span>,
     },
     {
       title: 'Ngày công',
       dataIndex: 'soNgayCong',
       key: 'soNgayCong',
-      width: 130,
-      render: (val: number, record: BangLuong) => (val || 0) + ' / ' + (record.ngayCongChuan || 22) + ' ngày',
+      width: 120,
+      align: 'center' as const,
+      render: (val: number, record: BangLuong) => `${val || 0} / ${record.ngayCongChuan || 22} ngày`,
     },
     {
       title: 'Lương OT',
       dataIndex: 'luongOt',
       key: 'luongOt',
       width: 140,
-      render: (val: number, record: BangLuong) =>
-        val ? (
-          <span>
-            {val.toLocaleString('vi-VN')} đ <small style={{ color: '#888' }}>({record.tongGioOt || 0}h)</small>
-          </span>
-        ) : (
-          '0 đ'
-        ),
+      align: 'right' as const,
+      render: (val: number, record: BangLuong) => (
+        <span style={{ whiteSpace: 'nowrap' }}>
+          {formatVND(val)}{' '}
+          <small style={{ color: '#888' }}>({record.tongGioOt || 0}h)</small>
+        </span>
+      ),
     },
     {
       title: 'Khấu trừ BHXH',
       dataIndex: 'baoHiemXaHoi',
       key: 'baoHiemXaHoi',
-      width: 140,
-      render: (val: number) => <span style={{ color: '#fa8c16' }}>-{val ? val.toLocaleString('vi-VN') + ' đ' : '0 đ'}</span>,
+      width: 130,
+      align: 'right' as const,
+      render: (val: number) => (
+        <span style={{ color: val > 0 ? '#fa8c16' : '#888', whiteSpace: 'nowrap' }}>
+          {formatDeductionVND(val)}
+        </span>
+      ),
     },
     {
       title: 'Thuế TNCN',
       dataIndex: 'thueTncn',
       key: 'thueTncn',
-      width: 130,
-      render: (val: number) => <span style={{ color: '#f5222d' }}>-{val ? val.toLocaleString('vi-VN') + ' đ' : '0 đ'}</span>,
+      width: 120,
+      align: 'right' as const,
+      render: (val: number) => (
+        <span style={{ color: val > 0 ? '#f5222d' : '#888', whiteSpace: 'nowrap' }}>
+          {formatDeductionVND(val)}
+        </span>
+      ),
     },
     {
       title: 'Thực lĩnh (Net)',
       dataIndex: 'thucLinh',
       key: 'thucLinh',
       width: 150,
+      align: 'right' as const,
       render: (val: number) => (
-        <strong style={{ color: '#52c41a', fontSize: 16 }}>
-          {val ? val.toLocaleString('vi-VN') + ' đ' : '0 đ'}
+        <strong style={{ color: '#52c41a', fontSize: 15, whiteSpace: 'nowrap' }}>
+          {formatVND(val)}
         </strong>
       ),
     },
@@ -226,7 +239,7 @@ export const BangLuongPage: React.FC = () => {
               <Descriptions.Item label="Nhân viên">{selectedSlip.hoTen}</Descriptions.Item>
               <Descriptions.Item label="Kỳ lương">{selectedSlip.thoiGian}</Descriptions.Item>
               <Descriptions.Item label="1. Lương cơ bản theo hợp đồng">
-                <strong>{selectedSlip.luongCoBan?.toLocaleString('vi-VN')} đ</strong>
+                <strong>{formatVND(selectedSlip.luongCoBan)}</strong>
               </Descriptions.Item>
               <Descriptions.Item label="2. Ngày công chuẩn quy định">
                 {(selectedSlip.ngayCongChuan || 22)} ngày
@@ -236,23 +249,23 @@ export const BangLuongPage: React.FC = () => {
               </Descriptions.Item>
               <Descriptions.Item label="4. Tiền lương theo ngày công">
                 {selectedSlip.ngayCongChuan
-                  ? Math.round(((selectedSlip.luongCoBan || 0) / selectedSlip.ngayCongChuan) * (selectedSlip.soNgayCong || 0)).toLocaleString('vi-VN')
-                  : 0}{' '}
-                đ <em>(Công thức: Lương cơ bản ÷ 22 × Số ngày công)</em>
+                  ? formatVND(((selectedSlip.luongCoBan || 0) / selectedSlip.ngayCongChuan) * (selectedSlip.soNgayCong || 0))
+                  : '0 đ'}{' '}
+                <em>(Công thức: Lương cơ bản ÷ 22 × Số ngày công)</em>
               </Descriptions.Item>
               <Descriptions.Item label="5. Tăng ca (OT)">
-                {(selectedSlip.tongGioOt || 0)} giờ ➔ <strong>+{selectedSlip.luongOt?.toLocaleString('vi-VN')} đ</strong>{' '}
+                {(selectedSlip.tongGioOt || 0)} giờ ➔ <strong>+{formatVND(selectedSlip.luongOt)}</strong>{' '}
                 <em>(Công thức: Tiền lương giờ × Giờ OT × 1.5)</em>
               </Descriptions.Item>
               <Descriptions.Item label="6. Khấu trừ Bảo hiểm xã hội (10.5%)">
-                <span style={{ color: '#fa8c16' }}>
-                  -{selectedSlip.baoHiemXaHoi?.toLocaleString('vi-VN')} đ
+                <span style={{ color: selectedSlip.baoHiemXaHoi ? '#fa8c16' : '#888' }}>
+                  {formatDeductionVND(selectedSlip.baoHiemXaHoi)}
                 </span>{' '}
                 <em>(Gồm 8% BHXH + 1.5% BHYT + 1% BHTN)</em>
               </Descriptions.Item>
               <Descriptions.Item label="7. Thuế Thu nhập cá nhân (TNCN)">
-                <span style={{ color: '#f5222d' }}>
-                  -{selectedSlip.thueTncn ? selectedSlip.thueTncn.toLocaleString('vi-VN') : 0} đ
+                <span style={{ color: selectedSlip.thueTncn ? '#f5222d' : '#888' }}>
+                  {formatDeductionVND(selectedSlip.thueTncn)}
                 </span>{' '}
                 <em>(Áp dụng biểu thuế lũy tiến từng phần sau giảm trừ gia cảnh 11 triệu)</em>
               </Descriptions.Item>
@@ -262,7 +275,7 @@ export const BangLuongPage: React.FC = () => {
             <div style={{ textAlign: 'right', fontSize: 18 }}>
               <span>LƯƠNG THỰC LĨNH (NET): </span>
               <strong style={{ color: '#52c41a', fontSize: 24 }}>
-                {selectedSlip.thucLinh?.toLocaleString('vi-VN')} VNĐ
+                {formatVND(selectedSlip.thucLinh)}
               </strong>
             </div>
           </div>
