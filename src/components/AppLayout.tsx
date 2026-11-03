@@ -106,7 +106,6 @@ export const AppLayout: React.FC = () => {
   } else {
     menuItems = [
       ...(isHR ? [{ key: '/nhan-vien', icon: <TeamOutlined />, label: 'Quản lý nhân sự' }] : []),
-      ...(isAccounting ? [{ key: '/tinh-luong', icon: <DollarOutlined />, label: 'Tính & Quản lý lương' }] : []),
       { key: '/profile', icon: <UserOutlined />, label: 'Hồ sơ của tôi' },
       { key: '/cham-cong', icon: <ClockCircleOutlined />, label: 'Chấm công cá nhân' },
       { key: '/don-tu', icon: <FileTextOutlined />, label: 'Đơn từ của tôi' },
