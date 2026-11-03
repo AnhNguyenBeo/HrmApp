@@ -362,6 +362,11 @@ namespace HrmApp.Api.Controllers
                 return NotFound(new { message = "Không tìm thấy nhân viên." });
             }
 
+            if (nhanVien.TrangThaiLamViec == "Đã nghỉ việc" || nhanVien.TrangThaiLamViec == "Đã thôi việc" || nhanVien.TrangThaiLamViec == "Đã thôi việc / Nghỉ việc" || nhanVien.TrangThaiLamViec.Contains("nghỉ việc") || nhanVien.TrangThaiLamViec.Contains("thôi việc"))
+            {
+                return BadRequest(new { message = "Nhân sự đã thôi việc, không thể sửa thông tin!" });
+            }
+
             var currentUserIdStr = User.FindFirst("MaNhanVien")?.Value;
             var currentUserRole = User.FindFirst(ClaimTypes.Role)?.Value ?? User.FindFirst("role")?.Value;
             Guid.TryParse(currentUserIdStr, out var currentNhanVienId);
@@ -457,6 +462,11 @@ namespace HrmApp.Api.Controllers
             if (nhanVien == null)
             {
                 return NotFound(new { message = "Không tìm thấy nhân viên." });
+            }
+
+            if (nhanVien.TrangThaiLamViec == "Đã nghỉ việc" || nhanVien.TrangThaiLamViec == "Đã thôi việc" || nhanVien.TrangThaiLamViec == "Đã thôi việc / Nghỉ việc" || nhanVien.TrangThaiLamViec.Contains("nghỉ việc") || nhanVien.TrangThaiLamViec.Contains("thôi việc"))
+            {
+                return BadRequest(new { message = "Nhân sự đã thôi việc, không thể cấp chức vụ hoặc phân quyền!" });
             }
 
             var newChucVu = await _context.ChucVus.FindAsync(maChucVu);

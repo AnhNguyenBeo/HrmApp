@@ -267,6 +267,44 @@ public class EmployeeSelfServiceTests
         Assert.Equal(403, Assert.IsType<ObjectResult>(deleteAttempt).StatusCode);
     }
 
+    [Fact]
+    public async Task HrManagerCannotEditOrPromoteResignedEmployee()
+    {
+        using var db = HrTestSupport.CreateDbContext();
+        var hrDept = new PhongBan { MaPhongBan = Guid.NewGuid(), TenPhongBan = "Phòng Nhân sự" };
+        var position = new ChucVu { MaChucVu = Guid.NewGuid(), TenChucVu = "Nhân viên" };
+        var manager = NewEmployee("Quản lý HR", "manager.hr@example.test", "079100000088", hrDept, position);
+        var resignedStaff = NewEmployee("Nhân viên đã nghỉ", "resigned.staff@example.test", "079100000089", hrDept, position);
+        resignedStaff.TrangThaiLamViec = "Đã thôi việc / Nghỉ việc";
+
+        db.PhongBans.Add(hrDept);
+        db.ChucVus.Add(position);
+        db.NhanViens.AddRange(manager, resignedStaff);
+        await db.SaveChangesAsync();
+
+        var controller = new NhanVienController(db, HrTestSupport.CreateAuditMock().Object);
+        HrTestSupport.SetUser(controller, manager.MaNhanVien, "Quản lý");
+
+        var editAttempt = await controller.PutNhanVien(resignedStaff.MaNhanVien, new UpdateNhanVienDto
+        {
+            HoTen = "Sửa nhân viên đã nghỉ",
+            NgaySinh = resignedStaff.NgaySinh,
+            GioiTinh = resignedStaff.GioiTinh,
+            Cccd = resignedStaff.Cccd,
+            Email = resignedStaff.Email,
+            SoDienThoai = resignedStaff.SoDienThoai,
+            DiaChi = resignedStaff.DiaChi,
+            TrinhDoHocVan = resignedStaff.TrinhDoHocVan,
+            MaPhongBan = resignedStaff.MaPhongBan
+        });
+        var badEdit = Assert.IsType<BadRequestObjectResult>(editAttempt);
+        Assert.Contains("Nhân sự đã thôi việc", badEdit.Value?.ToString() ?? "");
+
+        var promoteAttempt = await controller.ChangeChucVu(resignedStaff.MaNhanVien, position.MaChucVu);
+        var badPromote = Assert.IsType<BadRequestObjectResult>(promoteAttempt);
+        Assert.Contains("Nhân sự đã thôi việc", badPromote.Value?.ToString() ?? "");
+    }
+
     private static async Task<(NhanVien EmployeeA, NhanVien EmployeeB)> AddEmployeePairAsync(
         HrmApp.Api.Data.QuanLyNhanSuDbContext db,
         string departmentName)
