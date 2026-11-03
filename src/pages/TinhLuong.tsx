@@ -155,10 +155,17 @@ export const TinhLuongPage: React.FC = () => {
   });
 
   const columns = [
-    { title: 'Nhân viên', dataIndex: 'hoTen', key: 'hoTen', render: (val: string) => <strong>{val}</strong> },
+    {
+      title: 'Nhân viên',
+      dataIndex: 'hoTen',
+      key: 'hoTen',
+      width: 170,
+      render: (val: string) => <strong style={{ whiteSpace: 'nowrap' }}>{val}</strong>,
+    },
     {
       title: 'Phòng ban / Chức vụ',
       key: 'phongBanChucVu',
+      width: 190,
       render: (_: any, record: BangLuong) => (
         <Space direction="vertical" size={2}>
           <Tag color="blue">{record.tenPhongBan || 'Chưa xếp'}</Tag>
@@ -166,23 +173,26 @@ export const TinhLuongPage: React.FC = () => {
         </Space>
       ),
     },
-    { title: 'Kỳ lương', dataIndex: 'thoiGian', key: 'thoiGian' },
+    { title: 'Kỳ lương', dataIndex: 'thoiGian', key: 'thoiGian', width: 100 },
     {
       title: 'Lương cơ bản',
       dataIndex: 'luongCoBan',
       key: 'luongCoBan',
+      width: 140,
       render: (val: number) => (val ? val.toLocaleString('vi-VN') + ' đ' : '0 đ'),
     },
     {
       title: 'Ngày công',
       dataIndex: 'soNgayCong',
       key: 'soNgayCong',
+      width: 110,
       render: (val: number, record: BangLuong) => (val || 0) + ' / ' + (record.ngayCongChuan || 22),
     },
     {
       title: 'Lương OT',
       dataIndex: 'luongOt',
       key: 'luongOt',
+      width: 140,
       render: (val: number, record: BangLuong) => (
         <span>
           {val ? val.toLocaleString('vi-VN') + ' đ' : '0 đ'}{' '}
@@ -194,6 +204,7 @@ export const TinhLuongPage: React.FC = () => {
       title: 'BHXH (10.5%)',
       dataIndex: 'baoHiemXaHoi',
       key: 'baoHiemXaHoi',
+      width: 140,
       render: (val: number) => (
         <span style={{ color: '#fa8c16' }}>-{val ? val.toLocaleString('vi-VN') + ' đ' : '0 đ'}</span>
       ),
@@ -202,6 +213,7 @@ export const TinhLuongPage: React.FC = () => {
       title: 'Thuế TNCN',
       dataIndex: 'thueTncn',
       key: 'thueTncn',
+      width: 130,
       render: (val: number) => (
         <span style={{ color: '#f5222d' }}>-{val ? val.toLocaleString('vi-VN') + ' đ' : '0 đ'}</span>
       ),
@@ -210,6 +222,7 @@ export const TinhLuongPage: React.FC = () => {
       title: 'Thực lĩnh (Net)',
       dataIndex: 'thucLinh',
       key: 'thucLinh',
+      width: 150,
       render: (val: number) => (
         <strong style={{ color: '#52c41a', fontSize: 15 }}>
           {val ? val.toLocaleString('vi-VN') + ' đ' : '0 đ'}
@@ -220,6 +233,7 @@ export const TinhLuongPage: React.FC = () => {
       title: 'Trạng thái',
       dataIndex: 'trangThaiChiTra',
       key: 'trangThaiChiTra',
+      width: 130,
       render: (val: string) => (
         <Tag color={val === 'Đã chi trả' ? 'green' : 'gold'}>
           {val || 'Chờ duyệt'}
@@ -229,6 +243,8 @@ export const TinhLuongPage: React.FC = () => {
     {
       title: 'Thao tác chi trả',
       key: 'action',
+      width: 220,
+      fixed: 'right' as const,
       render: (_: any, record: BangLuong) => {
         if (record.trangThaiChiTra === 'Đã chi trả') {
           return <Tag color="green">Đã hoàn tất</Tag>;
@@ -408,7 +424,14 @@ export const TinhLuongPage: React.FC = () => {
             </span>
           </Col>
         </Row>
-        <Table dataSource={filteredData} columns={columns} rowKey="maBangLuong" loading={loading} />
+        <Table
+          dataSource={filteredData}
+          columns={columns}
+          rowKey="maBangLuong"
+          loading={loading}
+          scroll={{ x: 1550 }}
+          pagination={{ pageSize: 10, showSizeChanger: true, showTotal: (t) => `Tổng cộng ${t} phiếu lương` }}
+        />
       </Card>
     </div>
   );

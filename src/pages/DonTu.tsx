@@ -103,20 +103,22 @@ export const DonTuPage: React.FC = () => {
   };
 
   const columns = [
-    { title: 'Loại đơn', dataIndex: 'loaiDon', key: 'loaiDon' },
-    { title: 'Từ ngày', dataIndex: 'ngayBatDau', key: 'ngayBatDau' },
-    { title: 'Đến ngày', dataIndex: 'ngayKetThuc', key: 'ngayKetThuc' },
+    { title: 'Loại đơn', dataIndex: 'loaiDon', key: 'loaiDon', width: 140 },
+    { title: 'Từ ngày', dataIndex: 'ngayBatDau', key: 'ngayBatDau', width: 120, render: (val: string) => <span style={{ whiteSpace: 'nowrap' }}>{val}</span> },
+    { title: 'Đến ngày', dataIndex: 'ngayKetThuc', key: 'ngayKetThuc', width: 120, render: (val: string) => <span style={{ whiteSpace: 'nowrap' }}>{val}</span> },
     {
       title: 'Số ngày',
       dataIndex: 'soNgayNghi',
       key: 'soNgayNghi',
+      width: 100,
       render: (val: number) => <strong>{val} ngày</strong>,
     },
-    { title: 'Lý do', dataIndex: 'lyDo', key: 'lyDo' },
+    { title: 'Lý do', dataIndex: 'lyDo', key: 'lyDo', ellipsis: true },
     {
       title: 'Trạng thái',
       dataIndex: 'trangThai',
       key: 'trangThai',
+      width: 130,
       render: (val: string) => {
         let color = 'gold';
         if (val === 'Đã duyệt') color = 'green';
@@ -124,10 +126,12 @@ export const DonTuPage: React.FC = () => {
         return <Tag color={color}>{val}</Tag>;
       },
     },
-    { title: 'Người duyệt', dataIndex: 'tenNguoiDuyet', key: 'tenNguoiDuyet', render: (val: string) => val || '-' },
+    { title: 'Người duyệt', dataIndex: 'tenNguoiDuyet', key: 'tenNguoiDuyet', width: 150, render: (val: string) => val || '-' },
     {
       title: 'Thao tác',
       key: 'action',
+      width: 120,
+      align: 'center' as const,
       render: (_: any, record: DonTu) =>
         record.trangThai === 'Chờ duyệt' ? (
           <Popconfirm title="Bạn có chắc chắn muốn hủy đơn này?" onConfirm={() => handleCancel(record.maDon)}>
@@ -206,7 +210,14 @@ export const DonTuPage: React.FC = () => {
             </span>
           </Col>
         </Row>
-        <Table dataSource={filteredData} columns={columns} rowKey="maDon" loading={loading} />
+        <Table
+          dataSource={filteredData}
+          columns={columns}
+          rowKey="maDon"
+          loading={loading}
+          scroll={{ x: 1000 }}
+          pagination={{ pageSize: 10, showSizeChanger: true, showTotal: (t) => `Tổng cộng ${t} đơn từ` }}
+        />
       </Card>
 
       <Modal

@@ -46,8 +46,9 @@ export const NhanVienPage: React.FC = () => {
   const [myDeptName, setMyDeptName] = useState<string | undefined>(currentUser?.tenPhongBan);
 
   const isHR = (myDeptName || currentUser?.tenPhongBan || '').includes('Nhân sự');
-  const canManageHR = isOwner || isManager;
-  const canViewAllDepts = true;
+  const isHRManager = isManager && isHR;
+  const canManageHR = isOwner || isHRManager;
+  const canViewAllDepts = isOwner || isHRManager || (isEmployee && isHR);
 
   const [selectedPhongBan, setSelectedPhongBan] = useState<string>('ALL');
 
@@ -191,34 +192,58 @@ export const NhanVienPage: React.FC = () => {
       title: 'Họ và tên',
       dataIndex: 'hoTen',
       key: 'hoTen',
-      render: (val: string) => <strong>{val}</strong>,
+      width: 170,
+      render: (val: string) => <strong style={{ whiteSpace: 'nowrap' }}>{val}</strong>,
     },
     {
       title: 'Phòng ban',
       dataIndex: 'tenPhongBan',
       key: 'tenPhongBan',
-      render: (val: string) => <Tag color="blue">{val || 'Chưa gán'}</Tag>,
+      width: 200,
+      render: (val: string) => <Tag color="blue" style={{ margin: 0 }}>{val || 'Chưa gán'}</Tag>,
     },
     {
       title: 'Chức danh / Vị trí',
       dataIndex: 'tenChucVu',
       key: 'tenChucVu',
+      width: 160,
       render: (val: string) => {
         let color = 'default';
         if (val?.includes('Trưởng') || val?.includes('Giám đốc') || val?.includes('Chủ doanh nghiệp')) color = 'gold';
         else if (val?.includes('Phó')) color = 'cyan';
-        return <Tag color={color}>{val || 'Chưa gán'}</Tag>;
+        return <Tag color={color} style={{ margin: 0 }}>{val || 'Chưa gán'}</Tag>;
       },
     },
-    { title: 'Email', dataIndex: 'email', key: 'email' },
-    { title: 'Số điện thoại', dataIndex: 'soDienThoai', key: 'soDienThoai' },
-    { title: 'Trình độ', dataIndex: 'trinhDoHocVan', key: 'trinhDoHocVan' },
+    {
+      title: 'Email',
+      dataIndex: 'email',
+      key: 'email',
+      width: 210,
+      ellipsis: true,
+      render: (val: string) => <span style={{ whiteSpace: 'nowrap' }}>{val || '-'}</span>,
+    },
+    {
+      title: 'Số điện thoại',
+      dataIndex: 'soDienThoai',
+      key: 'soDienThoai',
+      width: 130,
+      render: (val: string) => <span style={{ whiteSpace: 'nowrap' }}>{val || '-'}</span>,
+    },
+    {
+      title: 'Trình độ',
+      dataIndex: 'trinhDoHocVan',
+      key: 'trinhDoHocVan',
+      width: 120,
+      render: (val: string) => <span style={{ whiteSpace: 'nowrap' }}>{val || '-'}</span>,
+    },
     {
       title: 'Trạng thái',
       dataIndex: 'trangThaiLamViec',
       key: 'trangThaiLamViec',
+      width: 140,
+      align: 'center' as const,
       render: (val: string) => (
-        <Tag color={val === 'Đang làm việc' ? 'green' : 'red'}>
+        <Tag color={val === 'Đang làm việc' ? 'green' : 'red'} style={{ margin: 0 }}>
           {val}
         </Tag>
       ),
@@ -226,6 +251,9 @@ export const NhanVienPage: React.FC = () => {
     {
       title: 'Thao tác',
       key: 'action',
+      width: 240,
+      fixed: 'right' as const,
+      align: 'center' as const,
       render: (_: any, record: NhanVien) => {
         if (!canManageHR) {
           return <Tag color="default">Chỉ xem</Tag>;
@@ -321,52 +349,70 @@ export const NhanVienPage: React.FC = () => {
           </span>
         }
       >
-        <Row justify="space-between" align="middle" style={{ marginBottom: 16 }} gutter={[16, 16]}>
-          <Col xs={24} md={15}>
-            <Space wrap size="middle">
-              {canViewAllDepts ? (
-                <Select
-                  value={selectedPhongBan}
-                  onChange={setSelectedPhongBan}
-                  style={{ width: 240 }}
-                >
-                  <Select.Option value="ALL">Tất cả phòng ban ({data.length})</Select.Option>
-                  {phongBans.map((pb) => {
-                    const count = data.filter((item) => item.maPhongBan?.toLowerCase() === pb.maPhongBan?.toLowerCase()).length;
-                    return (
-                      <Select.Option key={pb.maPhongBan} value={pb.maPhongBan}>
-                        {pb.tenPhongBan} ({count})
-                      </Select.Option>
-                    );
-                  })}
-                </Select>
-              ) : myDeptName ? (
-                <Tag color="blue" style={{ fontSize: 13, padding: '4px 10px' }}>
-                  🏢 Đang theo dõi: <strong>{myDeptName}</strong> ({displayData.length} nhân sự)
-                </Tag>
-              ) : null}
-            </Space>
-          </Col>
-          <Col xs={24} md={9} style={{ textAlign: 'right' }}>
-            <Space wrap>
-              <Input
-                placeholder="Tìm theo tên, email, CCCD, SĐT..."
-                prefix={<SearchOutlined />}
-                value={keyword}
-                onChange={(e) => setKeyword(e.target.value)}
-                style={{ width: 240 }}
-                allowClear
-              />
-              {canManageHR && (
-                <Button type="primary" icon={<UserAddOutlined />} onClick={openCreateModal}>
-                  Thêm nhân sự mới
-                </Button>
-              )}
-            </Space>
-          </Col>
-        </Row>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 16,
+            marginBottom: 20,
+          }}
+        >
+          <Space wrap size="middle">
+            {canViewAllDepts ? (
+              <Select
+                value={selectedPhongBan}
+                onChange={setSelectedPhongBan}
+                style={{ width: 250 }}
+              >
+                <Select.Option value="ALL">Tất cả phòng ban ({data.length})</Select.Option>
+                {phongBans.map((pb) => {
+                  const count = data.filter((item) => item.maPhongBan?.toLowerCase() === pb.maPhongBan?.toLowerCase()).length;
+                  return (
+                    <Select.Option key={pb.maPhongBan} value={pb.maPhongBan}>
+                      {pb.tenPhongBan} ({count})
+                    </Select.Option>
+                  );
+                })}
+              </Select>
+            ) : myDeptName ? (
+              <Tag color="blue" style={{ fontSize: 13, padding: '4px 10px' }}>
+                🏢 Đang theo dõi: <strong>{myDeptName}</strong> ({displayData.length} nhân sự)
+              </Tag>
+            ) : null}
+          </Space>
 
-        <Table dataSource={displayData} columns={columns} rowKey="maNhanVien" loading={loading} />
+          <Space wrap size="middle">
+            <Input
+              placeholder="Tìm theo tên, email, CCCD, SĐT..."
+              prefix={<SearchOutlined />}
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+              style={{ width: 260 }}
+              allowClear
+            />
+            {canManageHR && (
+              <Button type="primary" icon={<UserAddOutlined />} onClick={openCreateModal}>
+                Thêm nhân sự mới
+              </Button>
+            )}
+          </Space>
+        </div>
+
+        <Table
+          dataSource={displayData}
+          columns={columns}
+          rowKey="maNhanVien"
+          loading={loading}
+          scroll={{ x: 1250 }}
+          pagination={{
+            pageSize: 10,
+            showSizeChanger: true,
+            pageSizeOptions: ['10', '20', '50'],
+            showTotal: (total) => `Tổng cộng ${total} nhân sự`,
+          }}
+        />
       </Card>
 
       <Modal title="Thêm một nhân sự mới" open={createModal} onCancel={() => setCreateModal(false)} footer={null} width={700}>

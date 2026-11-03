@@ -92,12 +92,14 @@ export const ChamCongQuanLyPage: React.FC = () => {
       title: 'Nhân viên',
       dataIndex: 'hoTen',
       key: 'hoTen',
-      render: (val: string) => <strong>{val || 'Chưa rõ'}</strong>,
+      width: 170,
+      render: (val: string) => <strong style={{ whiteSpace: 'nowrap' }}>{val || 'Chưa rõ'}</strong>,
     },
     {
       title: 'Chức danh',
       dataIndex: 'tenChucVu',
       key: 'tenChucVu',
+      width: 150,
       render: (val: string) => {
         let color = 'default';
         if (val?.includes('Chủ doanh nghiệp') || val?.includes('Giám đốc')) color = 'gold';
@@ -110,26 +112,30 @@ export const ChamCongQuanLyPage: React.FC = () => {
       title: 'Phòng ban',
       dataIndex: 'tenPhongBan',
       key: 'tenPhongBan',
+      width: 180,
       render: (val: string) => <Tag color="blue">{val || 'Chưa gán'}</Tag>,
     },
-    { title: 'Ngày', dataIndex: 'ngay', key: 'ngay' },
-    { title: 'Giờ vào', dataIndex: 'gioVao', key: 'gioVao', render: (val: string) => formatTime(val) },
+    { title: 'Ngày', dataIndex: 'ngay', key: 'ngay', width: 110, render: (val: string) => <span style={{ whiteSpace: 'nowrap' }}>{val}</span> },
+    { title: 'Giờ vào', dataIndex: 'gioVao', key: 'gioVao', width: 100, render: (val: string) => formatTime(val) },
     {
       title: 'Giờ ra',
       dataIndex: 'gioRa',
       key: 'gioRa',
+      width: 100,
       render: (val: string) => formatTime(val),
     },
     {
       title: 'Tăng ca (OT)',
       dataIndex: 'soGioTangCa',
       key: 'soGioTangCa',
+      width: 120,
       render: (val: number) => (val > 0 ? <Tag color="orange">{val} giờ</Tag> : '-'),
     },
     {
       title: 'Trạng thái',
       dataIndex: 'trangThai',
       key: 'trangThai',
+      width: 140,
       render: (val: string) => {
         let color = 'default';
         if (val?.includes('Hoàn thành') || val === 'Đã check-in') color = 'green';
@@ -195,7 +201,14 @@ export const ChamCongQuanLyPage: React.FC = () => {
           </Col>
         </Row>
 
-        <Table dataSource={displayData} columns={columns} rowKey="maChamCong" loading={loading} pagination={{ pageSize: 15 }} />
+        <Table
+          dataSource={displayData}
+          columns={columns}
+          rowKey="maChamCong"
+          loading={loading}
+          scroll={{ x: 1050 }}
+          pagination={{ pageSize: 15, showSizeChanger: true, showTotal: (t) => `Tổng cộng ${t} lượt chấm công` }}
+        />
       </Card>
     </div>
   );

@@ -120,11 +120,12 @@ export const DuyetDonTuPage: React.FC = () => {
   };
 
   const columns = [
-    { title: 'Nhân viên gửi', dataIndex: 'hoTen', key: 'hoTen', render: (val: string) => <strong>{val}</strong> },
+    { title: 'Nhân viên gửi', dataIndex: 'hoTen', key: 'hoTen', width: 170, render: (val: string) => <strong style={{ whiteSpace: 'nowrap' }}>{val}</strong> },
     {
       title: 'Chức vụ',
       dataIndex: 'tenChucVu',
       key: 'tenChucVu',
+      width: 150,
       render: (val: string) => {
         let color = 'default';
         if (val?.includes('Chủ doanh nghiệp') || val?.includes('Giám đốc')) color = 'gold';
@@ -133,11 +134,12 @@ export const DuyetDonTuPage: React.FC = () => {
         return <Tag color={color}>{val || 'Nhân viên'}</Tag>;
       },
     },
-    { title: 'Phòng ban', dataIndex: 'tenPhongBan', key: 'tenPhongBan', render: (val: string) => <Tag color="blue">{val || 'Chưa gán'}</Tag> },
+    { title: 'Phòng ban', dataIndex: 'tenPhongBan', key: 'tenPhongBan', width: 180, render: (val: string) => <Tag color="blue">{val || 'Chưa gán'}</Tag> },
     {
       title: 'Loại đơn',
       dataIndex: 'loaiDon',
       key: 'loaiDon',
+      width: 130,
       render: (val: string) => {
         let color = 'blue';
         if (val === 'Nghỉ việc') color = 'red';
@@ -145,14 +147,15 @@ export const DuyetDonTuPage: React.FC = () => {
         return <Tag color={color}>{val}</Tag>;
       },
     },
-    { title: 'Từ ngày', dataIndex: 'ngayBatDau', key: 'ngayBatDau' },
-    { title: 'Đến ngày', dataIndex: 'ngayKetThuc', key: 'ngayKetThuc' },
-    { title: 'Số ngày', dataIndex: 'soNgayNghi', key: 'soNgayNghi', render: (val: number) => <strong>{val} ngày</strong> },
-    { title: 'Lý do', dataIndex: 'lyDo', key: 'lyDo' },
+    { title: 'Từ ngày', dataIndex: 'ngayBatDau', key: 'ngayBatDau', width: 110, render: (val: string) => <span style={{ whiteSpace: 'nowrap' }}>{val}</span> },
+    { title: 'Đến ngày', dataIndex: 'ngayKetThuc', key: 'ngayKetThuc', width: 110, render: (val: string) => <span style={{ whiteSpace: 'nowrap' }}>{val}</span> },
+    { title: 'Số ngày', dataIndex: 'soNgayNghi', key: 'soNgayNghi', width: 100, render: (val: number) => <strong>{val} ngày</strong> },
+    { title: 'Lý do', dataIndex: 'lyDo', key: 'lyDo', width: 180, ellipsis: true },
     {
       title: 'Trạng thái',
       dataIndex: 'trangThai',
       key: 'trangThai',
+      width: 130,
       render: (val: string) => {
         let color = 'gold';
         if (val === 'Đã duyệt') color = 'green';
@@ -160,10 +163,12 @@ export const DuyetDonTuPage: React.FC = () => {
         return <Tag color={color}>{val}</Tag>;
       },
     },
-    { title: 'Người duyệt', dataIndex: 'tenNguoiDuyet', key: 'tenNguoiDuyet', render: (val: string) => val || '-' },
+    { title: 'Người duyệt', dataIndex: 'tenNguoiDuyet', key: 'tenNguoiDuyet', width: 150, render: (val: string) => val || '-' },
     {
       title: 'Thao tác phê duyệt',
       key: 'action',
+      width: 200,
+      fixed: 'right' as const,
       render: (_: any, record: DonTu) => {
         if (record.trangThai !== 'Chờ duyệt') {
           return <Tag color={record.trangThai === 'Đã duyệt' ? 'green' : 'red'}>Đã hoàn tất ({record.trangThai})</Tag>;
@@ -297,7 +302,14 @@ export const DuyetDonTuPage: React.FC = () => {
           </Col>
         </Row>
 
-        <Table dataSource={displayData} columns={columns} rowKey="maDon" loading={loading} />
+        <Table
+          dataSource={displayData}
+          columns={columns}
+          rowKey="maDon"
+          loading={loading}
+          scroll={{ x: 1350 }}
+          pagination={{ pageSize: 10, showSizeChanger: true, showTotal: (t) => `Tổng cộng ${t} đơn từ` }}
+        />
       </Card>
 
       <Modal title={'Xử lý đơn của: ' + (selectedDon?.hoTen || '')} open={modalOpen} onCancel={() => setModalOpen(false)} footer={null}>

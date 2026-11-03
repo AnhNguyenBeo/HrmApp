@@ -69,23 +69,26 @@ export const BangLuongPage: React.FC = () => {
   };
 
   const columns = [
-    { title: 'Kỳ lương', dataIndex: 'thoiGian', key: 'thoiGian', render: (val: string) => <strong>{val}</strong> },
+    { title: 'Kỳ lương', dataIndex: 'thoiGian', key: 'thoiGian', width: 110, render: (val: string) => <strong>{val}</strong> },
     {
       title: 'Lương cơ bản',
       dataIndex: 'luongCoBan',
       key: 'luongCoBan',
+      width: 140,
       render: (val: number) => (val ? val.toLocaleString('vi-VN') + ' đ' : '0 đ'),
     },
     {
       title: 'Ngày công',
       dataIndex: 'soNgayCong',
       key: 'soNgayCong',
+      width: 130,
       render: (val: number, record: BangLuong) => (val || 0) + ' / ' + (record.ngayCongChuan || 22) + ' ngày',
     },
     {
       title: 'Lương OT',
       dataIndex: 'luongOt',
       key: 'luongOt',
+      width: 140,
       render: (val: number, record: BangLuong) =>
         val ? (
           <span>
@@ -99,18 +102,21 @@ export const BangLuongPage: React.FC = () => {
       title: 'Khấu trừ BHXH',
       dataIndex: 'baoHiemXaHoi',
       key: 'baoHiemXaHoi',
+      width: 140,
       render: (val: number) => <span style={{ color: '#fa8c16' }}>-{val ? val.toLocaleString('vi-VN') + ' đ' : '0 đ'}</span>,
     },
     {
       title: 'Thuế TNCN',
       dataIndex: 'thueTncn',
       key: 'thueTncn',
+      width: 130,
       render: (val: number) => <span style={{ color: '#f5222d' }}>-{val ? val.toLocaleString('vi-VN') + ' đ' : '0 đ'}</span>,
     },
     {
       title: 'Thực lĩnh (Net)',
       dataIndex: 'thucLinh',
       key: 'thucLinh',
+      width: 150,
       render: (val: number) => (
         <strong style={{ color: '#52c41a', fontSize: 16 }}>
           {val ? val.toLocaleString('vi-VN') + ' đ' : '0 đ'}
@@ -121,11 +127,14 @@ export const BangLuongPage: React.FC = () => {
       title: 'Trạng thái',
       dataIndex: 'trangThaiChiTra',
       key: 'trangThaiChiTra',
+      width: 120,
       render: (val: string) => <Tag color={val === 'Đã chi trả' ? 'green' : 'blue'}>{val || 'Chờ duyệt'}</Tag>,
     },
     {
       title: 'Chi tiết',
       key: 'action',
+      width: 110,
+      fixed: 'right' as const,
       render: (_: any, record: BangLuong) => (
         <Button
           size="small"
@@ -188,7 +197,14 @@ export const BangLuongPage: React.FC = () => {
           />
         }
       >
-        <Table dataSource={filteredData} columns={columns} rowKey="maBangLuong" loading={loading} />
+        <Table
+          dataSource={filteredData}
+          columns={columns}
+          rowKey="maBangLuong"
+          loading={loading}
+          scroll={{ x: 1100 }}
+          pagination={{ pageSize: 10, showSizeChanger: true, showTotal: (t) => `Tổng cộng ${t} phiếu lương` }}
+        />
       </Card>
       <Modal
         title={'CHI TIẾT CÁCH TÍNH LƯƠNG KỲ: ' + (selectedSlip?.thoiGian || '')}

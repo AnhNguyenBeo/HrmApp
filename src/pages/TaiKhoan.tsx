@@ -143,11 +143,13 @@ export const TaiKhoanPage: React.FC = () => {
       title: 'Tên đăng nhập',
       dataIndex: 'tenDangNhap',
       key: 'tenDangNhap',
-      render: (val: string) => <strong>{val}</strong>,
+      width: 150,
+      render: (val: string) => <strong style={{ whiteSpace: 'nowrap' }}>{val}</strong>,
     },
     {
       title: 'Chủ sở hữu (Nhân viên)',
       key: 'tenNhanVien',
+      width: 180,
       render: (_: any, record: TaiKhoan) => {
         const isResigned =
           record.trangThaiLamViec === 'Đã nghỉ việc' ||
@@ -158,8 +160,8 @@ export const TaiKhoanPage: React.FC = () => {
 
         return (
           <Space direction="vertical" size={2}>
-            <span>{record.tenNhanVien || 'Chưa gán'}</span>
-            {isResigned && <Tag color="error">Đã thôi việc</Tag>}
+            <span style={{ whiteSpace: 'nowrap' }}>{record.tenNhanVien || 'Chưa gán'}</span>
+            {isResigned && <Tag color="error" style={{ margin: 0 }}>Đã thôi việc</Tag>}
           </Space>
         );
       },
@@ -168,39 +170,44 @@ export const TaiKhoanPage: React.FC = () => {
       title: 'Phòng ban',
       dataIndex: 'tenPhongBan',
       key: 'tenPhongBan',
-      render: (val: string) => <Tag color="blue">{val || 'Chưa gán'}</Tag>,
+      width: 180,
+      render: (val: string) => <Tag color="blue" style={{ margin: 0 }}>{val || 'Chưa gán'}</Tag>,
     },
     {
       title: 'Chức vụ',
       dataIndex: 'tenChucVu',
       key: 'tenChucVu',
+      width: 150,
       render: (val: string) => {
         let color = 'default';
         if (val?.includes('Chủ doanh nghiệp') || val?.includes('Giám đốc')) color = 'gold';
         else if (val?.includes('Trưởng')) color = 'cyan';
         else if (val?.includes('Phó')) color = 'purple';
-        return <Tag color={color}>{val || 'Chưa gán'}</Tag>;
+        return <Tag color={color} style={{ margin: 0 }}>{val || 'Chưa gán'}</Tag>;
       },
     },
     {
       title: 'Vai trò (Quyền)',
       dataIndex: 'tenVaiTro',
       key: 'tenVaiTro',
+      width: 150,
       render: (val: string) => {
         let color = 'default';
         if (val === 'Quản trị viên') color = 'magenta';
         else if (val === 'Chủ doanh nghiệp') color = 'gold';
         else if (val === 'Quản lý') color = 'blue';
         else color = 'green';
-        return <Tag color={color}>{val || 'Chưa phân quyền'}</Tag>;
+        return <Tag color={color} style={{ margin: 0 }}>{val || 'Chưa phân quyền'}</Tag>;
       },
     },
     {
       title: 'Trạng thái',
       dataIndex: 'trangThai',
       key: 'trangThai',
+      width: 120,
+      align: 'center' as const,
       render: (val: string) => (
-        <Tag color={val === 'Hoạt động' ? 'green' : 'red'}>
+        <Tag color={val === 'Hoạt động' ? 'green' : 'red'} style={{ margin: 0 }}>
           {val}
         </Tag>
       ),
@@ -209,10 +216,14 @@ export const TaiKhoanPage: React.FC = () => {
       title: 'Ngày tạo',
       dataIndex: 'ngayTao',
       key: 'ngayTao',
+      width: 120,
+      render: (val: string) => <span style={{ whiteSpace: 'nowrap' }}>{val}</span>,
     },
     {
       title: 'Thao tác (Admin)',
       key: 'action',
+      width: 220,
+      fixed: 'right' as const,
       render: (_: any, record: TaiKhoan) => {
         const isResigned =
           record.trangThaiLamViec === 'Đã nghỉ việc' ||
@@ -338,7 +349,14 @@ export const TaiKhoanPage: React.FC = () => {
           </Col>
         </Row>
 
-        <Table dataSource={filteredData} columns={columns} rowKey="maTaiKhoan" loading={loading} />
+        <Table
+          dataSource={filteredData}
+          columns={columns}
+          rowKey="maTaiKhoan"
+          loading={loading}
+          scroll={{ x: 1200 }}
+          pagination={{ pageSize: 10, showSizeChanger: true, showTotal: (t) => `Tổng cộng ${t} tài khoản` }}
+        />
       </Card>
 
       <Modal title="Cấp tài khoản đăng nhập mới" open={createModal} onCancel={() => setCreateModal(false)} footer={null}>
