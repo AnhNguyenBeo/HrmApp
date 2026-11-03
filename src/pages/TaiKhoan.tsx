@@ -96,6 +96,18 @@ export const TaiKhoanPage: React.FC = () => {
   };
 
   const handleToggleLock = async (record: TaiKhoan) => {
+    const isResigned =
+      record.trangThaiLamViec === 'Đã nghỉ việc' ||
+      record.trangThaiLamViec === 'Đã thôi việc' ||
+      record.trangThaiLamViec === 'Đã thôi việc / Nghỉ việc' ||
+      (record.trangThaiLamViec &&
+        (record.trangThaiLamViec.includes('thôi việc') || record.trangThaiLamViec.includes('nghỉ việc')));
+
+    if (record.trangThai === 'Bị khóa' && isResigned) {
+      message.error('Nhân viên này đã thôi việc, không thể mở khóa tài khoản!');
+      return;
+    }
+
     try {
       if (record.trangThai === 'Bị khóa') {
         const res = await taiKhoanApi.unlock(record.maTaiKhoan);
@@ -106,7 +118,10 @@ export const TaiKhoanPage: React.FC = () => {
       }
       fetchData();
     } catch (err: any) {
-      message.error(err.response?.data?.message || 'Thao tác thất bại.');
+      const errMsg =
+        err.response?.data?.message ||
+        (typeof err.response?.data === 'string' ? err.response?.data : 'Thao tác thất bại.');
+      message.error(errMsg);
     }
   };
 
@@ -132,9 +147,22 @@ export const TaiKhoanPage: React.FC = () => {
     },
     {
       title: 'Chủ sở hữu (Nhân viên)',
-      dataIndex: 'tenNhanVien',
       key: 'tenNhanVien',
-      render: (val: string) => val || 'Chưa gán',
+      render: (_: any, record: TaiKhoan) => {
+        const isResigned =
+          record.trangThaiLamViec === 'Đã nghỉ việc' ||
+          record.trangThaiLamViec === 'Đã thôi việc' ||
+          record.trangThaiLamViec === 'Đã thôi việc / Nghỉ việc' ||
+          (record.trangThaiLamViec &&
+            (record.trangThaiLamViec.includes('thôi việc') || record.trangThaiLamViec.includes('nghỉ việc')));
+
+        return (
+          <Space direction="vertical" size={2}>
+            <span>{record.tenNhanVien || 'Chưa gán'}</span>
+            {isResigned && <Tag color="error">Đã thôi việc</Tag>}
+          </Space>
+        );
+      },
     },
     {
       title: 'Phòng ban',
@@ -185,35 +213,56 @@ export const TaiKhoanPage: React.FC = () => {
     {
       title: 'Thao tác (Admin)',
       key: 'action',
-      render: (_: any, record: TaiKhoan) => (
-        <Space>
-          <Button
-            size="small"
-            icon={<SafetyCertificateOutlined />}
-            onClick={() => {
-              setSelectedAcc(record);
-              const vt = vaiTros.find((v) => v.tenVaiTro === record.tenVaiTro);
-              roleForm.setFieldsValue({ maVaiTro: vt?.maVaiTro });
-              setRoleModal(true);
-            }}
-          >
-            Phân quyền
-          </Button>
+      render: (_: any, record: TaiKhoan) => {
+        const isResigned =
+          record.trangThaiLamViec === 'Đã nghỉ việc' ||
+          record.trangThaiLamViec === 'Đã thôi việc' ||
+          record.trangThaiLamViec === 'Đã thôi việc / Nghỉ việc' ||
+          (record.trangThaiLamViec &&
+            (record.trangThaiLamViec.includes('thôi việc') || record.trangThaiLamViec.includes('nghỉ việc')));
 
-          <Popconfirm
-            title={record.trangThai === 'Hoạt động' ? 'Bạn có muốn khóa tài khoản này?' : 'Mở khóa tài khoản này?'}
-            onConfirm={() => handleToggleLock(record)}
-          >
+        return (
+          <Space>
             <Button
               size="small"
-              danger={record.trangThai === 'Hoạt động'}
-              icon={record.trangThai === 'Hoạt động' ? <LockOutlined /> : <UnlockOutlined />}
+              icon={<SafetyCertificateOutlined />}
+              onClick={() => {
+                setSelectedAcc(record);
+                const vt = vaiTros.find((v) => v.tenVaiTro === record.tenVaiTro);
+                roleForm.setFieldsValue({ maVaiTro: vt?.maVaiTro });
+                setRoleModal(true);
+              }}
             >
-              {record.trangThai === 'Hoạt động' ? 'Khóa' : 'Mở khóa'}
+              Phân quyền
             </Button>
-          </Popconfirm>
-        </Space>
-      ),
+
+            {record.trangThai === 'Bị khóa' && isResigned ? (
+              <Button
+                size="small"
+                disabled
+                icon={<UnlockOutlined />}
+                title="Nhân viên này đã thôi việc, không thể mở khóa tài khoản!"
+                onClick={() => message.error('Nhân viên này đã thôi việc, không thể mở khóa tài khoản!')}
+              >
+                Mở khóa
+              </Button>
+            ) : (
+              <Popconfirm
+                title={record.trangThai === 'Hoạt động' ? 'Bạn có muốn khóa tài khoản này?' : 'Mở khóa tài khoản này?'}
+                onConfirm={() => handleToggleLock(record)}
+              >
+                <Button
+                  size="small"
+                  danger={record.trangThai === 'Hoạt động'}
+                  icon={record.trangThai === 'Hoạt động' ? <LockOutlined /> : <UnlockOutlined />}
+                >
+                  {record.trangThai === 'Hoạt động' ? 'Khóa' : 'Mở khóa'}
+                </Button>
+              </Popconfirm>
+            )}
+          </Space>
+        );
+      },
     },
   ];
 
