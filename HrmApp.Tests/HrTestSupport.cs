@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using System.Security.Claims;
 using HrmApp.Api.Data;
 using HrmApp.Api.Services;
@@ -14,6 +15,7 @@ internal static class HrTestSupport
     {
         var options = new DbContextOptionsBuilder<QuanLyNhanSuDbContext>()
             .UseInMemoryDatabase($"hrm-tests-{Guid.NewGuid():N}")
+            .ConfigureWarnings(w => w.Ignore(InMemoryEventId.TransactionIgnoredWarning))
             .Options;
         return new QuanLyNhanSuDbContext(options);
     }

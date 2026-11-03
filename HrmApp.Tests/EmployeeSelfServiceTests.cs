@@ -305,6 +305,95 @@ public class EmployeeSelfServiceTests
         Assert.Contains("Nhân sự đã thôi việc", badPromote.Value?.ToString() ?? "");
     }
 
+    [Fact]
+    public async Task HrManagerCanRestoreResignedEmployee_UpdatesStatusAndUnlocksAccount()
+    {
+        using var db = HrTestSupport.CreateDbContext();
+        var hrDept = new PhongBan { MaPhongBan = Guid.NewGuid(), TenPhongBan = "Phòng Nhân sự" };
+        var position = new ChucVu { MaChucVu = Guid.NewGuid(), TenChucVu = "Nhân viên" };
+        var manager = NewEmployee("Quản lý HR", "manager.hr@example.test", "079100000088", hrDept, position);
+        var resignedStaff = NewEmployee("Nhân viên đã nghỉ", "resigned.staff@example.test", "079100000089", hrDept, position);
+        resignedStaff.TrangThaiLamViec = "Đã thôi việc / Nghỉ việc";
+        resignedStaff.NgayNghiViec = new DateOnly(2026, 10, 1);
+
+        var account = new TaiKhoan
+        {
+            MaTaiKhoan = Guid.NewGuid(),
+            MaNhanVien = resignedStaff.MaNhanVien,
+            TenDangNhap = "resigned.staff",
+            MatKhauHash = "hash",
+            TrangThai = "Bị khóa"
+        };
+
+        db.PhongBans.Add(hrDept);
+        db.ChucVus.Add(position);
+        db.NhanViens.AddRange(manager, resignedStaff);
+        db.TaiKhoans.Add(account);
+        await db.SaveChangesAsync();
+
+        var controller = new NhanVienController(db, HrTestSupport.CreateAuditMock().Object);
+        HrTestSupport.SetUser(controller, manager.MaNhanVien, "Quản lý");
+
+        var result = await controller.KhoiPhucNhanSu(resignedStaff.MaNhanVien);
+        var okResult = Assert.IsType<OkObjectResult>(result);
+
+        var updatedEmployee = await db.NhanViens.FindAsync(resignedStaff.MaNhanVien);
+        var updatedAccount = await db.TaiKhoans.FindAsync(account.MaTaiKhoan);
+
+        Assert.NotNull(updatedEmployee);
+        Assert.Equal("Đang làm việc", updatedEmployee.TrangThaiLamViec);
+        Assert.Null(updatedEmployee.NgayNghiViec);
+
+        Assert.NotNull(updatedAccount);
+        Assert.Equal("Hoạt động", updatedAccount.TrangThai);
+    }
+
+    [Fact]
+    public async Task NonHrManagerCannotRestoreResignedEmployee_Returns403()
+    {
+        using var db = HrTestSupport.CreateDbContext();
+        var itDept = new PhongBan { MaPhongBan = Guid.NewGuid(), TenPhongBan = "Phòng Công nghệ thông tin" };
+        var position = new ChucVu { MaChucVu = Guid.NewGuid(), TenChucVu = "Nhân viên" };
+        var manager = NewEmployee("Quản lý IT", "manager.it@example.test", "079100000077", itDept, position);
+        var resignedStaff = NewEmployee("Nhân viên đã nghỉ", "resigned2@example.test", "079100000078", itDept, position);
+        resignedStaff.TrangThaiLamViec = "Đã thôi việc / Nghỉ việc";
+
+        db.PhongBans.Add(itDept);
+        db.ChucVus.Add(position);
+        db.NhanViens.AddRange(manager, resignedStaff);
+        await db.SaveChangesAsync();
+
+        var controller = new NhanVienController(db, HrTestSupport.CreateAuditMock().Object);
+        HrTestSupport.SetUser(controller, manager.MaNhanVien, "Quản lý");
+
+        var result = await controller.KhoiPhucNhanSu(resignedStaff.MaNhanVien);
+        var forbidden = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(403, forbidden.StatusCode);
+    }
+
+    [Fact]
+    public async Task CannotRestoreActiveEmployee_ReturnsBadRequest()
+    {
+        using var db = HrTestSupport.CreateDbContext();
+        var hrDept = new PhongBan { MaPhongBan = Guid.NewGuid(), TenPhongBan = "Phòng Nhân sự" };
+        var position = new ChucVu { MaChucVu = Guid.NewGuid(), TenChucVu = "Nhân viên" };
+        var manager = NewEmployee("Quản lý HR", "manager.hr2@example.test", "079100000099", hrDept, position);
+        var activeStaff = NewEmployee("Nhân viên đang làm", "active.staff@example.test", "079100000098", hrDept, position);
+        activeStaff.TrangThaiLamViec = "Đang làm việc";
+
+        db.PhongBans.Add(hrDept);
+        db.ChucVus.Add(position);
+        db.NhanViens.AddRange(manager, activeStaff);
+        await db.SaveChangesAsync();
+
+        var controller = new NhanVienController(db, HrTestSupport.CreateAuditMock().Object);
+        HrTestSupport.SetUser(controller, manager.MaNhanVien, "Quản lý");
+
+        var result = await controller.KhoiPhucNhanSu(activeStaff.MaNhanVien);
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Contains("đang làm việc", badRequest.Value?.ToString() ?? "");
+    }
+
     private static async Task<(NhanVien EmployeeA, NhanVien EmployeeB)> AddEmployeePairAsync(
         HrmApp.Api.Data.QuanLyNhanSuDbContext db,
         string departmentName)

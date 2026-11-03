@@ -599,7 +599,80 @@ namespace HrmApp.Api.Controllers
             await _nhatKyService.GhiLogAsync(callerUser, callerName, "Thôi việc nhân sự", $"Cho nhân sự '{nhanVien.HoTen}' thôi việc và khóa tài khoản liên kết", "Thành công", ip);
 
             return Ok(new { message = $"Đã cho nhân sự {nhanVien.HoTen} thôi việc và tự động khóa tài khoản liên kết." });
-        }        
+        }
+
+        [HttpPost("{id}/khoi-phuc")]
+        [Authorize(Roles = "Chủ doanh nghiệp, Quản lý")]
+        public async Task<IActionResult> KhoiPhucNhanSu(Guid id)
+        {
+            var nhanVien = await _context.NhanViens
+                .Include(n => n.MaPhongBanNavigation)
+                .Include(n => n.MaChucVuNavigation)
+                .FirstOrDefaultAsync(n => n.MaNhanVien == id);
+
+            if (nhanVien == null)
+            {
+                return NotFound(new { message = "Không tìm thấy nhân viên." });
+            }
+
+            var currentUserIdStr = User.FindFirst("MaNhanVien")?.Value;
+            var currentUserRole = User.FindFirst(ClaimTypes.Role)?.Value ?? User.FindFirst("role")?.Value;
+            Guid.TryParse(currentUserIdStr, out var currentNhanVienId);
+
+            var currentNhanVien = await _context.NhanViens
+                .Include(n => n.MaChucVuNavigation)
+                .Include(n => n.MaPhongBanNavigation)
+                .FirstOrDefaultAsync(n => n.MaNhanVien == currentNhanVienId);
+
+            var myDeptName = currentNhanVien?.MaPhongBanNavigation?.TenPhongBan ?? "";
+            bool isOwner = currentUserRole == "Chủ doanh nghiệp";
+            bool isHRManager = currentUserRole == "Quản lý" && myDeptName.Contains("Nhân sự");
+
+            if (!isOwner && !isHRManager)
+            {
+                return StatusCode(403, new { message = "Chỉ Quản lý phòng Nhân sự hoặc Chủ doanh nghiệp mới có quyền khôi phục nhân sự." });
+            }
+
+            if (!isOwner && IsBanGiamDocOrAdmin(nhanVien))
+            {
+                return StatusCode(403, new { message = "Bạn không có quyền tác động đến nhân sự thuộc Ban Giám Đốc." });
+            }
+
+            var tt = nhanVien.TrangThaiLamViec ?? string.Empty;
+            bool isResigned = tt == "Đã nghỉ việc" || tt == "Đã thôi việc" || tt == "Đã thôi việc / Nghỉ việc" || tt.Contains("thôi việc") || tt.Contains("nghỉ việc");
+            if (!isResigned)
+            {
+                return BadRequest(new { message = "Nhân sự này đang làm việc, không cần khôi phục!" });
+            }
+
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                nhanVien.TrangThaiLamViec = "Đang làm việc";
+                nhanVien.NgayNghiViec = null;
+
+                var taiKhoans = await _context.TaiKhoans.Where(t => t.MaNhanVien == nhanVien.MaNhanVien).ToListAsync();
+                foreach (var tk in taiKhoans)
+                {
+                    tk.TrangThai = "Hoạt động";
+                }
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                var callerUser = User.FindFirst("TenDangNhap")?.Value ?? User.Identity?.Name ?? "Hệ thống";
+                var callerName = User.FindFirst("HoTen")?.Value;
+                var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
+                await _nhatKyService.GhiLogAsync(callerUser, callerName, "Khôi phục nhân sự", $"Khôi phục trạng thái làm việc cho nhân sự '{nhanVien.HoTen}' và mở khóa tài khoản", "Thành công", ip);
+
+                return Ok(new { message = $"Đã khôi phục trạng thái làm việc cho nhân sự {nhanVien.HoTen} và mở khóa tài khoản thành công." });
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                return StatusCode(500, new { message = "Có lỗi xảy ra trong quá trình khôi phục: " + ex.Message });
+            }
+        }
 
         [HttpPut("ho-so-cua-toi")]
         [Authorize]
