@@ -227,7 +227,14 @@ export const TaiKhoanPage: React.FC = () => {
           </span>
         }
         extra={
-          <Button type="primary" icon={<UserAddOutlined />} onClick={() => setCreateModal(true)}>
+          <Button
+            type="primary"
+            icon={<UserAddOutlined />}
+            onClick={() => {
+              createForm.resetFields();
+              setCreateModal(true);
+            }}
+          >
             Cấp tài khoản mới
           </Button>
         }

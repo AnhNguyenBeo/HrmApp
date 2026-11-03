@@ -38,6 +38,8 @@ export const Login: React.FC = () => {
           maNhanVien: data.maNhanVien,
           hoTen: data.hoTen,
           vaiTro: data.vaiTro,
+          maPhongBan: data.maPhongBan,
+          tenPhongBan: data.tenPhongBan,
         })
       );
 
