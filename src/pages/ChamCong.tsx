@@ -67,6 +67,7 @@ export const ChamCongPage: React.FC = () => {
         let color = 'default';
         if (val.includes('Hoàn thành') || val === 'Đã check-in') color = 'green';
         if (val.includes('Thiếu')) color = 'volcano';
+        if (val.includes('Đi muộn')) color = 'gold';
         return <Tag color={color}>{val}</Tag>;
       },
     },
