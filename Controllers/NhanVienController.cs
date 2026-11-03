@@ -52,6 +52,8 @@ namespace HrmApp.Api.Controllers
             bool isOwner = currentUserRole == "Chủ doanh nghiệp";
             bool isAdmin = currentUserRole == "Quản trị viên";
             bool isManager = currentUserRole == "Quản lý";
+            bool isHRManager = isManager && myDeptName.Contains("Nhân sự");
+            bool isOtherManager = isManager && !isHRManager;
             bool isHREmployee = currentUserRole == "Nhân viên" && myDeptName.Contains("Nhân sự");
 
             if (!isOwner && !isAdmin && !isManager && !isHREmployee)
@@ -64,7 +66,14 @@ namespace HrmApp.Api.Controllers
                 .Include(n => n.MaChucVuNavigation)
                 .AsQueryable();
 
-            if (search.MaPhongBan.HasValue)
+            if (isOtherManager)
+            {
+                if (currentNhanVien != null)
+                {
+                    query = query.Where(n => n.MaPhongBan == currentNhanVien.MaPhongBan);
+                }
+            }
+            else if (search.MaPhongBan.HasValue)
             {
                 query = query.Where(n => n.MaPhongBan == search.MaPhongBan.Value);
             }
@@ -174,6 +183,9 @@ namespace HrmApp.Api.Controllers
             }
 
             var myDeptName = currentNhanVien?.MaPhongBanNavigation?.TenPhongBan ?? "";
+            bool isManager = currentUserRole == "Quản lý";
+            bool isHRManager = isManager && myDeptName.Contains("Nhân sự");
+            bool isOtherManager = isManager && !isHRManager;
             bool isHREmployee = currentUserRole == "Nhân viên" && myDeptName.Contains("Nhân sự");
 
             if (currentNhanVienId != Guid.Empty && id == currentNhanVienId)
@@ -181,12 +193,17 @@ namespace HrmApp.Api.Controllers
                 return Ok(nhanVien);
             }
 
-            if (isOwner || isAdmin || currentUserRole == "Quản lý" || isHREmployee)
+            if (isOwner || isAdmin || isHRManager || isHREmployee)
             {
                 return Ok(nhanVien);
             }
 
-            return StatusCode(403, new { message = "Bạn chỉ có quyền xem hồ sơ của chính mình." });
+            if (isOtherManager && currentNhanVien != null && nhanVien.MaPhongBan == currentNhanVien.MaPhongBan)
+            {
+                return Ok(nhanVien);
+            }
+
+            return StatusCode(403, new { message = "Bạn không có quyền xem thông tin nhân sự này." });
         }
 
         [HttpGet("search")]
@@ -271,12 +288,13 @@ namespace HrmApp.Api.Controllers
                 .Include(n => n.MaPhongBanNavigation)
                 .FirstOrDefaultAsync(n => n.MaNhanVien == currentNhanVienId);
 
+            var myDeptName = currentNhanVien?.MaPhongBanNavigation?.TenPhongBan ?? "";
             bool isOwner = currentUserRole == "Chủ doanh nghiệp";
-            bool isManager = currentUserRole == "Quản lý";
+            bool isHRManager = currentUserRole == "Quản lý" && myDeptName.Contains("Nhân sự");
 
-            if (!isOwner && !isManager)
+            if (!isOwner && !isHRManager)
             {
-                return StatusCode(403, new { message = "Nhân viên không có quyền thêm mới nhân sự. Chỉ dành cho Quản lý và Ban Giám Đốc." });
+                return StatusCode(403, new { message = "Chỉ Quản lý phòng Nhân sự hoặc Ban Giám Đốc mới có quyền thêm mới nhân sự." });
             }
 
             if (!isOwner)
@@ -353,12 +371,13 @@ namespace HrmApp.Api.Controllers
                 .Include(n => n.MaPhongBanNavigation)
                 .FirstOrDefaultAsync(n => n.MaNhanVien == currentNhanVienId);
 
+            var myDeptName = currentNhanVien?.MaPhongBanNavigation?.TenPhongBan ?? "";
             bool isOwner = currentUserRole == "Chủ doanh nghiệp";
-            bool isManager = currentUserRole == "Quản lý";
+            bool isHRManager = currentUserRole == "Quản lý" && myDeptName.Contains("Nhân sự");
 
-            if (!isOwner && !isManager)
+            if (!isOwner && !isHRManager)
             {
-                return StatusCode(403, new { message = "Nhân viên không có quyền chỉnh sửa nhân sự khác. Chỉ xem hồ sơ của mình." });
+                return StatusCode(403, new { message = "Chỉ Quản lý phòng Nhân sự hoặc Ban Giám Đốc mới có quyền chỉnh sửa nhân sự khác." });
             }
 
             if (!isOwner)
@@ -465,12 +484,13 @@ namespace HrmApp.Api.Controllers
                 .Include(n => n.MaPhongBanNavigation)
                 .FirstOrDefaultAsync(n => n.MaNhanVien == currentNhanVienId);
 
+            var myDeptName = currentNhanVien?.MaPhongBanNavigation?.TenPhongBan ?? "";
             bool isOwner = currentUserRole == "Chủ doanh nghiệp";
-            bool isManager = currentUserRole == "Quản lý";
+            bool isHRManager = currentUserRole == "Quản lý" && myDeptName.Contains("Nhân sự");
 
-            if (!isOwner && !isManager)
+            if (!isOwner && !isHRManager)
             {
-                return StatusCode(403, new { message = "Nhân viên không có quyền phân quyền hay thay đổi chức vụ." });
+                return StatusCode(403, new { message = "Chỉ Quản lý phòng Nhân sự hoặc Ban Giám Đốc mới có quyền phân quyền hay thay đổi chức vụ." });
             }
 
             if (!isOwner)
@@ -526,12 +546,13 @@ namespace HrmApp.Api.Controllers
                 .Include(n => n.MaPhongBanNavigation)
                 .FirstOrDefaultAsync(n => n.MaNhanVien == currentNhanVienId);
 
+            var myDeptName = currentNhanVien?.MaPhongBanNavigation?.TenPhongBan ?? "";
             bool isOwner = currentUserRole == "Chủ doanh nghiệp";
-            bool isManager = currentUserRole == "Quản lý";
+            bool isHRManager = currentUserRole == "Quản lý" && myDeptName.Contains("Nhân sự");
 
-            if (!isOwner && !isManager)
+            if (!isOwner && !isHRManager)
             {
-                return StatusCode(403, new { message = "Nhân viên không có quyền xử lý thôi việc." });
+                return StatusCode(403, new { message = "Chỉ Quản lý phòng Nhân sự hoặc Ban Giám Đốc mới có quyền xử lý thôi việc." });
             }
 
             if (!isOwner)
