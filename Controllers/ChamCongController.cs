@@ -95,11 +95,7 @@ namespace HrmApp.Api.Controllers
                     GioRa = TimeOnly.MinValue
                 };
                 
-                if (nowTime.Hour >= 12)
-                {
-                    newChamCong.TrangThai = TrangThaiChamCong.ThieuGioVao;
-                }
-                else if (nowTime > new TimeOnly(8, 30))
+                if (nowTime > new TimeOnly(8, 30))
                 {
                     newChamCong.TrangThai = TrangThaiChamCong.DiMuon;
                 }

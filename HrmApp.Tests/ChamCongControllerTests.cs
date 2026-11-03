@@ -12,8 +12,8 @@ public class ChamCongControllerTests
     [Theory]
     [InlineData(8, 30, TrangThaiChamCong.DaCheckIn)]
     [InlineData(8, 31, TrangThaiChamCong.DiMuon)]
-    [InlineData(12, 0, TrangThaiChamCong.ThieuGioVao)]
-    [InlineData(12, 1, TrangThaiChamCong.ThieuGioVao)]
+    [InlineData(12, 0, TrangThaiChamCong.DiMuon)]
+    [InlineData(18, 40, TrangThaiChamCong.DiMuon)]
     public async Task CheckIn_UsesServerTimeAndExpectedThreshold(int hour, int minute, string expectedStatus)
     {
         using var db = HrTestSupport.CreateDbContext();
