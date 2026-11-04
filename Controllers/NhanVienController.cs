@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
@@ -573,7 +573,10 @@ namespace HrmApp.Api.Controllers
                 }
             }
 
-            nhanVien.TrangThaiLamViec = "Đã thôi việc / Nghỉ việc";
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                nhanVien.TrangThaiLamViec = "Đã thôi việc / Nghỉ việc";
             nhanVien.NgayNghiViec = DateOnly.FromDateTime(DateTime.Now);
 
             var taiKhoans = await _context.TaiKhoans.Where(t => t.MaNhanVien == nhanVien.MaNhanVien).ToListAsync();
@@ -591,7 +594,14 @@ namespace HrmApp.Api.Controllers
                 hd.NgayKetThuc = DateOnly.FromDateTime(DateTime.Now);
             }
 
-            await _context.SaveChangesAsync();
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
 
             var callerUser = User.FindFirst("TenDangNhap")?.Value ?? User.Identity?.Name ?? "Hệ thống";
             var callerName = User.FindFirst("HoTen")?.Value;

@@ -214,9 +214,26 @@ namespace HrmApp.Api.Controllers
                 var phongBan = currentNhanVien.MaPhongBanNavigation?.TenPhongBan ?? "";
                 bool isDirector = chucVu.Contains("Giám đốc") || phongBan.Contains("Ban Giám đốc");
 
+                bool isHrManager = phongBan.Contains("Nhân sự");
+
                 if (!isDirector)
                 {
-                    query = query.Where(d => d.MaNhanVienNavigation != null && d.MaNhanVienNavigation.MaPhongBan == currentNhanVien.MaPhongBan);
+                    var loaiDonNghiViec = new[] { "Nghỉ việc", "Thôi việc" };
+                    if (isHrManager)
+                    {
+                        query = query.Where(d =>
+                            (d.MaNhanVienNavigation != null && d.MaNhanVienNavigation.MaPhongBan == currentNhanVien.MaPhongBan && !loaiDonNghiViec.Contains(d.LoaiDon)) ||
+                            loaiDonNghiViec.Contains(d.LoaiDon)
+                        );
+                    }
+                    else
+                    {
+                        query = query.Where(d =>
+                            d.MaNhanVienNavigation != null &&
+                            d.MaNhanVienNavigation.MaPhongBan == currentNhanVien.MaPhongBan &&
+                            !loaiDonNghiViec.Contains(d.LoaiDon)
+                        );
+                    }
                 }
             }
 
@@ -295,50 +312,74 @@ namespace HrmApp.Api.Controllers
 
             bool isDirector = userRole == "Chủ doanh nghiệp" || chucVuNguoiDuyet.Contains("Giám đốc") || phongBanNguoiDuyet.Contains("Ban Giám đốc");
 
-            if (!isDirector)
-            {
-                if (nguoiLamDon.MaPhongBan != nguoiDuyet.MaPhongBan)
-                {
-                    return StatusCode(403, new { message = "Trưởng phòng / Quản lý chỉ được quyền phê duyệt đơn từ của nhân sự thuộc phòng ban của mình!" });
-                }
+            bool isHrManager = phongBanNguoiDuyet.Contains("Nhân sự");
+            var loaiDonNghiViec = new[] { "Nghỉ việc", "Thôi việc" };
+            bool isResignation = loaiDonNghiViec.Contains(donTu.LoaiDon);
 
-                if (chucVuNguoiLamDon.Contains("Trưởng") || chucVuNguoiLamDon.Contains("Phó"))
+            if (isResignation)
+            {
+                if (!isDirector && !isHrManager)
                 {
-                    return StatusCode(403, new { message = $"Đơn từ của {chucVuNguoiLamDon} ({nguoiLamDon.HoTen}) phải do Chủ doanh nghiệp phê duyệt! Quản lý cùng cấp không được duyệt chéo." });
+                    return StatusCode(403, new { message = "Đơn xin thôi việc chỉ được duyệt bởi Quản lý phòng Nhân sự hoặc Chủ doanh nghiệp!" });
+                }
+            }
+            else
+            {
+                if (!isDirector)
+                {
+                    if (nguoiLamDon.MaPhongBan != nguoiDuyet.MaPhongBan)
+                    {
+                        return StatusCode(403, new { message = "Trưởng phòng / Quản lý chỉ được quyền phê duyệt đơn từ của nhân sự thuộc phòng ban của mình!" });
+                    }
+
+                    if (chucVuNguoiLamDon.Contains("Trưởng") || chucVuNguoiLamDon.Contains("Phó"))
+                    {
+                        return StatusCode(403, new { message = $"Đơn từ của {chucVuNguoiLamDon} ({nguoiLamDon.HoTen}) phải do Chủ doanh nghiệp phê duyệt! Quản lý cùng cấp không được duyệt chéo." });
+                    }
                 }
             }
 
-            donTu.TrangThai = request.TrangThai;
-            donTu.NguoiDuyetMa = nguoiDuyetMa;
-            donTu.NgayDuyet = DateOnly.FromDateTime(DateTime.Now);
-            donTu.GhiChuDuyet = request.GhiChuDuyet;
-
-            if (request.TrangThai == "Đã duyệt" && (donTu.LoaiDon == "Nghỉ việc" || donTu.LoaiDon == "Thôi việc"))
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
             {
-                nguoiLamDon.TrangThaiLamViec = "Đã nghỉ việc";
-                nguoiLamDon.NgayNghiViec = donTu.NgayKetThuc;
+                donTu.TrangThai = request.TrangThai;
+                donTu.NguoiDuyetMa = nguoiDuyetMa;
+                donTu.NgayDuyet = DateOnly.FromDateTime(DateTime.Now);
+                donTu.GhiChuDuyet = request.GhiChuDuyet;
 
-                var taiKhoans = await _context.TaiKhoans
-                    .Where(t => t.MaNhanVien == nguoiLamDon.MaNhanVien)
-                    .ToListAsync();
-                foreach (var taiKhoan in taiKhoans)
+                if (request.TrangThai == "Đã duyệt" && isResignation)
                 {
-                    taiKhoan.TrangThai = "Bị khóa";
+                    nguoiLamDon.TrangThaiLamViec = "Đã nghỉ việc";
+                    nguoiLamDon.NgayNghiViec = donTu.NgayKetThuc;
+
+                    var taiKhoans = await _context.TaiKhoans
+                        .Where(t => t.MaNhanVien == nguoiLamDon.MaNhanVien)
+                        .ToListAsync();
+                    foreach (var taiKhoan in taiKhoans)
+                    {
+                        taiKhoan.TrangThai = "Bị khóa";
+                    }
+
+                    var hopDongs = await _context.HopDongLaoDongs
+                        .Where(h => h.MaNhanVien == nguoiLamDon.MaNhanVien &&
+                                    (h.TrangThai == "Có hiệu lực" || h.TrangThai == "Đang hiệu lực"))
+                        .ToListAsync();
+                    foreach (var hopDong in hopDongs)
+                    {
+                        hopDong.TrangThai = "Đã thanh lý";
+                        hopDong.NgayKetThuc = donTu.NgayKetThuc;
+                    }
                 }
 
-                var hopDongs = await _context.HopDongLaoDongs
-                    .Where(h => h.MaNhanVien == nguoiLamDon.MaNhanVien &&
-                                (h.TrangThai == "Có hiệu lực" || h.TrangThai == "Đang hiệu lực"))
-                    .ToListAsync();
-                foreach (var hopDong in hopDongs)
-                {
-                    hopDong.TrangThai = "Đã thanh lý";
-                    hopDong.NgayKetThuc = donTu.NgayKetThuc;
-                }
+                _context.DonTus.Update(donTu);
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
             }
-
-            _context.DonTus.Update(donTu);
-            await _context.SaveChangesAsync();
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
 
             var actionText = request.TrangThai == "Đã duyệt" ? "phê duyệt" : "từ chối";
             var callerUser = User.FindFirst("TenDangNhap")?.Value ?? User.Identity?.Name ?? "Hệ thống";

@@ -1,4 +1,4 @@
-using HrmApp.Api.Controllers;
+﻿using HrmApp.Api.Controllers;
 using HrmApp.Api.Data;
 using HrmApp.Api.Data.Models;
 using HrmApp.Api.DTOs.DonTu;
@@ -117,7 +117,7 @@ public class DonTuControllerTests
     public async Task ManagerApproval_ResignationMarksEmployeeResignedAndLocksAccount()
     {
         using var db = HrTestSupport.CreateDbContext();
-        var department = new PhongBan { MaPhongBan = Guid.NewGuid(), TenPhongBan = "Phòng Kinh doanh" };
+        var department = new PhongBan { MaPhongBan = Guid.NewGuid(), TenPhongBan = "Phòng Nhân sự" };
         var managerPosition = new ChucVu { MaChucVu = Guid.NewGuid(), TenChucVu = "Quản lý" };
         var employeePosition = new ChucVu { MaChucVu = Guid.NewGuid(), TenChucVu = "Nhân viên" };
         var employeeRole = new VaiTro { MaVaiTro = Guid.NewGuid(), TenVaiTro = "Nhân viên" };
