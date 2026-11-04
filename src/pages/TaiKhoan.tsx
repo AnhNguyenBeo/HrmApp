@@ -232,6 +232,29 @@ export const TaiKhoanPage: React.FC = () => {
           (record.trangThaiLamViec &&
             (record.trangThaiLamViec.includes('thôi việc') || record.trangThaiLamViec.includes('nghỉ việc')));
 
+        const isLocked = record.trangThai === 'Bị khóa';
+
+        if (isLocked) {
+          return (
+            <Space>
+              <Tag color="error" style={{ margin: 0 }}>Đã khóa</Tag>
+              {!isResigned && (
+                <Popconfirm
+                  title="Mở khóa tài khoản này?"
+                  onConfirm={() => handleToggleLock(record)}
+                >
+                  <Button
+                    size="small"
+                    icon={<UnlockOutlined />}
+                  >
+                    Mở khóa
+                  </Button>
+                </Popconfirm>
+              )}
+            </Space>
+          );
+        }
+
         return (
           <Space>
             <Button
@@ -247,30 +270,18 @@ export const TaiKhoanPage: React.FC = () => {
               Phân quyền
             </Button>
 
-            {record.trangThai === 'Bị khóa' && isResigned ? (
+            <Popconfirm
+              title="Bạn có muốn khóa tài khoản này?"
+              onConfirm={() => handleToggleLock(record)}
+            >
               <Button
                 size="small"
-                disabled
-                icon={<UnlockOutlined />}
-                title="Nhân viên này đã thôi việc, không thể mở khóa tài khoản!"
-                onClick={() => message.error('Nhân viên này đã thôi việc, không thể mở khóa tài khoản!')}
+                danger
+                icon={<LockOutlined />}
               >
-                Mở khóa
+                Khóa
               </Button>
-            ) : (
-              <Popconfirm
-                title={record.trangThai === 'Hoạt động' ? 'Bạn có muốn khóa tài khoản này?' : 'Mở khóa tài khoản này?'}
-                onConfirm={() => handleToggleLock(record)}
-              >
-                <Button
-                  size="small"
-                  danger={record.trangThai === 'Hoạt động'}
-                  icon={record.trangThai === 'Hoạt động' ? <LockOutlined /> : <UnlockOutlined />}
-                >
-                  {record.trangThai === 'Hoạt động' ? 'Khóa' : 'Mở khóa'}
-                </Button>
-              </Popconfirm>
-            )}
+            </Popconfirm>
           </Space>
         );
       },

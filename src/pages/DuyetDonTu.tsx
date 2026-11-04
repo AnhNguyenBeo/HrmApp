@@ -184,8 +184,17 @@ export const DuyetDonTuPage: React.FC = () => {
           return <Tag color="purple">Cần Chủ doanh nghiệp duyệt</Tag>;
         }
 
-        if (!isOwner && !isSameDept(record)) {
-          return <Tag color="default">Khác phòng ban</Tag>;
+        const isResignation = record.loaiDon === 'Nghỉ việc' || record.loaiDon === 'Thôi việc';
+        const isHrManager = (myDeptName || '').includes('Nhân sự');
+
+        if (isResignation) {
+          if (!isOwner && !isHrManager) {
+            return <Tag color="red">Chỉ phòng Nhân sự duyệt</Tag>;
+          }
+        } else {
+          if (!isOwner && !isSameDept(record)) {
+            return <Tag color="default">Khác phòng ban</Tag>;
+          }
         }
 
         return (
