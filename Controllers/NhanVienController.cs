@@ -312,11 +312,37 @@ namespace HrmApp.Api.Controllers
                 }
             }
 
+            var today = DateOnly.FromDateTime(DateTime.Today);
+            if (dto.NgaySinh > today)
+            {
+                return BadRequest(new { message = "Ngày sinh không hợp lệ (không được lớn hơn ngày hiện tại)." });
+            }
+
+            if (dto.NgayVaoLam < dto.NgaySinh)
+            {
+                return BadRequest(new { message = "Ngày vào làm không được trước ngày sinh." });
+            }
+
+            if (dto.NgayVaoLam < dto.NgaySinh.AddYears(18))
+            {
+                return BadRequest(new { message = "Nhân sự chưa đủ độ tuổi lao động (phải từ đủ 18 tuổi tính đến ngày vào làm)." });
+            }
+
             var cccdTrimmed = dto.Cccd.Trim();
             var cccdExists = await _context.NhanViens.AnyAsync(n => n.Cccd == cccdTrimmed);
             if (cccdExists)
             {
                 return BadRequest(new { message = "Số CCCD này đã tồn tại trong hệ thống, không được trùng lặp." });
+            }
+
+            var phoneTrimmed = dto.SoDienThoai?.Trim();
+            if (!string.IsNullOrEmpty(phoneTrimmed))
+            {
+                var phoneExists = await _context.NhanViens.AnyAsync(n => n.SoDienThoai == phoneTrimmed);
+                if (phoneExists)
+                {
+                    return BadRequest(new { message = "Số điện thoại này đã tồn tại trong hệ thống, không được trùng lặp." });
+                }
             }
 
             var nhanVien = new NhanVien
@@ -408,11 +434,37 @@ namespace HrmApp.Api.Controllers
                 }
             }
 
+            var today = DateOnly.FromDateTime(DateTime.Today);
+            if (dto.NgaySinh > today)
+            {
+                return BadRequest(new { message = "Ngày sinh không hợp lệ (không được lớn hơn ngày hiện tại)." });
+            }
+
+            if (nhanVien.NgayVaoLam < dto.NgaySinh)
+            {
+                return BadRequest(new { message = "Ngày vào làm không được trước ngày sinh." });
+            }
+
+            if (nhanVien.NgayVaoLam < dto.NgaySinh.AddYears(18))
+            {
+                return BadRequest(new { message = "Nhân sự chưa đủ độ tuổi lao động (phải từ đủ 18 tuổi tính đến ngày vào làm)." });
+            }
+
             var cccdTrimmed = dto.Cccd.Trim();
             var cccdExists = await _context.NhanViens.AnyAsync(n => n.Cccd == cccdTrimmed && n.MaNhanVien != id);
             if (cccdExists)
             {
                 return BadRequest(new { message = "Số CCCD này đã tồn tại ở nhân viên khác trong hệ thống." });
+            }
+
+            var phoneTrimmed = dto.SoDienThoai?.Trim();
+            if (!string.IsNullOrEmpty(phoneTrimmed))
+            {
+                var phoneExists = await _context.NhanViens.AnyAsync(n => n.SoDienThoai == phoneTrimmed && n.MaNhanVien != id);
+                if (phoneExists)
+                {
+                    return BadRequest(new { message = "Số điện thoại này đã tồn tại ở nhân sự khác, không được trùng lặp." });
+                }
             }
 
             nhanVien.HoTen = dto.HoTen;
