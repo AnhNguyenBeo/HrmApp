@@ -147,9 +147,36 @@ export const DuyetDonTuPage: React.FC = () => {
         return <Tag color={color}>{val}</Tag>;
       },
     },
-    { title: 'Từ ngày', dataIndex: 'ngayBatDau', key: 'ngayBatDau', width: 110, render: (val: string) => <span style={{ whiteSpace: 'nowrap' }}>{val}</span> },
-    { title: 'Đến ngày', dataIndex: 'ngayKetThuc', key: 'ngayKetThuc', width: 110, render: (val: string) => <span style={{ whiteSpace: 'nowrap' }}>{val}</span> },
-    { title: 'Số ngày', dataIndex: 'soNgayNghi', key: 'soNgayNghi', width: 100, render: (val: number) => <strong>{val} ngày</strong> },
+    {
+      title: 'Từ ngày',
+      dataIndex: 'ngayBatDau',
+      key: 'ngayBatDau',
+      width: 110,
+      render: (val: string) => <span style={{ whiteSpace: 'nowrap' }}>{val}</span>,
+    },
+    {
+      title: 'Đến ngày',
+      dataIndex: 'ngayKetThuc',
+      key: 'ngayKetThuc',
+      width: 110,
+      render: (val: string, record: DonTu) => (
+        <span style={{ whiteSpace: 'nowrap' }}>
+          {record.loaiDon === 'Nghỉ việc' || record.loaiDon === 'Thôi việc' ? '-' : val}
+        </span>
+      ),
+    },
+    {
+      title: 'Số ngày',
+      dataIndex: 'soNgayNghi',
+      key: 'soNgayNghi',
+      width: 100,
+      render: (val: number, record: DonTu) =>
+        record.loaiDon === 'Nghỉ việc' || record.loaiDon === 'Thôi việc' ? (
+          <span style={{ color: '#888' }}>-</span>
+        ) : (
+          <strong>{val} ngày</strong>
+        ),
+    },
     { title: 'Lý do', dataIndex: 'lyDo', key: 'lyDo', width: 180, ellipsis: true },
     {
       title: 'Trạng thái',
@@ -327,7 +354,12 @@ export const DuyetDonTuPage: React.FC = () => {
             Nhân viên: <strong>{selectedDon?.hoTen}</strong> ({selectedDon?.tenChucVu || 'Nhân viên'} - {selectedDon?.tenPhongBan})
           </p>
           <p>
-            Loại đơn: <strong>{selectedDon?.loaiDon}</strong> ({selectedDon?.soNgayNghi} ngày: từ {selectedDon?.ngayBatDau} đến {selectedDon?.ngayKetThuc}).
+            Loại đơn: <strong>{selectedDon?.loaiDon}</strong>
+            {selectedDon?.loaiDon === 'Nghỉ việc' || selectedDon?.loaiDon === 'Thôi việc' ? (
+              <span> - Ngày thôi việc: <strong>{selectedDon?.ngayBatDau}</strong></span>
+            ) : (
+              <span> ({selectedDon?.soNgayNghi} ngày: từ {selectedDon?.ngayBatDau} đến {selectedDon?.ngayKetThuc})</span>
+            )}.
           </p>
           <p>Lý do: <em>"{selectedDon?.lyDo}"</em></p>
 

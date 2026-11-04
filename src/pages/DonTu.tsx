@@ -3,6 +3,7 @@ import { Card, Table, Button, Modal, Form, Select, DatePicker, Input, Tag, messa
 import { PlusOutlined, DeleteOutlined, InfoCircleOutlined, CalendarOutlined, SearchOutlined } from '@ant-design/icons';
 import dayjs, { Dayjs } from 'dayjs';
 import { donTuApi } from '../api/donTuApi';
+import { nhanVienApi } from '../api/nhanVienApi';
 import { DonTu } from '../types';
 
 const { RangePicker } = DatePicker;
@@ -17,8 +18,13 @@ export const DonTuPage: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [form] = Form.useForm();
 
+  const userStr = localStorage.getItem('user');
+  const currentUser = userStr ? JSON.parse(userStr) : null;
+  const [userGender, setUserGender] = useState<string>(currentUser?.gioiTinh || '');
+
   const selectedDates = Form.useWatch('dates', form);
   const selectedLoaiDon = Form.useWatch('loaiDon', form);
+  const isResign = selectedLoaiDon === 'Nghỉ việc' || selectedLoaiDon === 'Thôi việc';
 
   const currentYear = dayjs().year();
 
@@ -36,6 +42,15 @@ export const DonTuPage: React.FC = () => {
 
   useEffect(() => {
     fetchData();
+    if (currentUser?.maNhanVien && !currentUser?.gioiTinh) {
+      nhanVienApi.getById(currentUser.maNhanVien).then((res) => {
+        if (res.data?.gioiTinh) {
+          setUserGender(res.data.gioiTinh);
+          const updated = { ...currentUser, gioiTinh: res.data.gioiTinh };
+          localStorage.setItem('user', JSON.stringify(updated));
+        }
+      }).catch(() => {});
+    }
   }, []);
 
   const usedAnnualLeave = data
@@ -74,11 +89,31 @@ export const DonTuPage: React.FC = () => {
 
   const handleCreate = async (values: any) => {
     try {
+      const isResignation = values.loaiDon === 'Nghỉ việc' || values.loaiDon === 'Thôi việc';
+      let startDate: string;
+      let endDate: string;
+
+      if (isResignation) {
+        if (!values.singleDate) {
+          message.error('Vui lòng chọn ngày nghỉ việc!');
+          return;
+        }
+        startDate = values.singleDate.format('YYYY-MM-DD');
+        endDate = startDate;
+      } else {
+        if (!values.dates || !values.dates[0] || !values.dates[1]) {
+          message.error('Vui lòng chọn thời gian nghỉ!');
+          return;
+        }
+        startDate = values.dates[0].format('YYYY-MM-DD');
+        endDate = values.dates[1].format('YYYY-MM-DD');
+      }
+
       const payload = {
         loaiDon: values.loaiDon,
         loaiNghi: values.loaiDon,
-        ngayBatDau: values.dates[0].format('YYYY-MM-DD'),
-        ngayKetThuc: values.dates[1].format('YYYY-MM-DD'),
+        ngayBatDau: startDate,
+        ngayKetThuc: endDate,
         lyDo: values.lyDo,
       };
       await donTuApi.create(payload);
@@ -104,14 +139,35 @@ export const DonTuPage: React.FC = () => {
 
   const columns = [
     { title: 'Loại đơn', dataIndex: 'loaiDon', key: 'loaiDon', width: 140 },
-    { title: 'Từ ngày', dataIndex: 'ngayBatDau', key: 'ngayBatDau', width: 120, render: (val: string) => <span style={{ whiteSpace: 'nowrap' }}>{val}</span> },
-    { title: 'Đến ngày', dataIndex: 'ngayKetThuc', key: 'ngayKetThuc', width: 120, render: (val: string) => <span style={{ whiteSpace: 'nowrap' }}>{val}</span> },
+    {
+      title: 'Từ ngày',
+      dataIndex: 'ngayBatDau',
+      key: 'ngayBatDau',
+      width: 120,
+      render: (val: string) => <span style={{ whiteSpace: 'nowrap' }}>{val}</span>,
+    },
+    {
+      title: 'Đến ngày',
+      dataIndex: 'ngayKetThuc',
+      key: 'ngayKetThuc',
+      width: 120,
+      render: (val: string, record: DonTu) => (
+        <span style={{ whiteSpace: 'nowrap' }}>
+          {record.loaiDon === 'Nghỉ việc' || record.loaiDon === 'Thôi việc' ? '-' : val}
+        </span>
+      ),
+    },
     {
       title: 'Số ngày',
       dataIndex: 'soNgayNghi',
       key: 'soNgayNghi',
       width: 100,
-      render: (val: number) => <strong>{val} ngày</strong>,
+      render: (val: number, record: DonTu) =>
+        record.loaiDon === 'Nghỉ việc' || record.loaiDon === 'Thôi việc' ? (
+          <span style={{ color: '#888' }}>-</span>
+        ) : (
+          <strong>{val} ngày</strong>
+        ),
     },
     { title: 'Lý do', dataIndex: 'lyDo', key: 'lyDo', ellipsis: true },
     {
@@ -240,45 +296,75 @@ export const DonTuPage: React.FC = () => {
         )}
 
         <Form form={form} layout="vertical" onFinish={handleCreate}>
-          <Form.Item name="loaiDon" label="Loại đơn" rules={[{ required: true, message: 'Vui lòng chọn loại đơn!' }]}>
-            <Select placeholder="Chọn loại đơn">
+          <Form.Item
+            name="loaiDon"
+            label="Loại đơn"
+            rules={[
+              { required: true, message: 'Vui lòng chọn loại đơn!' },
+              {
+                validator: (_, value) => {
+                  if ((value === 'Thai sản' || value === 'Nghỉ thai sản') && userGender === 'Nam') {
+                    return Promise.reject(new Error('Nhân viên nam không được phép nộp đơn xin nghỉ thai sản!'));
+                  }
+                  return Promise.resolve();
+                }
+              }
+            ]}
+          >
+            <Select
+              placeholder="Chọn loại đơn"
+              onChange={() => form.setFieldsValue({ dates: undefined, singleDate: undefined })}
+            >
               <Select.Option value="Nghỉ phép">Nghỉ phép thường niên (Hạn mức 12 ngày/năm)</Select.Option>
               <Select.Option value="Nghỉ ốm">Nghỉ ốm đau / Khám bệnh</Select.Option>
-              <Select.Option value="Thai sản">Nghỉ thai sản (180 ngày)</Select.Option>
+              {userGender !== 'Nam' && (
+                <Select.Option value="Thai sản">Nghỉ thai sản (180 ngày)</Select.Option>
+              )}
               <Select.Option value="Nghỉ việc">Đơn xin nghỉ việc / Thôi việc</Select.Option>
             </Select>
           </Form.Item>
 
-          <Form.Item
-            name="dates"
-            label="Thời gian nghỉ"
-            rules={[{ required: true, message: 'Vui lòng chọn thời gian nghỉ!' }]}
-            extra={
-              selectedDates && selectedDates[0] && selectedDates[1] ? (
-                <div style={{ marginTop: 8 }}>
-                  {estimatedDays > 0 ? (
-                    <Text type="success">
-                      ✓ Đăng ký: <strong>{estimatedDays} ngày</strong>{' '}
-                      {selectedLoaiDon === 'Thai sản' ? '(tính theo ngày dương lịch)' : '(chỉ tính ngày làm việc T2 - T6)'}
-                    </Text>
-                  ) : (
-                    <Text type="danger">
-                      ⚠️ Khoảng thời gian đã chọn rơi vào thứ 7 / chủ nhật (không có ngày làm việc hợp lệ)!
-                    </Text>
-                  )}
-                  {selectedLoaiDon === 'Nghỉ phép' && usedAnnualLeave + estimatedDays > 12 && (
-                    <div style={{ marginTop: 4 }}>
-                      <Text type="danger">
-                        ⚠️ Cảnh báo: Tổng ngày nghỉ ({usedAnnualLeave + estimatedDays} ngày) sẽ vượt quá hạn mức 12 ngày/năm!
+          {isResign ? (
+            <Form.Item
+              name="singleDate"
+              label="Ngày nghỉ việc (Chính thức thôi việc)"
+              rules={[{ required: true, message: 'Vui lòng chọn ngày nghỉ việc!' }]}
+              extra={<Text type="secondary">Chỉ chọn đúng 1 ngày bắt đầu chính thức nghỉ việc.</Text>}
+            >
+              <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" placeholder="Chọn ngày nghỉ việc" />
+            </Form.Item>
+          ) : (
+            <Form.Item
+              name="dates"
+              label="Thời gian nghỉ (Từ ngày - Đến ngày)"
+              rules={[{ required: true, message: 'Vui lòng chọn thời gian nghỉ!' }]}
+              extra={
+                selectedDates && selectedDates[0] && selectedDates[1] ? (
+                  <div style={{ marginTop: 8 }}>
+                    {estimatedDays > 0 ? (
+                      <Text type="success">
+                        ✓ Đăng ký: <strong>{estimatedDays} ngày</strong>{' '}
+                        {selectedLoaiDon === 'Thai sản' ? '(tính theo ngày dương lịch)' : '(chỉ tính ngày làm việc T2 - T6)'}
                       </Text>
-                    </div>
-                  )}
-                </div>
-              ) : null
-            }
-          >
-            <RangePicker style={{ width: '100%' }} format="DD/MM/YYYY" />
-          </Form.Item>
+                    ) : (
+                      <Text type="danger">
+                        ⚠️ Khoảng thời gian đã chọn rơi vào thứ 7 / chủ nhật (không có ngày làm việc hợp lệ)!
+                      </Text>
+                    )}
+                    {selectedLoaiDon === 'Nghỉ phép' && usedAnnualLeave + estimatedDays > 12 && (
+                      <div style={{ marginTop: 4 }}>
+                        <Text type="danger">
+                          ⚠️ Cảnh báo: Tổng ngày nghỉ ({usedAnnualLeave + estimatedDays} ngày) sẽ vượt quá hạn mức 12 ngày/năm!
+                        </Text>
+                      </div>
+                    )}
+                  </div>
+                ) : null
+              }
+            >
+              <RangePicker style={{ width: '100%' }} format="DD/MM/YYYY" />
+            </Form.Item>
+          )}
 
           <Form.Item name="lyDo" label="Lý do chi tiết" rules={[{ required: true, message: 'Vui lòng nhập lý do!' }]}>
             <TextArea rows={4} placeholder="Nhập lý do xin nghỉ cụ thể..." />
