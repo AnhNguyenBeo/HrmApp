@@ -12,6 +12,10 @@ export const nhanVienApi = {
     axiosClient.get<{ exists: boolean }>('/nhanvien/check-phone', {
       params: { phone, excludeId },
     }),
+  checkCccd: (cccd: string, excludeId?: string) =>
+    axiosClient.get<{ exists: boolean }>('/nhanvien/check-cccd', {
+      params: { cccd, excludeId },
+    }),
   updateMyProfile: (data: { soDienThoai?: string; email?: string; diaChi?: string }) =>
     axiosClient.put('/nhanvien/ho-so-cua-toi', data),
 };

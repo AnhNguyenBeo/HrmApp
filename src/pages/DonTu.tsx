@@ -24,7 +24,9 @@ export const DonTuPage: React.FC = () => {
 
   const selectedDates = Form.useWatch('dates', form);
   const selectedLoaiDon = Form.useWatch('loaiDon', form);
+  const selectedMaternityStart = Form.useWatch('maternityStartDate', form);
   const isResign = selectedLoaiDon === 'Nghỉ việc' || selectedLoaiDon === 'Thôi việc';
+  const isMaternity = selectedLoaiDon === 'Thai sản' || selectedLoaiDon === 'Nghỉ thai sản';
 
   const currentYear = dayjs().year();
 
@@ -90,6 +92,7 @@ export const DonTuPage: React.FC = () => {
   const handleCreate = async (values: any) => {
     try {
       const isResignation = values.loaiDon === 'Nghỉ việc' || values.loaiDon === 'Thôi việc';
+      const isMaternityLeave = values.loaiDon === 'Thai sản' || values.loaiDon === 'Nghỉ thai sản';
       let startDate: string;
       let endDate: string;
 
@@ -100,6 +103,13 @@ export const DonTuPage: React.FC = () => {
         }
         startDate = values.singleDate.format('YYYY-MM-DD');
         endDate = startDate;
+      } else if (isMaternityLeave) {
+        if (!values.maternityStartDate) {
+          message.error('Vui lòng chọn ngày bắt đầu nghỉ thai sản!');
+          return;
+        }
+        startDate = values.maternityStartDate.format('YYYY-MM-DD');
+        endDate = values.maternityStartDate.add(179, 'day').format('YYYY-MM-DD');
       } else {
         if (!values.dates || !values.dates[0] || !values.dates[1]) {
           message.error('Vui lòng chọn thời gian nghỉ!');
@@ -313,7 +323,7 @@ export const DonTuPage: React.FC = () => {
           >
             <Select
               placeholder="Chọn loại đơn"
-              onChange={() => form.setFieldsValue({ dates: undefined, singleDate: undefined })}
+              onChange={() => form.setFieldsValue({ dates: undefined, singleDate: undefined, maternityStartDate: undefined })}
             >
               <Select.Option value="Nghỉ phép">Nghỉ phép thường niên (Hạn mức 12 ngày/năm)</Select.Option>
               <Select.Option value="Nghỉ ốm">Nghỉ ốm đau / Khám bệnh</Select.Option>
@@ -333,6 +343,37 @@ export const DonTuPage: React.FC = () => {
             >
               <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" placeholder="Chọn ngày nghỉ việc" />
             </Form.Item>
+          ) : isMaternity ? (
+            <div>
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item
+                    name="maternityStartDate"
+                    label="Ngày bắt đầu nghỉ thai sản"
+                    rules={[{ required: true, message: 'Vui lòng chọn ngày bắt đầu nghỉ thai sản!' }]}
+                  >
+                    <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" placeholder="Chọn ngày bắt đầu" />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item label="Ngày kết thúc nghỉ (Mặc định 180 ngày)">
+                    <Input
+                      value={selectedMaternityStart ? selectedMaternityStart.add(179, 'day').format('DD/MM/YYYY') : '-'}
+                      disabled
+                      prefix={<CalendarOutlined style={{ color: '#1890ff' }} />}
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
+              {selectedMaternityStart && (
+                <Alert
+                  type="success"
+                  showIcon
+                  message={`Thời gian nghỉ thai sản: 180 ngày (tính từ ${selectedMaternityStart.format('DD/MM/YYYY')} đến hết ngày ${selectedMaternityStart.add(179, 'day').format('DD/MM/YYYY')}).`}
+                  style={{ marginBottom: 16 }}
+                />
+              )}
+            </div>
           ) : (
             <Form.Item
               name="dates"
@@ -343,8 +384,7 @@ export const DonTuPage: React.FC = () => {
                   <div style={{ marginTop: 8 }}>
                     {estimatedDays > 0 ? (
                       <Text type="success">
-                        ✓ Đăng ký: <strong>{estimatedDays} ngày</strong>{' '}
-                        {selectedLoaiDon === 'Thai sản' ? '(tính theo ngày dương lịch)' : '(chỉ tính ngày làm việc T2 - T6)'}
+                        ✓ Đăng ký: <strong>{estimatedDays} ngày</strong> (chỉ tính ngày làm việc T2 - T6)
                       </Text>
                     ) : (
                       <Text type="danger">

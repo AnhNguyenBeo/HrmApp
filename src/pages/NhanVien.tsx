@@ -147,7 +147,9 @@ export const NhanVienPage: React.FC = () => {
       fetchData();
     } catch (err: any) {
       const errMsg = getErrorMessage(err, 'Thêm nhân sự thất bại.');
-      if (errMsg.toLowerCase().includes('số điện thoại') || errMsg.toLowerCase().includes('sđt')) {
+      if (errMsg.toLowerCase().includes('cccd')) {
+        createForm.setFields([{ name: 'cccd', errors: [errMsg] }]);
+      } else if (errMsg.toLowerCase().includes('số điện thoại') || errMsg.toLowerCase().includes('sđt')) {
         createForm.setFields([{ name: 'soDienThoai', errors: [errMsg] }]);
       } else if (errMsg.toLowerCase().includes('ngày sinh')) {
         createForm.setFields([{ name: 'ngaySinh', errors: [errMsg] }]);
@@ -176,7 +178,9 @@ export const NhanVienPage: React.FC = () => {
       fetchData();
     } catch (err: any) {
       const errMsg = getErrorMessage(err, 'Cập nhật thất bại.');
-      if (errMsg.toLowerCase().includes('số điện thoại') || errMsg.toLowerCase().includes('sđt')) {
+      if (errMsg.toLowerCase().includes('cccd')) {
+        editForm.setFields([{ name: 'cccd', errors: [errMsg] }]);
+      } else if (errMsg.toLowerCase().includes('số điện thoại') || errMsg.toLowerCase().includes('sđt')) {
         editForm.setFields([{ name: 'soDienThoai', errors: [errMsg] }]);
       } else if (errMsg.toLowerCase().includes('ngày sinh')) {
         editForm.setFields([{ name: 'ngaySinh', errors: [errMsg] }]);
@@ -555,14 +559,25 @@ export const NhanVienPage: React.FC = () => {
               <Form.Item
                 name="cccd"
                 label="Số CCCD"
+                validateTrigger={['onChange', 'onBlur']}
                 rules={[
                   { required: true, message: 'Nhập CCCD!' },
                   { pattern: /^[0-9]{9,12}$/, message: 'Số CCCD phải gồm 9 đến 12 chữ số!' },
                   {
-                    validator: (_, value) => {
+                    validator: async (_, value) => {
                       if (!value) return Promise.resolve();
-                      if (data.some((nv) => nv.cccd === value.trim())) {
+                      const trimmed = value.trim();
+                      if (data.some((nv) => nv.cccd === trimmed)) {
                         return Promise.reject(new Error('Số CCCD này đã tồn tại trong danh sách nhân sự!'));
+                      }
+                      if (/^[0-9]{9,12}$/.test(trimmed)) {
+                        try {
+                          const res = await nhanVienApi.checkCccd(trimmed);
+                          if (res.data?.exists) {
+                            return Promise.reject(new Error('Số CCCD này đã tồn tại trong hệ thống!'));
+                          }
+                        } catch {
+                        }
                       }
                       return Promise.resolve();
                     }
@@ -763,14 +778,25 @@ export const NhanVienPage: React.FC = () => {
               <Form.Item
                 name="cccd"
                 label="Số CCCD"
+                validateTrigger={['onChange', 'onBlur']}
                 rules={[
                   { required: true, message: 'Nhập CCCD!' },
                   { pattern: /^[0-9]{9,12}$/, message: 'Số CCCD phải gồm 9 đến 12 chữ số!' },
                   {
-                    validator: (_, value) => {
+                    validator: async (_, value) => {
                       if (!value || !selectedNv) return Promise.resolve();
-                      if (data.some((nv) => nv.cccd === value.trim() && nv.maNhanVien !== selectedNv.maNhanVien)) {
+                      const trimmed = value.trim();
+                      if (data.some((nv) => nv.cccd === trimmed && nv.maNhanVien !== selectedNv.maNhanVien)) {
                         return Promise.reject(new Error('Số CCCD này đã tồn tại ở nhân sự khác!'));
+                      }
+                      if (/^[0-9]{9,12}$/.test(trimmed)) {
+                        try {
+                          const res = await nhanVienApi.checkCccd(trimmed, selectedNv.maNhanVien);
+                          if (res.data?.exists) {
+                            return Promise.reject(new Error('Số CCCD này đã tồn tại ở nhân sự khác!'));
+                          }
+                        } catch {
+                        }
                       }
                       return Promise.resolve();
                     }
