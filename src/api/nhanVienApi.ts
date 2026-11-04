@@ -8,6 +8,10 @@ export const nhanVienApi = {
   update: (id: string, data: any) => axiosClient.put('/nhanvien/' + id, data),
   softDelete: (id: string) => axiosClient.delete('/nhanvien/' + id),
   restore: (id: string) => axiosClient.post('/nhanvien/' + id + '/khoi-phuc'),
+  checkPhone: (phone: string, excludeId?: string) =>
+    axiosClient.get<{ exists: boolean }>('/nhanvien/check-phone', {
+      params: { phone, excludeId },
+    }),
   updateMyProfile: (data: { soDienThoai?: string; email?: string; diaChi?: string }) =>
     axiosClient.put('/nhanvien/ho-so-cua-toi', data),
 };

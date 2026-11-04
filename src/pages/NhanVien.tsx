@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Card,
   Table,
@@ -134,6 +134,8 @@ export const NhanVienPage: React.FC = () => {
     try {
       const payload = {
         ...values,
+        soDienThoai: values.soDienThoai ? values.soDienThoai.trim() : undefined,
+        cccd: values.cccd ? values.cccd.trim() : undefined,
         ngaySinh: values.ngaySinh.format('YYYY-MM-DD'),
         ngayVaoLam: values.ngayVaoLam.format('YYYY-MM-DD'),
         trangThaiLamViec: 'Đang làm việc',
@@ -144,7 +146,15 @@ export const NhanVienPage: React.FC = () => {
       createForm.resetFields();
       fetchData();
     } catch (err: any) {
-      message.error(getErrorMessage(err, 'Thêm nhân sự thất bại.'));
+      const errMsg = getErrorMessage(err, 'Thêm nhân sự thất bại.');
+      if (errMsg.toLowerCase().includes('số điện thoại') || errMsg.toLowerCase().includes('sđt')) {
+        createForm.setFields([{ name: 'soDienThoai', errors: [errMsg] }]);
+      } else if (errMsg.toLowerCase().includes('ngày sinh')) {
+        createForm.setFields([{ name: 'ngaySinh', errors: [errMsg] }]);
+      } else if (errMsg.toLowerCase().includes('ngày vào làm') || errMsg.toLowerCase().includes('độ tuổi')) {
+        createForm.setFields([{ name: 'ngayVaoLam', errors: [errMsg] }]);
+      }
+      message.error(errMsg);
     }
   };
 
@@ -153,6 +163,8 @@ export const NhanVienPage: React.FC = () => {
     try {
       const payload = {
         ...values,
+        soDienThoai: values.soDienThoai ? values.soDienThoai.trim() : undefined,
+        cccd: values.cccd ? values.cccd.trim() : undefined,
         maChucVu: selectedNv.maChucVu,
         trangThaiLamViec: selectedNv.trangThaiLamViec,
         ngaySinh: values.ngaySinh ? values.ngaySinh.format('YYYY-MM-DD') : selectedNv.ngaySinh,
@@ -163,7 +175,15 @@ export const NhanVienPage: React.FC = () => {
       setEditModal(false);
       fetchData();
     } catch (err: any) {
-      message.error(getErrorMessage(err, 'Cập nhật thất bại.'));
+      const errMsg = getErrorMessage(err, 'Cập nhật thất bại.');
+      if (errMsg.toLowerCase().includes('số điện thoại') || errMsg.toLowerCase().includes('sđt')) {
+        editForm.setFields([{ name: 'soDienThoai', errors: [errMsg] }]);
+      } else if (errMsg.toLowerCase().includes('ngày sinh')) {
+        editForm.setFields([{ name: 'ngaySinh', errors: [errMsg] }]);
+      } else if (errMsg.toLowerCase().includes('ngày vào làm') || errMsg.toLowerCase().includes('độ tuổi')) {
+        editForm.setFields([{ name: 'ngayVaoLam', errors: [errMsg] }]);
+      }
+      message.error(errMsg);
     }
   };
 
@@ -523,7 +543,8 @@ export const NhanVienPage: React.FC = () => {
                 <DatePicker
                   format="DD/MM/YYYY"
                   style={{ width: '100%' }}
-                  disabledDate={(current) => current && current > dayjs().endOf('day')}
+                  disabledDate={(current) => current && current.isAfter(dayjs(), 'day')}
+                  placeholder="DD/MM/YYYY"
                 />
               </Form.Item>
             </Col>
@@ -555,14 +576,25 @@ export const NhanVienPage: React.FC = () => {
               <Form.Item
                 name="soDienThoai"
                 label="Số điện thoại"
+                validateTrigger={['onChange', 'onBlur']}
                 rules={[
                   { required: true, message: 'Nhập SĐT!' },
                   { pattern: /^0\d{9}$/, message: 'Số điện thoại phải gồm 10 chữ số và bắt đầu bằng số 0!' },
                   {
-                    validator: (_, value) => {
+                    validator: async (_, value) => {
                       if (!value) return Promise.resolve();
-                      if (data.some((nv) => nv.soDienThoai === value.trim())) {
+                      const trimmed = value.trim();
+                      if (data.some((nv) => nv.soDienThoai === trimmed)) {
                         return Promise.reject(new Error('Số điện thoại này đã tồn tại trong danh sách nhân sự!'));
+                      }
+                      if (/^0\d{9}$/.test(trimmed)) {
+                        try {
+                          const res = await nhanVienApi.checkPhone(trimmed);
+                          if (res.data?.exists) {
+                            return Promise.reject(new Error('Số điện thoại này đã tồn tại trong hệ thống!'));
+                          }
+                        } catch {
+                        }
                       }
                       return Promise.resolve();
                     }
@@ -625,27 +657,44 @@ export const NhanVienPage: React.FC = () => {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
-                name="ngayVaoLam"
-                label="Ngày vào làm"
-                dependencies={['ngaySinh']}
-                rules={[
-                  { required: true, message: 'Chọn ngày vào làm!' },
-                  ({ getFieldValue }) => ({
-                    validator(_, value) {
-                      const ngaySinh = getFieldValue('ngaySinh');
-                      if (!value || !ngaySinh) return Promise.resolve();
-                      if (value.isBefore(ngaySinh, 'day')) {
-                        return Promise.reject(new Error('Ngày vào làm không được trước ngày sinh!'));
-                      }
-                      if (value.isBefore(ngaySinh.add(18, 'year'), 'day')) {
-                        return Promise.reject(new Error('Nhân sự phải từ đủ 18 tuổi tính đến ngày vào làm!'));
-                      }
-                      return Promise.resolve();
-                    }
-                  })
-                ]}
+                noStyle
+                shouldUpdate={(prev, cur) => prev.ngaySinh !== cur.ngaySinh}
               >
-                <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} />
+                {({ getFieldValue }) => {
+                  const ngaySinh = getFieldValue('ngaySinh');
+                  return (
+                    <Form.Item
+                      name="ngayVaoLam"
+                      label="Ngày vào làm"
+                      dependencies={['ngaySinh']}
+                      rules={[
+                        { required: true, message: 'Chọn ngày vào làm!' },
+                        {
+                          validator: (_, value) => {
+                            if (!value) return Promise.resolve();
+                            if (ngaySinh && value.isBefore(ngaySinh, 'day')) {
+                              return Promise.reject(new Error('Ngày vào làm không được trước ngày sinh!'));
+                            }
+                            if (ngaySinh && value.isBefore(ngaySinh.add(18, 'year'), 'day')) {
+                              return Promise.reject(new Error('Nhân sự phải từ đủ 18 tuổi tính đến ngày vào làm!'));
+                            }
+                            return Promise.resolve();
+                          }
+                        }
+                      ]}
+                    >
+                      <DatePicker
+                        format="DD/MM/YYYY"
+                        style={{ width: '100%' }}
+                        disabledDate={(current) => {
+                          if (!current || !ngaySinh) return false;
+                          return current.isBefore(ngaySinh, 'day');
+                        }}
+                        placeholder="DD/MM/YYYY"
+                      />
+                    </Form.Item>
+                  );
+                }}
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -702,7 +751,8 @@ export const NhanVienPage: React.FC = () => {
                 <DatePicker
                   format="DD/MM/YYYY"
                   style={{ width: '100%' }}
-                  disabledDate={(current) => current && current > dayjs().endOf('day')}
+                  disabledDate={(current) => current && current.isAfter(dayjs(), 'day')}
+                  placeholder="DD/MM/YYYY"
                 />
               </Form.Item>
             </Col>
@@ -734,14 +784,25 @@ export const NhanVienPage: React.FC = () => {
               <Form.Item
                 name="soDienThoai"
                 label="Số điện thoại"
+                validateTrigger={['onChange', 'onBlur']}
                 rules={[
                   { required: true, message: 'Nhập SĐT!' },
                   { pattern: /^0\d{9}$/, message: 'Số điện thoại phải gồm 10 chữ số và bắt đầu bằng số 0!' },
                   {
-                    validator: (_, value) => {
+                    validator: async (_, value) => {
                       if (!value) return Promise.resolve();
-                      if (data.some((nv) => nv.soDienThoai === value.trim() && nv.maNhanVien !== selectedNv?.maNhanVien)) {
+                      const trimmed = value.trim();
+                      if (data.some((nv) => nv.soDienThoai === trimmed && nv.maNhanVien !== selectedNv?.maNhanVien)) {
                         return Promise.reject(new Error('Số điện thoại này đã tồn tại ở nhân sự khác!'));
+                      }
+                      if (/^0\d{9}$/.test(trimmed)) {
+                        try {
+                          const res = await nhanVienApi.checkPhone(trimmed, selectedNv?.maNhanVien);
+                          if (res.data?.exists) {
+                            return Promise.reject(new Error('Số điện thoại này đã tồn tại ở nhân sự khác!'));
+                          }
+                        } catch {
+                        }
                       }
                       return Promise.resolve();
                     }
@@ -788,27 +849,44 @@ export const NhanVienPage: React.FC = () => {
             </Col>
             <Col span={12}>
               <Form.Item
-                name="ngayVaoLam"
-                label="Ngày vào làm"
-                dependencies={['ngaySinh']}
-                rules={[
-                  { required: true, message: 'Chọn ngày vào làm!' },
-                  ({ getFieldValue }) => ({
-                    validator(_, value) {
-                      const ngaySinh = getFieldValue('ngaySinh');
-                      if (!value || !ngaySinh) return Promise.resolve();
-                      if (value.isBefore(ngaySinh, 'day')) {
-                        return Promise.reject(new Error('Ngày vào làm không được trước ngày sinh!'));
-                      }
-                      if (value.isBefore(ngaySinh.add(18, 'year'), 'day')) {
-                        return Promise.reject(new Error('Nhân sự phải từ đủ 18 tuổi tính đến ngày vào làm!'));
-                      }
-                      return Promise.resolve();
-                    }
-                  })
-                ]}
+                noStyle
+                shouldUpdate={(prev, cur) => prev.ngaySinh !== cur.ngaySinh}
               >
-                <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} />
+                {({ getFieldValue }) => {
+                  const ngaySinh = getFieldValue('ngaySinh');
+                  return (
+                    <Form.Item
+                      name="ngayVaoLam"
+                      label="Ngày vào làm"
+                      dependencies={['ngaySinh']}
+                      rules={[
+                        { required: true, message: 'Chọn ngày vào làm!' },
+                        {
+                          validator: (_, value) => {
+                            if (!value) return Promise.resolve();
+                            if (ngaySinh && value.isBefore(ngaySinh, 'day')) {
+                              return Promise.reject(new Error('Ngày vào làm không được trước ngày sinh!'));
+                            }
+                            if (ngaySinh && value.isBefore(ngaySinh.add(18, 'year'), 'day')) {
+                              return Promise.reject(new Error('Nhân sự phải từ đủ 18 tuổi tính đến ngày vào làm!'));
+                            }
+                            return Promise.resolve();
+                          }
+                        }
+                      ]}
+                    >
+                      <DatePicker
+                        format="DD/MM/YYYY"
+                        style={{ width: '100%' }}
+                        disabledDate={(current) => {
+                          if (!current || !ngaySinh) return false;
+                          return current.isBefore(ngaySinh, 'day');
+                        }}
+                        placeholder="DD/MM/YYYY"
+                      />
+                    </Form.Item>
+                  );
+                }}
               </Form.Item>
             </Col>
           </Row>
