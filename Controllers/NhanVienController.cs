@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
@@ -275,6 +275,26 @@ namespace HrmApp.Api.Controllers
             return Ok(nhanViens);
         }
 
+        [HttpGet("check-phone")]
+        [Authorize]
+        public async Task<IActionResult> CheckPhone([FromQuery] string? phone, [FromQuery] Guid? excludeId)
+        {
+            if (string.IsNullOrWhiteSpace(phone))
+            {
+                return Ok(new { exists = false });
+            }
+
+            var trimmed = phone.Trim();
+            var query = _context.NhanViens.Where(n => n.SoDienThoai == trimmed);
+            if (excludeId.HasValue && excludeId.Value != Guid.Empty)
+            {
+                query = query.Where(n => n.MaNhanVien != excludeId.Value);
+            }
+
+            var exists = await query.AnyAsync();
+            return Ok(new { exists });
+        }
+
         [HttpPost]
         [Authorize]
         public async Task<ActionResult<NhanVienResponseDto>> PostNhanVien([FromBody] CreateNhanVienDto dto)
@@ -353,7 +373,7 @@ namespace HrmApp.Api.Controllers
                 GioiTinh = dto.GioiTinh,
                 Cccd = cccdTrimmed,
                 Email = dto.Email,
-                SoDienThoai = dto.SoDienThoai,
+                SoDienThoai = phoneTrimmed,
                 DiaChi = dto.DiaChi,
                 TrinhDoHocVan = dto.TrinhDoHocVan,
                 MaPhongBan = dto.MaPhongBan,
@@ -472,7 +492,7 @@ namespace HrmApp.Api.Controllers
             nhanVien.GioiTinh = dto.GioiTinh;
             nhanVien.Cccd = cccdTrimmed;
             nhanVien.Email = dto.Email;
-            nhanVien.SoDienThoai = dto.SoDienThoai;
+            nhanVien.SoDienThoai = phoneTrimmed;
             nhanVien.DiaChi = dto.DiaChi;
             nhanVien.TrinhDoHocVan = dto.TrinhDoHocVan;
             nhanVien.MaPhongBan = dto.MaPhongBan;
