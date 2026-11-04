@@ -84,7 +84,8 @@ public class AuthController : ControllerBase
             HoTen = taiKhoan.MaNhanVienNavigation?.HoTen ?? string.Empty,
             VaiTro = taiKhoan.MaVaiTroNavigation?.TenVaiTro ?? string.Empty,
             MaPhongBan = taiKhoan.MaNhanVienNavigation?.MaPhongBan,
-            TenPhongBan = taiKhoan.MaNhanVienNavigation?.MaPhongBanNavigation?.TenPhongBan ?? string.Empty
+            TenPhongBan = taiKhoan.MaNhanVienNavigation?.MaPhongBanNavigation?.TenPhongBan ?? string.Empty,
+            GioiTinh = taiKhoan.MaNhanVienNavigation?.GioiTinh ?? string.Empty
         });
     }
 }

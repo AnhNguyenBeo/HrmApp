@@ -13,4 +13,5 @@ public class LoginResponseDto
 	public string VaiTro { get; set; } = string.Empty;
 	public Guid? MaPhongBan { get; set; }
 	public string TenPhongBan { get; set; } = string.Empty;
+	public string GioiTinh { get; set; } = string.Empty;
 }

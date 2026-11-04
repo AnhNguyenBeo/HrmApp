@@ -243,7 +243,7 @@ namespace HrmApp.Api.Controllers
 
                 TinhHinhNhanSu = new TinhHinhNhanSuThangDto
                 {
-                    DangLamViec = activeInMonth.Where(nv => !employeeIdsOnLeave.Contains(nv.MaNhanVien)).Select(nv => new NhanSuStatusDto
+                    DangLamViec = activeInMonth.Select(nv => new NhanSuStatusDto
                     {
                         MaNhanVien = nv.MaNhanVien,
                         HoTen = nv.HoTen,

@@ -1,4 +1,4 @@
-﻿using HrmApp.Api.Controllers;
+using HrmApp.Api.Controllers;
 using HrmApp.Api.Data;
 using HrmApp.Api.Data.Models;
 using HrmApp.Api.DTOs.DonTu;
@@ -21,6 +21,11 @@ public class DonTuControllerTests
     {
         using var db = HrTestSupport.CreateDbContext();
         var employee = await AddEmployeeAsync(db, "Nhân viên A", "Phòng Kinh doanh", "Nhân viên");
+        if (requestType.Contains("thai sản", StringComparison.OrdinalIgnoreCase) || requestType == "Thai sản")
+        {
+            employee.GioiTinh = "Nữ";
+            await db.SaveChangesAsync();
+        }
         var audit = HrTestSupport.CreateAuditMock();
         var controller = new DonTuController(db, audit.Object);
         HrTestSupport.SetUser(controller, employee.MaNhanVien, "Nhân viên");
@@ -47,14 +52,17 @@ public class DonTuControllerTests
         Assert.Equal(requestType, saved.LoaiDon);
         Assert.Equal("Chờ duyệt", saved.TrangThai);
         Assert.Equal(employee.MaNhanVien, saved.MaNhanVien);
-        Assert.Equal(requestType is "Thai sản" or "Nghỉ thai sản" ? 180m : 1m, saved.SoNgayNghi);
+        var expectedDays = requestType is "Thai sản" or "Nghỉ thai sản" ? 180m : (requestType is "Nghỉ việc" or "Thôi việc" ? 0m : 1m);
+        Assert.Equal(expectedDays, saved.SoNgayNghi);
     }
 
     [Fact]
     public async Task CreateDonTu_MaternityOver180Days_IsRejected()
     {
         using var db = HrTestSupport.CreateDbContext();
-        var employee = await AddEmployeeAsync(db, "Nhân viên A", "Phòng Kinh doanh", "Nhân viên");
+        var employee = await AddEmployeeAsync(db, "Nhân viên Nữ", "Phòng Kinh doanh", "Nhân viên");
+        employee.GioiTinh = "Nữ";
+        await db.SaveChangesAsync();
         var controller = new DonTuController(db, HrTestSupport.CreateAuditMock().Object);
         HrTestSupport.SetUser(controller, employee.MaNhanVien, "Nhân viên");
 
@@ -66,7 +74,31 @@ public class DonTuControllerTests
             LyDo = "Yêu cầu vượt giới hạn"
         });
 
-        Assert.IsType<BadRequestObjectResult>(result);
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Contains("180 ngày", badRequest.Value?.ToString() ?? "");
+        Assert.Empty(await db.DonTus.ToListAsync());
+    }
+
+    [Fact]
+    public async Task CreateDonTu_MaleMaternity_IsRejected()
+    {
+        using var db = HrTestSupport.CreateDbContext();
+        var employee = await AddEmployeeAsync(db, "Nhân viên Nam", "Phòng Kinh doanh", "Nhân viên");
+        employee.GioiTinh = "Nam";
+        await db.SaveChangesAsync();
+        var controller = new DonTuController(db, HrTestSupport.CreateAuditMock().Object);
+        HrTestSupport.SetUser(controller, employee.MaNhanVien, "Nhân viên");
+
+        var result = await controller.CreateDonTu(new CreateDonTuDto
+        {
+            LoaiDon = "Nghỉ thai sản",
+            NgayBatDau = new DateOnly(2026, 1, 1),
+            NgayKetThuc = new DateOnly(2026, 6, 20),
+            LyDo = "Nam xin nghỉ thai sản"
+        });
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Contains("nam", badRequest.Value?.ToString() ?? "", StringComparison.OrdinalIgnoreCase);
         Assert.Empty(await db.DonTus.ToListAsync());
     }
 

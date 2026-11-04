@@ -35,8 +35,9 @@ public class ThongKeControllerTests
             await controller.GetDashboardStats("10/2026")).Value);
 
         Assert.Equal(2, response.TongSoNhanVien);
-        Assert.Single(response.TinhHinhNhanSu.DangLamViec);
-        Assert.Equal(working.MaNhanVien, response.TinhHinhNhanSu.DangLamViec[0].MaNhanVien);
+        Assert.Equal(2, response.TinhHinhNhanSu.DangLamViec.Count);
+        Assert.Contains(response.TinhHinhNhanSu.DangLamViec, x => x.MaNhanVien == working.MaNhanVien);
+        Assert.Contains(response.TinhHinhNhanSu.DangLamViec, x => x.MaNhanVien == onLeave.MaNhanVien);
         Assert.Single(response.TinhHinhNhanSu.NghiPhep);
         Assert.Equal(onLeave.MaNhanVien, response.TinhHinhNhanSu.NghiPhep[0].MaNhanVien);
         Assert.Single(response.TinhHinhNhanSu.DaNghiViec);

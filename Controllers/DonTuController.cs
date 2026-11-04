@@ -1,4 +1,4 @@
-﻿using HrmApp.Api.Data;
+using HrmApp.Api.Data;
 using HrmApp.Api.Data.Models;
 using HrmApp.Api.DTOs.DonTu;
 using HrmApp.Api.Services;
@@ -48,6 +48,11 @@ namespace HrmApp.Api.Controllers
                 return BadRequest(new { message = "Loại đơn không hợp lệ." });
             }
 
+            if (request.LoaiDon == "Nghỉ việc" || request.LoaiDon == "Thôi việc")
+            {
+                request.NgayKetThuc = request.NgayBatDau;
+            }
+
             if (request.NgayKetThuc < request.NgayBatDau)
             {
                 return BadRequest(new { message = "Ngày kết thúc không được nhỏ hơn ngày bắt đầu." });
@@ -56,11 +61,19 @@ namespace HrmApp.Api.Controllers
             int songaynghi = 0;
             if (request.LoaiDon == "Thai sản" || request.LoaiDon == "Nghỉ thai sản")
             {
+                if (nhanVien.GioiTinh == "Nam")
+                {
+                    return BadRequest(new { message = "Nhân viên nam không được phép nộp đơn xin nghỉ thai sản." });
+                }
                 songaynghi = request.NgayKetThuc.DayNumber - request.NgayBatDau.DayNumber + 1;
                 if (songaynghi > 180)
                 {
                     return BadRequest(new { message = "Thời gian nghỉ thai sản tối đa là 180 ngày (6 tháng)." });
                 }
+            }
+            else if (request.LoaiDon == "Nghỉ việc" || request.LoaiDon == "Thôi việc")
+            {
+                songaynghi = 0;
             }
             else
             {
@@ -70,7 +83,7 @@ namespace HrmApp.Api.Controllers
                 }
             }
 
-            if (songaynghi <= 0) return BadRequest(new { message = "Khoảng thời gian nghỉ không bao gồm ngày làm việc hợp lệ." });
+            if (songaynghi <= 0 && request.LoaiDon != "Nghỉ việc" && request.LoaiDon != "Thôi việc") return BadRequest(new { message = "Khoảng thời gian nghỉ không bao gồm ngày làm việc hợp lệ." });
 
             var hasOverlap = await _context.DonTus.AnyAsync(d =>
                 d.MaNhanVien == maNhanVien &&
