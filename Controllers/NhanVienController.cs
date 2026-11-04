@@ -295,6 +295,26 @@ namespace HrmApp.Api.Controllers
             return Ok(new { exists });
         }
 
+        [HttpGet("check-cccd")]
+        [Authorize]
+        public async Task<IActionResult> CheckCccd([FromQuery] string? cccd, [FromQuery] Guid? excludeId)
+        {
+            if (string.IsNullOrWhiteSpace(cccd))
+            {
+                return Ok(new { exists = false });
+            }
+
+            var trimmed = cccd.Trim();
+            var query = _context.NhanViens.Where(n => n.Cccd == trimmed);
+            if (excludeId.HasValue && excludeId.Value != Guid.Empty)
+            {
+                query = query.Where(n => n.MaNhanVien != excludeId.Value);
+            }
+
+            var exists = await query.AnyAsync();
+            return Ok(new { exists });
+        }
+
         [HttpPost]
         [Authorize]
         public async Task<ActionResult<NhanVienResponseDto>> PostNhanVien([FromBody] CreateNhanVienDto dto)

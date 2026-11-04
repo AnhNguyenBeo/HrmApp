@@ -52,6 +52,13 @@ namespace HrmApp.Api.Controllers
             {
                 request.NgayKetThuc = request.NgayBatDau;
             }
+            else if (request.LoaiDon == "Thai sản" || request.LoaiDon == "Nghỉ thai sản")
+            {
+                if (request.NgayKetThuc == default || request.NgayKetThuc == request.NgayBatDau)
+                {
+                    request.NgayKetThuc = request.NgayBatDau.AddDays(179);
+                }
+            }
 
             if (request.NgayKetThuc < request.NgayBatDau)
             {
