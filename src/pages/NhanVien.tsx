@@ -504,8 +504,7 @@ export const NhanVienPage: React.FC = () => {
           scroll={{ x: 1250 }}
           pagination={{
             pageSize: 10,
-            showSizeChanger: true,
-            pageSizeOptions: ['10', '20', '50'],
+            showSizeChanger: false,
             showTotal: (total) => `Tổng cộng ${total} nhân sự`,
           }}
         />

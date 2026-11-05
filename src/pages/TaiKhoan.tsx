@@ -366,7 +366,7 @@ export const TaiKhoanPage: React.FC = () => {
           rowKey="maTaiKhoan"
           loading={loading}
           scroll={{ x: 1200 }}
-          pagination={{ pageSize: 10, showSizeChanger: true, showTotal: (t) => `Tổng cộng ${t} tài khoản` }}
+          pagination={{ pageSize: 10, showSizeChanger: false, showTotal: (t) => `Tổng cộng ${t} tài khoản` }}
         />
       </Card>
 

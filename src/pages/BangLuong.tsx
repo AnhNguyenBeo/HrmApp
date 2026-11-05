@@ -216,7 +216,7 @@ export const BangLuongPage: React.FC = () => {
           rowKey="maBangLuong"
           loading={loading}
           scroll={{ x: 1100 }}
-          pagination={{ pageSize: 10, showSizeChanger: true, showTotal: (t) => `Tổng cộng ${t} phiếu lương` }}
+          pagination={{ pageSize: 10, showSizeChanger: false, showTotal: (t) => `Tổng cộng ${t} phiếu lương` }}
         />
       </Card>
       <Modal

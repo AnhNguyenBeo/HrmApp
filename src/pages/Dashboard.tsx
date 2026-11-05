@@ -232,7 +232,7 @@ export const DashboardPage: React.FC = () => {
             },
           ]}
           rowKey="maNhanVien"
-          pagination={{ pageSize: 6, showTotal: (total) => `Tổng cộng ${total} nhân sự` }}
+          pagination={{ pageSize: 6, showSizeChanger: false, showTotal: (total) => `Tổng cộng ${total} nhân sự` }}
           size="middle"
         />
       ),
@@ -299,7 +299,7 @@ export const DashboardPage: React.FC = () => {
             },
           ]}
           rowKey={(r) => r.maNhanVien + r.ngayBatDau}
-          pagination={{ pageSize: 6, showTotal: (total) => `Tổng cộng ${total} lượt nghỉ phép` }}
+          pagination={{ pageSize: 6, showSizeChanger: false, showTotal: (total) => `Tổng cộng ${total} lượt nghỉ phép` }}
           size="middle"
         />
       ),
@@ -367,7 +367,7 @@ export const DashboardPage: React.FC = () => {
             },
           ]}
           rowKey="maNhanVien"
-          pagination={{ pageSize: 6, showTotal: (total) => `Tổng cộng ${total} nhân sự` }}
+          pagination={{ pageSize: 6, showSizeChanger: false, showTotal: (total) => `Tổng cộng ${total} nhân sự` }}
           size="middle"
         />
       ),
@@ -875,8 +875,7 @@ export const DashboardPage: React.FC = () => {
             rowKey="maNhanVien"
             pagination={{
               pageSize: 8,
-              showSizeChanger: true,
-              pageSizeOptions: ['8', '15', '25'],
+              showSizeChanger: false,
               showTotal: (total) => `Tổng số ${total} nhân sự`,
             }}
             summary={() => (

@@ -208,7 +208,7 @@ export const ChamCongQuanLyPage: React.FC = () => {
           rowKey="maChamCong"
           loading={loading}
           scroll={{ x: 1050 }}
-          pagination={{ pageSize: 15, showSizeChanger: true, showTotal: (t) => `Tổng cộng ${t} lượt chấm công` }}
+          pagination={{ pageSize: 15, showSizeChanger: false, showTotal: (t) => `Tổng cộng ${t} lượt chấm công` }}
         />
       </Card>
     </div>

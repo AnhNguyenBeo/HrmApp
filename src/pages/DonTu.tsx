@@ -282,7 +282,7 @@ export const DonTuPage: React.FC = () => {
           rowKey="maDon"
           loading={loading}
           scroll={{ x: 1000 }}
-          pagination={{ pageSize: 10, showSizeChanger: true, showTotal: (t) => `Tổng cộng ${t} đơn từ` }}
+          pagination={{ pageSize: 10, showSizeChanger: false, showTotal: (t) => `Tổng cộng ${t} đơn từ` }}
         />
       </Card>
 

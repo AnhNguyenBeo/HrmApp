@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Card, Table, Input, Select, DatePicker, Button, Tag, Space, Row, Col, Tooltip, message } from 'antd';
 import { HistoryOutlined, SearchOutlined, ReloadOutlined, ClearOutlined, CheckCircleOutlined, ExclamationCircleOutlined, CloseCircleOutlined, GlobalOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -263,8 +263,7 @@ export const NhatKyPage: React.FC = () => {
           current: page,
           pageSize: pageSize,
           total: totalCount,
-          showSizeChanger: true,
-          pageSizeOptions: ['10', '15', '20', '50', '100'],
+          showSizeChanger: false,
           showTotal: (total, range) => `${range[0]}-${range[1]} trong số ${total} nhật ký`,
           onChange: (p, ps) => {
             setPage(p);

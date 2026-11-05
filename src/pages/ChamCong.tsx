@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, Table, Button, DatePicker, Tag, Space, message, Row, Col, Statistic, Input } from 'antd';
 import { CheckCircleOutlined, ClockCircleOutlined, SearchOutlined } from '@ant-design/icons';
 import { chamCongApi } from '../api/chamCongApi';
@@ -139,7 +139,7 @@ export const ChamCongPage: React.FC = () => {
           columns={columns}
           rowKey="maChamCong"
           loading={loading}
-          pagination={{ pageSize: 15 }}
+          pagination={{ pageSize: 15, showSizeChanger: false }}
         />
       </Card>
     </div>
