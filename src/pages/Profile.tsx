@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, Descriptions, Button, Modal, Form, Input, message, Spin, Tag } from 'antd';
 import { EditOutlined, UserOutlined } from '@ant-design/icons';
 import { nhanVienApi } from '../api/nhanVienApi';
@@ -7,6 +7,7 @@ import { NhanVien } from '../types';
 export const Profile: React.FC = () => {
   const [profile, setProfile] = useState<NhanVien | null>(null);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [form] = Form.useForm();
 
@@ -32,12 +33,19 @@ export const Profile: React.FC = () => {
 
   const handleUpdate = async (values: any) => {
     try {
+      setSubmitting(true);
       await nhanVienApi.updateMyProfile(values);
       message.success('Cập nhật thông tin cá nhân thành công!');
       setIsModalOpen(false);
       fetchProfile();
-    } catch {
-      message.error('Cập nhật thất bại.');
+    } catch (err: any) {
+      const errMsg = err?.response?.data?.message || err?.message || 'Cập nhật thất bại.';
+      if (errMsg.toLowerCase().includes('số điện thoại') || errMsg.toLowerCase().includes('sđt')) {
+        form.setFields([{ name: 'soDienThoai', errors: [errMsg] }]);
+      }
+      message.error(errMsg);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -97,20 +105,53 @@ export const Profile: React.FC = () => {
         footer={null}
       >
         <Form form={form} layout="vertical" onFinish={handleUpdate}>
-          <Form.Item name="soDienThoai" label="Số điện thoại">
-            <Input />
+          <Form.Item
+            name="soDienThoai"
+            label="Số điện thoại"
+            validateTrigger={['onChange', 'onBlur']}
+            rules={[
+              { required: true, message: 'Vui lòng nhập số điện thoại!' },
+              { pattern: /^0\d{9}$/, message: 'Số điện thoại phải gồm 10 chữ số và bắt đầu bằng số 0!' },
+              {
+                validator: async (_, value) => {
+                  if (!value) return Promise.resolve();
+                  const trimmed = value.trim();
+                  if (profile?.soDienThoai && trimmed === profile.soDienThoai.trim()) {
+                    return Promise.resolve();
+                  }
+                  if (/^0\d{9}$/.test(trimmed)) {
+                    try {
+                      const res = await nhanVienApi.checkPhone(trimmed, profile?.maNhanVien);
+                      if (res.data?.exists) {
+                        return Promise.reject(new Error('Số điện thoại này đã tồn tại ở nhân sự khác, không được trùng lặp!'));
+                      }
+                    } catch {
+                    }
+                  }
+                  return Promise.resolve();
+                }
+              }
+            ]}
+          >
+            <Input placeholder="090..." maxLength={10} />
           </Form.Item>
-          <Form.Item name="email" label="Email">
-            <Input type="email" />
+          <Form.Item
+            name="email"
+            label="Email"
+            rules={[
+              { type: 'email', message: 'Email không đúng định dạng!' }
+            ]}
+          >
+            <Input type="email" placeholder="example@company.com" />
           </Form.Item>
           <Form.Item name="diaChi" label="Địa chỉ">
-            <Input.TextArea rows={3} />
+            <Input.TextArea rows={3} placeholder="Địa chỉ thường trú / tạm trú" />
           </Form.Item>
           <Form.Item style={{ textAlign: 'right', marginBottom: 0 }}>
-            <Button style={{ marginRight: 8 }} onClick={() => setIsModalOpen(false)}>
+            <Button style={{ marginRight: 8 }} onClick={() => setIsModalOpen(false)} disabled={submitting}>
               Hủy
             </Button>
-            <Button type="primary" htmlType="submit">
+            <Button type="primary" htmlType="submit" loading={submitting}>
               Lưu thay đổi
             </Button>
           </Form.Item>
