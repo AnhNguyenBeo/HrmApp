@@ -786,9 +786,23 @@ namespace HrmApp.Api.Controllers
             var nhanVien = await _context.NhanViens.FindAsync(maNhanVien);
             if (nhanVien == null) return NotFound(new { message = "Không tìm thấy nhân viên." });
 
-            if (!string.IsNullOrEmpty(request.SoDienThoai)) nhanVien.SoDienThoai = request.SoDienThoai;
-            if (!string.IsNullOrEmpty(request.Email)) nhanVien.Email = request.Email;
-            if (!string.IsNullOrEmpty(request.DiaChi)) nhanVien.DiaChi = request.DiaChi;
+            if (request.SoDienThoai != null)
+            {
+                var phoneTrimmed = request.SoDienThoai.Trim();
+                if (string.IsNullOrEmpty(phoneTrimmed))
+                {
+                    return BadRequest(new { message = "Số điện thoại không được để trống." });
+                }
+
+                var phoneExists = await _context.NhanViens.AnyAsync(n => n.SoDienThoai == phoneTrimmed && n.MaNhanVien != maNhanVien);
+                if (phoneExists)
+                {
+                    return BadRequest(new { message = "Số điện thoại này đã tồn tại ở nhân sự khác, không được trùng lặp." });
+                }
+                nhanVien.SoDienThoai = phoneTrimmed;
+            }
+            if (!string.IsNullOrEmpty(request.Email)) nhanVien.Email = request.Email.Trim();
+            if (!string.IsNullOrEmpty(request.DiaChi)) nhanVien.DiaChi = request.DiaChi.Trim();
 
             _context.NhanViens.Update(nhanVien);
             await _context.SaveChangesAsync();
