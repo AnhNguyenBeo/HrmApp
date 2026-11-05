@@ -78,8 +78,7 @@ export const Profile: React.FC = () => {
         }
       >
         <Descriptions bordered column={{ xxl: 2, xl: 2, lg: 2, md: 1, sm: 1, xs: 1 }}>
-          <Descriptions.Item label="Họ và tên">{profile?.hoTen}</Descriptions.Item>
-          <Descriptions.Item label="Mã nhân viên">{profile?.maNhanVien}</Descriptions.Item>
+          <Descriptions.Item label="Họ và tên" span={2}>{profile?.hoTen}</Descriptions.Item>
           <Descriptions.Item label="Ngày sinh">{profile?.ngaySinh}</Descriptions.Item>
           <Descriptions.Item label="Giới tính">{profile?.gioiTinh}</Descriptions.Item>
           <Descriptions.Item label="Số CCCD">{profile?.cccd}</Descriptions.Item>
@@ -90,7 +89,7 @@ export const Profile: React.FC = () => {
           <Descriptions.Item label="Chức vụ">{profile?.tenChucVu || 'Chưa cập nhật'}</Descriptions.Item>
           <Descriptions.Item label="Trình độ học vấn">{profile?.trinhDoHocVan}</Descriptions.Item>
           <Descriptions.Item label="Ngày vào làm">{profile?.ngayVaoLam}</Descriptions.Item>
-          <Descriptions.Item label="Trạng thái làm việc">
+          <Descriptions.Item label="Trạng thái làm việc" span={2}>
             <Tag color={profile?.trangThaiLamViec === 'Đang làm việc' ? 'green' : 'red'}>
               {profile?.trangThaiLamViec}
             </Tag>

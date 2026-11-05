@@ -981,8 +981,7 @@ export const NhanVienPage: React.FC = () => {
         width={720}
       >
         <Descriptions bordered column={2} size="small">
-          <Descriptions.Item label="Mã nhân viên">{selectedNv?.maNhanVien || '---'}</Descriptions.Item>
-          <Descriptions.Item label="Họ và tên">{selectedNv?.hoTen || '---'}</Descriptions.Item>
+          <Descriptions.Item label="Họ và tên" span={2}>{selectedNv?.hoTen || '---'}</Descriptions.Item>
           <Descriptions.Item label="Giới tính">{selectedNv?.gioiTinh || '---'}</Descriptions.Item>
           <Descriptions.Item label="Ngày sinh">
             {selectedNv?.ngaySinh ? dayjs(selectedNv.ngaySinh).format('DD/MM/YYYY') : '---'}
