@@ -78,7 +78,7 @@ export const BangLuongPage: React.FC = () => {
       message.warning('Bạn chưa có dữ liệu lương cá nhân năm ' + yearVal);
       return;
     }
-    printPayrollTable(myYearRecords, 'Lịch sử lương cá nhân năm ' + yearVal);
+    printPayrollTable(myYearRecords, 'Lịch sử lương cá nhân năm ' + yearVal, true);
   };
 
   const columns = [

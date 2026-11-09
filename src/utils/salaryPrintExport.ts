@@ -141,7 +141,19 @@ export function exportBangLuongToExcel(records: BangLuong[], periodTitle: string
   XLSX.writeFile(wb, safeFilename);
 }
 
-export function printPayrollTable(records: BangLuong[], periodTitle: string) {
+export function printPayrollTable(records: BangLuong[], periodTitle: string, showMonth?: boolean) {
+  const isYearly = showMonth !== undefined
+    ? showMonth
+    : (periodTitle.toLowerCase().includes('năm') || records.some((r, _, arr) => r.thoiGian && r.thoiGian !== arr[0]?.thoiGian));
+
+  const sortedRecords = [...records].sort((a, b) => {
+    if (!a.thoiGian || !b.thoiGian) return 0;
+    const [m1, y1] = a.thoiGian.split('/').map(Number);
+    const [m2, y2] = b.thoiGian.split('/').map(Number);
+    if (y1 !== y2) return (y1 || 0) - (y2 || 0);
+    return (m1 || 0) - (m2 || 0);
+  });
+
   let sumCong = 0;
   let sumOt = 0;
   let sumLuongCb = 0;
@@ -151,7 +163,7 @@ export function printPayrollTable(records: BangLuong[], periodTitle: string) {
   let sumThue = 0;
   let sumThucLinh = 0;
 
-  records.forEach((r) => {
+  sortedRecords.forEach((r) => {
     sumCong += r.soNgayCong || 0;
     sumOt += r.tongGioOt || 0;
     sumLuongCb += r.luongCoBan || 0;
@@ -162,11 +174,12 @@ export function printPayrollTable(records: BangLuong[], periodTitle: string) {
     sumThucLinh += r.thucLinh || 0;
   });
 
-  const rowsHtml = records
+  const rowsHtml = sortedRecords
     .map(
       (r, idx) => `
     <tr>
       <td style="text-align: center;">${idx + 1}</td>
+      ${isYearly ? `<td style="text-align: center; font-weight: 600;">${r.thoiGian || ''}</td>` : ''}
       <td style="font-weight: 600; text-align: left;">${r.hoTen || ''}</td>
       <td>${r.tenPhongBan || ''}</td>
       <td>${r.tenChucVu || ''}</td>
@@ -338,6 +351,7 @@ export function printPayrollTable(records: BangLuong[], periodTitle: string) {
     <thead>
       <tr>
         <th style="width: 28px;">STT</th>
+        ${isYearly ? '<th style="width: 75px; text-align: center;">Tháng</th>' : ''}
         <th>Họ và tên</th>
         <th>Phòng ban</th>
         <th>Chức vụ</th>
@@ -355,7 +369,7 @@ export function printPayrollTable(records: BangLuong[], periodTitle: string) {
     <tbody>
       ${rowsHtml}
       <tr class="total-row">
-        <td colspan="4" style="text-align: center; text-transform: uppercase;">TỔNG CỘNG</td>
+        <td colspan="${isYearly ? 5 : 4}" style="text-align: center; text-transform: uppercase;">TỔNG CỘNG</td>
         <td style="text-align: center;">${sumCong}</td>
         <td style="text-align: center;">${sumOt}</td>
         <td style="text-align: right;">${formatVND(sumLuongCb)}</td>
