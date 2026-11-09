@@ -24,6 +24,7 @@ export const DuyetDonTuPage: React.FC = () => {
 
   const [myDeptId, setMyDeptId] = useState<string | undefined>(currentUser?.maPhongBan);
   const [myDeptName, setMyDeptName] = useState<string | undefined>(currentUser?.tenPhongBan);
+  const isHrManager = (myDeptName || '').includes('Nhân sự');
 
   const [phongBans, setPhongBans] = useState<PhongBan[]>([]);
   const [selectedPhongBan, setSelectedPhongBan] = useState<string>('ALL');
@@ -49,10 +50,10 @@ export const DuyetDonTuPage: React.FC = () => {
   }, [currentUser?.maNhanVien]);
 
   useEffect(() => {
-    if (isOwner) {
+    if (isOwner || isHrManager) {
       danhMucApi.getPhongBans().then((res) => setPhongBans(res.data)).catch(() => {});
     }
-  }, [isOwner]);
+  }, [isOwner, isHrManager]);
 
   const fetchData = async () => {
     try {
@@ -93,7 +94,7 @@ export const DuyetDonTuPage: React.FC = () => {
     if (statusFilter !== 'ALL' && item.trangThai !== statusFilter) {
       return false;
     }
-    if (isOwner && selectedPhongBan !== 'ALL') {
+    if ((isOwner || isHrManager) && selectedPhongBan !== 'ALL') {
       if (item.maPhongBan?.toLowerCase() !== selectedPhongBan.toLowerCase()) {
         return false;
       }
@@ -287,7 +288,7 @@ export const DuyetDonTuPage: React.FC = () => {
             );
           }
         } else {
-          if (!isOwner && !isSameDept(record)) {
+          if (!isOwner && !isHrManager && !isSameDept(record)) {
             return (
               <Space size="small">
                 <Tag color="default">Khác phòng ban</Tag>
@@ -393,7 +394,7 @@ export const DuyetDonTuPage: React.FC = () => {
                 ]}
               />
 
-              {isOwner && (
+              {(isOwner || isHrManager) && (
                 <Select
                   value={selectedPhongBan}
                   onChange={setSelectedPhongBan}
@@ -412,8 +413,8 @@ export const DuyetDonTuPage: React.FC = () => {
           <Col xs={24} lg={9} style={{ textAlign: 'right' }}>
             <Space wrap>
               {!isOwner && myDeptName && (
-                <Tag color="blue" style={{ fontSize: 13, padding: '4px 10px' }}>
-                  🏢 Đang quản lý: <strong>{myDeptName}</strong>
+                <Tag color={isHrManager ? "purple" : "blue"} style={{ fontSize: 13, padding: '4px 10px' }}>
+                  🏢 {isHrManager ? `Quản lý Nhân sự (Duyệt toàn công ty)` : `Đang quản lý: ${myDeptName}`}
                 </Tag>
               )}
               <Input
