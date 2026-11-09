@@ -139,8 +139,10 @@ export const ChamCongQuanLyPage: React.FC = () => {
       render: (val: string) => {
         let color = 'default';
         if (val?.includes('Hoàn thành') || val === 'Đã check-in') color = 'green';
-        if (val?.includes('Thiếu')) color = 'volcano';
-        if (val?.includes('Đi muộn')) color = 'gold';
+        else if (val?.includes('Thiếu')) color = 'volcano';
+        else if (val?.includes('Đi muộn') && val?.includes('Về sớm')) color = 'red';
+        else if (val?.includes('Về sớm')) color = 'orange';
+        else if (val?.includes('Đi muộn')) color = 'gold';
         return <Tag color={color}>{val}</Tag>;
       },
     },

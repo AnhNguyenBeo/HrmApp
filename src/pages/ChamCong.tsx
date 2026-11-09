@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Card, Table, Button, DatePicker, Tag, Space, message, Row, Col, Statistic, Input } from 'antd';
-import { CheckCircleOutlined, ClockCircleOutlined, SearchOutlined } from '@ant-design/icons';
+import { Card, Table, Button, DatePicker, Tag, Space, message, Row, Col, Statistic, Input, Modal } from 'antd';
+import { CheckCircleOutlined, ClockCircleOutlined, SearchOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import { chamCongApi } from '../api/chamCongApi';
 import { ChamCong } from '../types';
 import dayjs from 'dayjs';
@@ -33,15 +33,40 @@ export const ChamCongPage: React.FC = () => {
     fetchData(selectedMonth);
   }, [selectedMonth]);
 
-  const handleCheckIn = async () => {
+  const executeCheckInOut = async (today: string) => {
     try {
-      const today = dayjs().format('YYYY-MM-DD');
       const res = await chamCongApi.checkInOut(today);
-      message.success(res.data?.message || 'Chấm công thành công!');
+      if (res.data?.isEarly) {
+        message.warning(res.data.message, 6);
+      } else {
+        message.success(res.data?.message || 'Chấm công thành công!');
+      }
       fetchData(selectedMonth);
     } catch (err: any) {
       message.error(err.response?.data?.message || 'Chấm công thất bại.');
     }
+  };
+
+  const handleCheckIn = async () => {
+    const today = dayjs().format('YYYY-MM-DD');
+    const todayRecord = data.find((c) => c.ngay === today);
+    const nowHour = dayjs().hour();
+    const isCheckingOut = todayRecord && todayRecord.gioVao && (!todayRecord.gioRa || todayRecord.gioRa === '00:00:00' || todayRecord.gioRa.startsWith('00:00:00'));
+
+    if (isCheckingOut && nowHour < 17) {
+      Modal.confirm({
+        title: 'CẢNH BÁO: BẠN ĐANG CHECK-OUT VỀ SỚM!',
+        icon: <ExclamationCircleOutlined style={{ color: '#faad14' }} />,
+        content: `Giờ tan ca tiêu chuẩn là 17:00. Bạn đang thực hiện Check-out lúc ${dayjs().format('HH:mm:ss')} (sớm hơn quy định). Bạn có chắc chắn muốn Check-out về sớm không?`,
+        okText: 'Xác nhận về sớm',
+        okType: 'danger',
+        cancelText: 'Tiếp tục làm việc',
+        onOk: () => executeCheckInOut(today),
+      });
+      return;
+    }
+
+    await executeCheckInOut(today);
   };
 
   const formatTime = (val?: string) => {
@@ -66,8 +91,10 @@ export const ChamCongPage: React.FC = () => {
       render: (val: string) => {
         let color = 'default';
         if (val.includes('Hoàn thành') || val === 'Đã check-in') color = 'green';
-        if (val.includes('Thiếu')) color = 'volcano';
-        if (val.includes('Đi muộn')) color = 'gold';
+        else if (val.includes('Thiếu')) color = 'volcano';
+        else if (val.includes('Đi muộn') && val.includes('Về sớm')) color = 'red';
+        else if (val.includes('Về sớm')) color = 'orange';
+        else if (val.includes('Đi muộn')) color = 'gold';
         return <Tag color={color}>{val}</Tag>;
       },
     },
@@ -98,7 +125,7 @@ export const ChamCongPage: React.FC = () => {
           </Card>
         </Col>
         <Col span={12}>
-          <Card style={{ textAlign: 'center', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Card style={{ textAlign: 'center', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
             <Button
               type="primary"
               size="large"
@@ -108,6 +135,9 @@ export const ChamCongPage: React.FC = () => {
             >
               ĐIỂM DANH CHECK-IN / CHECK-OUT
             </Button>
+            <div style={{ marginTop: 8, fontSize: 13, color: '#888' }}>
+              Quy định ca: Vào trước <strong>08:30</strong> • Tan ca từ <strong>17:00</strong> (Trước 17:00: Cảnh báo về sớm)
+            </div>
           </Card>
         </Col>
       </Row>

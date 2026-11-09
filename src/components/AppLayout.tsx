@@ -60,7 +60,11 @@ export const AppLayout: React.FC = () => {
       setCheckInLoading(true);
       const today = dayjs().format('YYYY-MM-DD');
       const res = await chamCongApi.checkInOut(today);
-      message.success(res.data?.message || 'Ghi nhận chấm công thành công!');
+      if (res.data?.isEarly) {
+        message.warning(res.data.message, 6);
+      } else {
+        message.success(res.data?.message || 'Ghi nhận chấm công thành công!');
+      }
     } catch (err: any) {
       message.error(err.response?.data?.message || 'Chấm công thất bại');
     } finally {
