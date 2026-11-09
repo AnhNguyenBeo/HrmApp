@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Card, Table, Button, Modal, Form, Select, DatePicker, Input, Tag, message, Popconfirm, Alert, Space, Typography, Row, Col } from 'antd';
-import { PlusOutlined, DeleteOutlined, InfoCircleOutlined, CalendarOutlined, SearchOutlined } from '@ant-design/icons';
+import { Card, Table, Button, Modal, Form, Select, DatePicker, Input, Tag, message, Popconfirm, Alert, Space, Typography, Row, Col, Descriptions, Divider } from 'antd';
+import { PlusOutlined, DeleteOutlined, InfoCircleOutlined, CalendarOutlined, SearchOutlined, EyeOutlined, CheckCircleOutlined, CloseCircleOutlined, ClockCircleOutlined, SafetyCertificateOutlined, FileTextOutlined } from '@ant-design/icons';
 import dayjs, { Dayjs } from 'dayjs';
 import { donTuApi } from '../api/donTuApi';
 import { nhanVienApi } from '../api/nhanVienApi';
@@ -14,6 +14,8 @@ export const DonTuPage: React.FC = () => {
   const [data, setData] = useState<DonTu[]>([]);
   const [loading, setLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [selectedDetailDon, setSelectedDetailDon] = useState<DonTu | null>(null);
   const [searchKeyword, setSearchKeyword] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [form] = Form.useForm();
@@ -149,6 +151,11 @@ export const DonTuPage: React.FC = () => {
     }
   };
 
+  const handleViewDetail = (record: DonTu) => {
+    setSelectedDetailDon(record);
+    setDetailModalOpen(true);
+  };
+
   const columns = [
     { title: 'Loại đơn', dataIndex: 'loaiDon', key: 'loaiDon', width: 140 },
     {
@@ -198,16 +205,28 @@ export const DonTuPage: React.FC = () => {
     {
       title: 'Thao tác',
       key: 'action',
-      width: 120,
+      width: 140,
       align: 'center' as const,
-      render: (_: any, record: DonTu) =>
-        record.trangThai === 'Chờ duyệt' ? (
-          <Popconfirm title="Bạn có chắc chắn muốn hủy đơn này?" onConfirm={() => handleCancel(record.maDon)}>
-            <Button danger icon={<DeleteOutlined />} size="small">
-              Hủy đơn
-            </Button>
-          </Popconfirm>
-        ) : null,
+      render: (_: any, record: DonTu) => (
+        <Space size="small">
+          <Button
+            type="link"
+            size="small"
+            icon={<EyeOutlined />}
+            onClick={() => handleViewDetail(record)}
+            style={{ padding: 0 }}
+          >
+            Chi tiết
+          </Button>
+          {record.trangThai === 'Chờ duyệt' && (
+            <Popconfirm title="Bạn có chắc chắn muốn hủy đơn này?" onConfirm={() => handleCancel(record.maDon)}>
+              <Button danger icon={<DeleteOutlined />} size="small" type="text" style={{ padding: 0 }}>
+                Hủy
+              </Button>
+            </Popconfirm>
+          )}
+        </Space>
+      ),
     },
   ];
 
@@ -437,6 +456,139 @@ export const DonTuPage: React.FC = () => {
             </Button>
           </Form.Item>
         </Form>
+      </Modal>
+
+      <Modal
+        title={
+          <span style={{ fontSize: 17, fontWeight: 600 }}>
+            <FileTextOutlined style={{ marginRight: 8, color: '#1890ff' }} />
+            CHI TIẾT ĐƠN TỪ
+          </span>
+        }
+        open={detailModalOpen}
+        onCancel={() => {
+          setDetailModalOpen(false);
+          setSelectedDetailDon(null);
+        }}
+        footer={[
+          <Button key="close" type="primary" onClick={() => setDetailModalOpen(false)}>
+            Đóng
+          </Button>,
+        ]}
+        width={680}
+        destroyOnClose
+      >
+        {selectedDetailDon && (
+          <div>
+            {selectedDetailDon.trangThai === 'Đã duyệt' ? (
+              <Alert
+                type="success"
+                showIcon
+                icon={<CheckCircleOutlined style={{ fontSize: 20 }} />}
+                message={<span style={{ fontWeight: 600 }}>ĐƠN ĐÃ ĐƯỢC PHÊ DUYỆT</span>}
+                description={
+                  selectedDetailDon.loaiDon === 'Giải trình chấm công'
+                    ? 'Đơn giải trình đã được cấp trên chấp thuận. Giờ ra đã cập nhật thành 17:00 và khôi phục 1.0 ngày công.'
+                    : selectedDetailDon.loaiDon === 'Nghỉ việc' || selectedDetailDon.loaiDon === 'Thôi việc'
+                    ? 'Đơn thôi việc đã được phê duyệt. Hợp đồng lao động đã thanh lý theo quy định.'
+                    : 'Đơn xin nghỉ đã được cấp trên phê duyệt và ghi nhận vào hồ sơ chấm công / tính lương.'
+                }
+                style={{ marginBottom: 18 }}
+              />
+            ) : selectedDetailDon.trangThai === 'Từ chối' ? (
+              <Alert
+                type="error"
+                showIcon
+                icon={<CloseCircleOutlined style={{ fontSize: 20 }} />}
+                message={<span style={{ fontWeight: 600 }}>ĐƠN ĐÃ BỊ TỪ CHỐI</span>}
+                description="Cấp trên đã từ chối yêu cầu này. Vui lòng xem ý kiến/ghi chú phản hồi bên dưới."
+                style={{ marginBottom: 18 }}
+              />
+            ) : (
+              <Alert
+                type="warning"
+                showIcon
+                icon={<ClockCircleOutlined style={{ fontSize: 20 }} />}
+                message={<span style={{ fontWeight: 600 }}>ĐƠN ĐANG CHỜ PHÊ DUYỆT</span>}
+                description="Đơn từ đang được chuyển tới cấp trên quản lý trực tiếp để xem xét phê duyệt."
+                style={{ marginBottom: 18 }}
+              />
+            )}
+
+            <Descriptions bordered size="small" column={{ xs: 1, sm: 2, md: 2 }}>
+              <Descriptions.Item label="Mã đơn" span={2}>
+                <Text code copyable>{selectedDetailDon.maDon}</Text>
+              </Descriptions.Item>
+              <Descriptions.Item label="Loại đơn">
+                <Tag color="blue" style={{ fontSize: 13, padding: '2px 8px' }}>{selectedDetailDon.loaiDon}</Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label="Trạng thái">
+                <Tag
+                  color={selectedDetailDon.trangThai === 'Đã duyệt' ? 'green' : selectedDetailDon.trangThai === 'Từ chối' ? 'red' : 'gold'}
+                  style={{ fontSize: 13, padding: '2px 8px' }}
+                >
+                  {selectedDetailDon.trangThai}
+                </Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label="Người nộp">
+                <strong>{selectedDetailDon.hoTen || currentUser?.hoTen || 'Cá nhân'}</strong>
+              </Descriptions.Item>
+              <Descriptions.Item label="Phòng ban / Chức vụ">
+                {selectedDetailDon.tenPhongBan || currentUser?.tenPhongBan || 'Chưa gán'} • {selectedDetailDon.tenChucVu || currentUser?.tenChucVu || 'Nhân viên'}
+              </Descriptions.Item>
+              <Descriptions.Item label="Thời gian áp dụng" span={2}>
+                {selectedDetailDon.loaiDon === 'Nghỉ việc' || selectedDetailDon.loaiDon === 'Thôi việc' ? (
+                  <span>Ngày chính thức thôi việc: <strong>{dayjs(selectedDetailDon.ngayBatDau).format('DD/MM/YYYY')}</strong></span>
+                ) : selectedDetailDon.loaiDon === 'Giải trình chấm công' ? (
+                  <span>Ngày xác nhận chấm công: <strong>{dayjs(selectedDetailDon.ngayBatDau).format('DD/MM/YYYY')}</strong></span>
+                ) : (
+                  <span>
+                    Từ <strong>{dayjs(selectedDetailDon.ngayBatDau).format('DD/MM/YYYY')}</strong> đến{' '}
+                    <strong>{dayjs(selectedDetailDon.ngayKetThuc).format('DD/MM/YYYY')}</strong> (
+                    <strong>{selectedDetailDon.soNgayNghi} ngày</strong>)
+                  </span>
+                )}
+              </Descriptions.Item>
+              <Descriptions.Item label="Lý do chi tiết" span={2}>
+                <div style={{ whiteSpace: 'pre-wrap', background: '#fafafa', padding: '8px 12px', borderRadius: 6, border: '1px solid #f0f0f0' }}>
+                  {selectedDetailDon.lyDo}
+                </div>
+              </Descriptions.Item>
+            </Descriptions>
+
+            {(selectedDetailDon.trangThai === 'Đã duyệt' || selectedDetailDon.trangThai === 'Từ chối') && (
+              <div style={{ marginTop: 18 }}>
+                <Divider titlePlacement="start" style={{ margin: '14px 0 12px 0', fontSize: 14 }}>
+                  <SafetyCertificateOutlined style={{ color: selectedDetailDon.trangThai === 'Đã duyệt' ? '#52c41a' : '#ff4d4f', marginRight: 6 }} />
+                  THÔNG TIN XÉT DUYỆT CỦA CẤP TRÊN
+                </Divider>
+                <Descriptions bordered size="small" column={{ xs: 1, sm: 2, md: 2 }}>
+                  <Descriptions.Item label="Cấp trên xét duyệt">
+                    <strong style={{ color: '#1677ff' }}>{selectedDetailDon.tenNguoiDuyet || 'Hệ thống / Quản lý'}</strong>
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Ngày xét duyệt">
+                    {selectedDetailDon.ngayDuyet ? dayjs(selectedDetailDon.ngayDuyet).format('DD/MM/YYYY') : '-'}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Ý kiến / Ghi chú phản hồi" span={2}>
+                    <div
+                      style={{
+                        whiteSpace: 'pre-wrap',
+                        fontStyle: selectedDetailDon.ghiChuDuyet ? 'normal' : 'italic',
+                        color: selectedDetailDon.ghiChuDuyet ? '#262626' : '#8c8c8c',
+                        background: selectedDetailDon.trangThai === 'Đã duyệt' ? '#f6ffed' : '#fff1f0',
+                        border: selectedDetailDon.trangThai === 'Đã duyệt' ? '1px solid #b7eb8f' : '1px solid #ffa39e',
+                        padding: '10px 14px',
+                        borderRadius: 6,
+                      }}
+                    >
+                      {selectedDetailDon.ghiChuDuyet || 'Không có ghi chú thêm từ cấp trên.'}
+                    </div>
+                  </Descriptions.Item>
+                </Descriptions>
+              </div>
+            )}
+          </div>
+        )}
       </Modal>
     </div>
   );

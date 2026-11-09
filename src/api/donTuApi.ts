@@ -6,6 +6,7 @@ export const donTuApi = {
     axiosClient.post('/dontu', data),
   getMine: () => axiosClient.get<DonTu[]>('/dontu/cua-toi'),
   getAll: () => axiosClient.get<DonTu[]>('/dontu'),
+  getById: (id: string) => axiosClient.get<DonTu>('/dontu/' + id),
   approve: (id: string, data: { trangThai: string; ghiChuDuyet?: string }) =>
     axiosClient.put('/dontu/' + id + '/duyet', data),
   cancel: (id: string) => axiosClient.delete('/dontu/' + id),
