@@ -90,7 +90,15 @@ export const Profile: React.FC = () => {
           <Descriptions.Item label="Trình độ học vấn">{profile?.trinhDoHocVan}</Descriptions.Item>
           <Descriptions.Item label="Ngày vào làm">{profile?.ngayVaoLam}</Descriptions.Item>
           <Descriptions.Item label="Trạng thái làm việc" span={2}>
-            <Tag color={profile?.trangThaiLamViec === 'Đang làm việc' ? 'green' : 'red'}>
+            <Tag
+              color={
+                profile?.trangThaiLamViec === 'Đang làm việc'
+                  ? 'green'
+                  : profile?.trangThaiLamViec === 'Đang bàn giao thôi việc'
+                  ? 'orange'
+                  : 'red'
+              }
+            >
               {profile?.trangThaiLamViec}
             </Tag>
           </Descriptions.Item>

@@ -522,7 +522,9 @@ export const DonTuPage: React.FC = () => {
                     : selectedDetailDon.loaiDon === 'Giải trình chấm công'
                     ? 'Đơn giải trình đã được cấp trên chấp thuận. Giờ ra đã cập nhật thành 17:00 và khôi phục 1.0 ngày công.'
                     : selectedDetailDon.loaiDon === 'Nghỉ việc' || selectedDetailDon.loaiDon === 'Thôi việc'
-                    ? 'Đơn thôi việc đã được phê duyệt. Hợp đồng lao động đã thanh lý theo quy định.'
+                    ? dayjs(selectedDetailDon.ngayKetThuc).isAfter(dayjs(), 'day')
+                      ? `Đơn thôi việc đã được phê duyệt. Nhân viên chuyển sang trạng thái "Đang bàn giao thôi việc" và tiếp tục làm việc đến hết ngày ${dayjs(selectedDetailDon.ngayKetThuc).format('DD/MM/YYYY')}. Hợp đồng và tài khoản sẽ tự động thanh lý/khóa sau ngày này.`
+                      : 'Đơn thôi việc đã được phê duyệt. Hợp đồng lao động đã thanh lý và tài khoản đã được khóa theo quy định.'
                     : 'Đơn xin nghỉ đã được cấp trên phê duyệt và ghi nhận vào hồ sơ chấm công / tính lương.'
                 }
                 style={{ marginBottom: 18 }}

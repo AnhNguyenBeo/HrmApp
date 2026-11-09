@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import dayjs from 'dayjs';
 import { Card, Table, Button, Modal, Form, Input, Select, Tag, Space, message, Popconfirm, Row, Col } from 'antd';
 import { UserAddOutlined, LockOutlined, UnlockOutlined, SafetyCertificateOutlined, SearchOutlined, KeyOutlined } from '@ant-design/icons';
 import { taiKhoanApi } from '../api/taiKhoanApi';
@@ -96,11 +97,14 @@ export const TaiKhoanPage: React.FC = () => {
   };
 
   const handleToggleLock = async (record: TaiKhoan) => {
+    const isPastNotice = record.ngayNghiViec ? dayjs(record.ngayNghiViec).isBefore(dayjs(), 'day') : false;
     const isResigned =
       record.trangThaiLamViec === 'Đã nghỉ việc' ||
       record.trangThaiLamViec === 'Đã thôi việc' ||
       record.trangThaiLamViec === 'Đã thôi việc / Nghỉ việc' ||
+      isPastNotice ||
       (record.trangThaiLamViec &&
+        !record.trangThaiLamViec.includes('bàn giao') &&
         (record.trangThaiLamViec.includes('thôi việc') || record.trangThaiLamViec.includes('nghỉ việc')));
 
     if (record.trangThai === 'Bị khóa' && isResigned) {
@@ -151,17 +155,25 @@ export const TaiKhoanPage: React.FC = () => {
       key: 'tenNhanVien',
       width: 180,
       render: (_: any, record: TaiKhoan) => {
+        const isHandingOver = record.trangThaiLamViec === 'Đang bàn giao thôi việc';
+        const isPastNotice = record.ngayNghiViec ? dayjs(record.ngayNghiViec).isBefore(dayjs(), 'day') : false;
         const isResigned =
           record.trangThaiLamViec === 'Đã nghỉ việc' ||
           record.trangThaiLamViec === 'Đã thôi việc' ||
           record.trangThaiLamViec === 'Đã thôi việc / Nghỉ việc' ||
+          isPastNotice ||
           (record.trangThaiLamViec &&
+            !record.trangThaiLamViec.includes('bàn giao') &&
             (record.trangThaiLamViec.includes('thôi việc') || record.trangThaiLamViec.includes('nghỉ việc')));
 
         return (
           <Space direction="vertical" size={2}>
             <span style={{ whiteSpace: 'nowrap' }}>{record.tenNhanVien || 'Chưa gán'}</span>
-            {isResigned && <Tag color="error" style={{ margin: 0 }}>Đã thôi việc</Tag>}
+            {isResigned ? (
+              <Tag color="error" style={{ margin: 0 }}>Đã thôi việc</Tag>
+            ) : isHandingOver ? (
+              <Tag color="orange" style={{ margin: 0 }}>Đang bàn giao thôi việc</Tag>
+            ) : null}
           </Space>
         );
       },
@@ -225,11 +237,14 @@ export const TaiKhoanPage: React.FC = () => {
       width: 220,
       fixed: 'right' as const,
       render: (_: any, record: TaiKhoan) => {
+        const isPastNotice = record.ngayNghiViec ? dayjs(record.ngayNghiViec).isBefore(dayjs(), 'day') : false;
         const isResigned =
           record.trangThaiLamViec === 'Đã nghỉ việc' ||
           record.trangThaiLamViec === 'Đã thôi việc' ||
           record.trangThaiLamViec === 'Đã thôi việc / Nghỉ việc' ||
+          isPastNotice ||
           (record.trangThaiLamViec &&
+            !record.trangThaiLamViec.includes('bàn giao') &&
             (record.trangThaiLamViec.includes('thôi việc') || record.trangThaiLamViec.includes('nghỉ việc')));
 
         const isLocked = record.trangThai === 'Bị khóa';

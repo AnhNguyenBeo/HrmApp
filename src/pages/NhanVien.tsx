@@ -280,11 +280,16 @@ export const NhanVienPage: React.FC = () => {
       key: 'trangThaiLamViec',
       width: 140,
       align: 'center' as const,
-      render: (val: string) => (
-        <Tag color={val === 'Đang làm việc' ? 'green' : 'red'} style={{ margin: 0 }}>
-          {val}
-        </Tag>
-      ),
+      render: (val: string) => {
+        let color = 'green';
+        if (val === 'Đang bàn giao thôi việc') color = 'orange';
+        else if (val !== 'Đang làm việc') color = 'red';
+        return (
+          <Tag color={color} style={{ margin: 0 }}>
+            {val}
+          </Tag>
+        );
+      },
     },
     {
       title: 'Thao tác',
@@ -293,11 +298,14 @@ export const NhanVienPage: React.FC = () => {
       fixed: 'right' as const,
       align: 'center' as const,
       render: (_: any, record: NhanVien) => {
+        const isPastNotice = record.ngayNghiViec ? dayjs(record.ngayNghiViec).isBefore(dayjs(), 'day') : false;
         const isResigned =
           record.trangThaiLamViec === 'Đã nghỉ việc' ||
           record.trangThaiLamViec === 'Đã thôi việc' ||
           record.trangThaiLamViec === 'Đã thôi việc / Nghỉ việc' ||
+          (record.trangThaiLamViec === 'Đang bàn giao thôi việc' && isPastNotice) ||
           (record.trangThaiLamViec &&
+            record.trangThaiLamViec !== 'Đang bàn giao thôi việc' &&
             (record.trangThaiLamViec.includes('thôi việc') || record.trangThaiLamViec.includes('nghỉ việc')));
 
         if (!canManageHR) {
@@ -994,7 +1002,7 @@ export const NhanVienPage: React.FC = () => {
           <Descriptions.Item label="Chức vụ">{selectedNv?.tenChucVu || '---'}</Descriptions.Item>
           <Descriptions.Item label="Trình độ">{selectedNv?.trinhDoHocVan || '---'}</Descriptions.Item>
           <Descriptions.Item label="Trạng thái">
-            <Tag color={selectedNv?.trangThaiLamViec?.includes('nghỉ') || selectedNv?.trangThaiLamViec?.includes('thôi') ? 'red' : 'green'}>
+            <Tag color={selectedNv?.trangThaiLamViec === 'Đang bàn giao thôi việc' ? 'orange' : (selectedNv?.trangThaiLamViec?.includes('nghỉ') || selectedNv?.trangThaiLamViec?.includes('thôi') ? 'red' : 'green')}>
               {selectedNv?.trangThaiLamViec || 'Đang làm việc'}
             </Tag>
           </Descriptions.Item>

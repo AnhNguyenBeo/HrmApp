@@ -158,6 +158,7 @@ export interface TaiKhoan {
   trangThai: string;
   ngayTao: string;
   trangThaiLamViec?: string;
+  ngayNghiViec?: string;
 }
 
 
