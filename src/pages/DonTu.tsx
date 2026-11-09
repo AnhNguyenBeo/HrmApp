@@ -27,6 +27,7 @@ export const DonTuPage: React.FC = () => {
   const selectedMaternityStart = Form.useWatch('maternityStartDate', form);
   const isResign = selectedLoaiDon === 'Nghỉ việc' || selectedLoaiDon === 'Thôi việc';
   const isMaternity = selectedLoaiDon === 'Thai sản' || selectedLoaiDon === 'Nghỉ thai sản';
+  const isAttendanceAdjustment = selectedLoaiDon === 'Giải trình chấm công';
 
   const currentYear = dayjs().year();
 
@@ -92,13 +93,14 @@ export const DonTuPage: React.FC = () => {
   const handleCreate = async (values: any) => {
     try {
       const isResignation = values.loaiDon === 'Nghỉ việc' || values.loaiDon === 'Thôi việc';
+      const isAttendanceAdjustment = values.loaiDon === 'Giải trình chấm công';
       const isMaternityLeave = values.loaiDon === 'Thai sản' || values.loaiDon === 'Nghỉ thai sản';
       let startDate: string;
       let endDate: string;
 
-      if (isResignation) {
+      if (isResignation || isAttendanceAdjustment) {
         if (!values.singleDate) {
-          message.error('Vui lòng chọn ngày nghỉ việc!');
+          message.error(isAttendanceAdjustment ? 'Vui lòng chọn ngày cần xác nhận chấm công!' : 'Vui lòng chọn ngày nghỉ việc!');
           return;
         }
         startDate = values.singleDate.format('YYYY-MM-DD');
@@ -163,7 +165,7 @@ export const DonTuPage: React.FC = () => {
       width: 120,
       render: (val: string, record: DonTu) => (
         <span style={{ whiteSpace: 'nowrap' }}>
-          {record.loaiDon === 'Nghỉ việc' || record.loaiDon === 'Thôi việc' ? '-' : val}
+          {record.loaiDon === 'Nghỉ việc' || record.loaiDon === 'Thôi việc' || record.loaiDon === 'Giải trình chấm công' ? '-' : val}
         </span>
       ),
     },
@@ -173,7 +175,7 @@ export const DonTuPage: React.FC = () => {
       key: 'soNgayNghi',
       width: 100,
       render: (val: number, record: DonTu) =>
-        record.loaiDon === 'Nghỉ việc' || record.loaiDon === 'Thôi việc' ? (
+        record.loaiDon === 'Nghỉ việc' || record.loaiDon === 'Thôi việc' || record.loaiDon === 'Giải trình chấm công' ? (
           <span style={{ color: '#888' }}>-</span>
         ) : (
           <strong>{val} ngày</strong>
@@ -327,6 +329,7 @@ export const DonTuPage: React.FC = () => {
             >
               <Select.Option value="Nghỉ phép">Nghỉ phép thường niên (Hạn mức 12 ngày/năm)</Select.Option>
               <Select.Option value="Nghỉ ốm">Nghỉ ốm đau / Khám bệnh</Select.Option>
+              <Select.Option value="Giải trình chấm công">Giải trình / Xác nhận quên check-out</Select.Option>
               {userGender !== 'Nam' && (
                 <Select.Option value="Thai sản">Nghỉ thai sản (180 ngày)</Select.Option>
               )}
@@ -342,6 +345,15 @@ export const DonTuPage: React.FC = () => {
               extra={<Text type="secondary">Chỉ chọn đúng 1 ngày bắt đầu chính thức nghỉ việc.</Text>}
             >
               <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" placeholder="Chọn ngày nghỉ việc" />
+            </Form.Item>
+          ) : isAttendanceAdjustment ? (
+            <Form.Item
+              name="singleDate"
+              label="Ngày quên check-out (Cần xác nhận lại công)"
+              rules={[{ required: true, message: 'Vui lòng chọn ngày quên check-out!' }]}
+              extra={<Text type="secondary">Sau khi cấp trên duyệt đơn, hệ thống sẽ tự động cập nhật giờ ra và tính đủ 1.0 công.</Text>}
+            >
+              <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" placeholder="Chọn ngày cần xác nhận chấm công" />
             </Form.Item>
           ) : isMaternity ? (
             <div>

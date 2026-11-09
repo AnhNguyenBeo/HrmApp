@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { Card, Table, Button, DatePicker, Tag, Space, message, Row, Col, Statistic, Input, Modal } from 'antd';
-import { CheckCircleOutlined, ClockCircleOutlined, SearchOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
+import { Card, Table, Button, DatePicker, Tag, Space, message, Row, Col, Statistic, Input, Modal, Alert, Tooltip } from 'antd';
+import { CheckCircleOutlined, ClockCircleOutlined, SearchOutlined, ExclamationCircleOutlined, FileDoneOutlined } from '@ant-design/icons';
 import { chamCongApi } from '../api/chamCongApi';
 import { ChamCong } from '../types';
 import dayjs from 'dayjs';
 
 export const ChamCongPage: React.FC = () => {
+  const navigate = useNavigate();
   const [data, setData] = useState<ChamCong[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState<dayjs.Dayjs>(dayjs());
@@ -36,7 +38,24 @@ export const ChamCongPage: React.FC = () => {
   const executeCheckInOut = async (today: string) => {
     try {
       const res = await chamCongApi.checkInOut(today);
-      if (res.data?.isEarly) {
+      if (res.data?.hasUnresolvedCheckOut) {
+        Modal.warning({
+          title: 'CHÚ Ý: BẠN CÓ NGÀY CHƯA CHECK-OUT (0 CÔNG)',
+          icon: <ExclamationCircleOutlined style={{ color: '#ff4d4f' }} />,
+          content: (
+            <div>
+              <p>{res.data.message}</p>
+              <p style={{ color: '#ff4d4f', fontWeight: 600 }}>
+                Các ngày chưa check-out đang bị tạm tính 0 công. Vui lòng nộp đơn giải trình cho cấp trên để được xử lý và khôi phục ngày công!
+              </p>
+            </div>
+          ),
+          okText: 'Nộp đơn ngay',
+          cancelText: 'Đã hiểu',
+          okCancel: true,
+          onOk: () => navigate('/don-tu'),
+        });
+      } else if (res.data?.isEarly) {
         message.warning(res.data.message, 6);
       } else {
         message.success(res.data?.message || 'Chấm công thành công!');
@@ -110,10 +129,33 @@ export const ChamCongPage: React.FC = () => {
     return val.split('.')[0];
   };
 
+  const missedCheckOutDays = data.filter((item) => {
+    const isPast = dayjs(item.ngay, 'YYYY-MM-DD').isBefore(dayjs(), 'day');
+    const noOutTime = !item.gioRa || item.gioRa === '00:00:00' || item.gioRa.startsWith('00:00:00') || item.gioRa === '-';
+    const hasInTime = item.gioVao && item.gioVao !== '00:00:00' && !item.gioVao.startsWith('00:00:00') && item.gioVao !== '-';
+    return (
+      (item.trangThai === 'Chưa check-out' || (isPast && noOutTime && hasInTime)) &&
+      item.trangThai !== 'Vắng mặt'
+    );
+  });
+
   const columns = [
     { title: 'Ngày', dataIndex: 'ngay', key: 'ngay' },
     { title: 'Giờ vào', dataIndex: 'gioVao', key: 'gioVao', render: (val: string) => formatTime(val) },
-    { title: 'Giờ ra', dataIndex: 'gioRa', key: 'gioRa', render: (val: string) => formatTime(val) },
+    {
+      title: 'Giờ ra',
+      dataIndex: 'gioRa',
+      key: 'gioRa',
+      render: (val: string, record: ChamCong) => {
+        const isPast = dayjs(record.ngay, 'YYYY-MM-DD').isBefore(dayjs(), 'day');
+        const noOut = !val || val === '00:00:00' || val.startsWith('00:00:00') || val === '-';
+        const hasIn = record.gioVao && record.gioVao !== '00:00:00' && !record.gioVao.startsWith('00:00:00') && record.gioVao !== '-';
+        if (record.trangThai === 'Chưa check-out' || (isPast && noOut && hasIn && record.trangThai !== 'Vắng mặt')) {
+          return <Tag color="error">Chưa check-out</Tag>;
+        }
+        return formatTime(val);
+      },
+    },
     {
       title: 'Tăng ca (OT)',
       dataIndex: 'soGioTangCa',
@@ -124,7 +166,13 @@ export const ChamCongPage: React.FC = () => {
       title: 'Trạng thái',
       dataIndex: 'trangThai',
       key: 'trangThai',
-      render: (val: string) => {
+      render: (val: string, record: ChamCong) => {
+        const isPast = dayjs(record.ngay, 'YYYY-MM-DD').isBefore(dayjs(), 'day');
+        const noOut = !record.gioRa || record.gioRa === '00:00:00' || record.gioRa.startsWith('00:00:00') || record.gioRa === '-';
+        const hasIn = record.gioVao && record.gioVao !== '00:00:00' && !record.gioVao.startsWith('00:00:00') && record.gioVao !== '-';
+        if (val === 'Chưa check-out' || (isPast && noOut && hasIn && val !== 'Vắng mặt')) {
+          return <Tag color="error">Chưa check-out</Tag>;
+        }
         let color = 'default';
         if (val.includes('Bỏ ca') || val.includes('Không đủ công')) color = 'error';
         else if (val.includes('Nửa công')) color = 'purple';
@@ -143,8 +191,17 @@ export const ChamCongPage: React.FC = () => {
       width: 120,
       render: (_: any, record: ChamCong) => {
         const st = record.trangThai || '';
-        if (st.includes('Bỏ ca') || st === 'Vắng mặt' || st.includes('Thiếu giờ vào')) {
-          return <Tag color="default">0 công</Tag>;
+        const isPast = dayjs(record.ngay, 'YYYY-MM-DD').isBefore(dayjs(), 'day');
+        const noOut = !record.gioRa || record.gioRa === '00:00:00' || record.gioRa.startsWith('00:00:00') || record.gioRa === '-';
+        const hasIn = record.gioVao && record.gioVao !== '00:00:00' && !record.gioVao.startsWith('00:00:00') && record.gioVao !== '-';
+        const isMissedCheckOut = st === 'Chưa check-out' || (isPast && noOut && hasIn && st !== 'Vắng mặt');
+
+        if (st.includes('Bỏ ca') || st === 'Vắng mặt' || st.includes('Thiếu giờ vào') || isMissedCheckOut) {
+          return (
+            <Tooltip title={isMissedCheckOut ? "Chưa check-out (0 công). Cần nộp đơn cho cấp trên xử lý." : undefined}>
+              <Tag color="default">0 công</Tag>
+            </Tooltip>
+          );
         }
         if (st.includes('Nửa công')) {
           return <Tag color="purple">0.5 công</Tag>;
@@ -167,6 +224,42 @@ export const ChamCongPage: React.FC = () => {
 
   return (
     <div>
+      {missedCheckOutDays.length > 0 && (
+        <Alert
+          message={
+            <span style={{ fontWeight: 600, fontSize: 15 }}>
+              CẢNH BÁO: BẠN CÓ {missedCheckOutDays.length} NGÀY CHƯA CHECK-OUT (TÍNH 0 CÔNG)
+            </span>
+          }
+          description={
+            <div style={{ marginTop: 4 }}>
+              <div>
+                Danh sách ngày chưa check-out:{' '}
+                <strong style={{ color: '#cf1322' }}>
+                  {missedCheckOutDays.map((d) => dayjs(d.ngay).format('DD/MM/YYYY')).join(', ')}
+                </strong>.
+              </div>
+              <div style={{ marginTop: 4 }}>
+                Hệ thống tạm ghi nhận <strong>0 công</strong> cho các ngày này do thiếu giờ ra. Vui lòng nộp đơn giải trình / xác nhận chấm công cho cấp trên xử lý để được khôi phục ngày công.
+              </div>
+            </div>
+          }
+          type="error"
+          showIcon
+          action={
+            <Button
+              type="primary"
+              danger
+              size="middle"
+              icon={<FileDoneOutlined />}
+              onClick={() => navigate('/don-tu')}
+            >
+              Nộp đơn cho cấp trên
+            </Button>
+          }
+          style={{ marginBottom: 20 }}
+        />
+      )}
       <Row gutter={16} style={{ marginBottom: 24 }}>
         <Col span={12}>
           <Card>
