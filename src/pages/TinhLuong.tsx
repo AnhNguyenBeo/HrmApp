@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Card, Table, Button, DatePicker, Space, message, Tag, Alert, Popconfirm, Input, Select, Row, Col, Progress, Statistic } from 'antd';
-import { CalculatorOutlined, DownloadOutlined, DollarCircleOutlined, CheckCircleOutlined, CheckOutlined, SearchOutlined, ClockCircleOutlined } from '@ant-design/icons';
+import { CalculatorOutlined, DownloadOutlined, DollarCircleOutlined, CheckCircleOutlined, CheckOutlined, SearchOutlined, ClockCircleOutlined, FileExcelOutlined, PrinterOutlined } from '@ant-design/icons';
 import { bangLuongApi } from '../api/bangLuongApi';
 import { exportApi } from '../api/exportApi';
 import { nhanVienApi } from '../api/nhanVienApi';
 import { BangLuong } from '../types';
 import { formatVND, formatDeductionVND, formatNumberVND } from '../utils/format';
+import { exportBangLuongToExcel, printPayrollTable } from '../utils/salaryPrintExport';
 import dayjs from 'dayjs';
 
 export const TinhLuongPage: React.FC = () => {
@@ -116,20 +117,23 @@ export const TinhLuongPage: React.FC = () => {
     }
   };
 
-  const handleExport = async () => {
-    try {
-      const res = await exportApi.exportBangLuong(monthStr);
-      const url = window.URL.createObjectURL(new Blob([res.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', 'BangLuong_' + monthStr.replace('/', '_') + '.csv');
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      message.success('Xuất file bảng lương thành công!');
-    } catch {
-      message.error('Không thể xuất file bảng lương.');
+  const handleExportExcel = () => {
+    const list = filteredData.length > 0 ? filteredData : monthRecords;
+    if (list.length === 0) {
+      message.warning('Không có dữ liệu bảng lương tháng ' + monthStr);
+      return;
     }
+    exportBangLuongToExcel(list, 'Tháng ' + monthStr, 'BangLuong_Thang_' + monthStr.replace('/', '_'));
+    message.success('Đã xuất bảng lương Excel (.xlsx) thành công!');
+  };
+
+  const handlePrintPayroll = () => {
+    const list = filteredData.length > 0 ? filteredData : monthRecords;
+    if (list.length === 0) {
+      message.warning('Không có dữ liệu bảng lương tháng ' + monthStr);
+      return;
+    }
+    printPayrollTable(list, 'Tháng ' + monthStr);
   };
 
   const monthRecords = data.filter((b) => b.thoiGian === monthStr);
@@ -406,8 +410,18 @@ export const TinhLuongPage: React.FC = () => {
                 </Button>
               </Popconfirm>
             )}
-            <Button icon={<DownloadOutlined />} onClick={handleExport}>
-              Xuất Excel (.csv)
+            <Button
+              icon={<FileExcelOutlined style={{ color: '#52c41a' }} />}
+              onClick={handleExportExcel}
+            >
+              Xuất Excel (.xlsx)
+            </Button>
+            <Button
+              type="primary"
+              icon={<PrinterOutlined />}
+              onClick={handlePrintPayroll}
+            >
+              In bảng lương (PDF)
             </Button>
           </Space>
         }

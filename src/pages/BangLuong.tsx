@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Card, Table, Button, message, Space, Modal, Descriptions, Tag, DatePicker, Row, Col, Divider, Input } from 'antd';
-import { DownloadOutlined, EyeOutlined, PrinterOutlined, SearchOutlined } from '@ant-design/icons';
+import { DownloadOutlined, EyeOutlined, PrinterOutlined, SearchOutlined, FileExcelOutlined } from '@ant-design/icons';
 import { bangLuongApi } from '../api/bangLuongApi';
 import { exportApi } from '../api/exportApi';
 import { BangLuong } from '../types';
 import { formatVND, formatDeductionVND } from '../utils/format';
+import { exportBangLuongToExcel, printPayrollTable, printSinglePaySlip } from '../utils/salaryPrintExport';
 import dayjs from 'dayjs';
 
 export const BangLuongPage: React.FC = () => {
@@ -33,40 +34,90 @@ export const BangLuongPage: React.FC = () => {
     fetchData();
   }, []);
 
-  const handleExportMonth = async () => {
+  const userStr = localStorage.getItem('user');
+  const currentUser = userStr ? JSON.parse(userStr) : null;
+  const isOwner = currentUser?.vaiTro === 'Chủ doanh nghiệp';
+  const isAccounting = (currentUser?.vaiTro === 'Quản lý' && (currentUser?.tenPhongBan || '').toLowerCase().includes('kế toán')) || isOwner;
+
+  const getRecords = async (monthStr?: string, yearVal?: number) => {
+    let list: BangLuong[] = [];
+    if (isAccounting) {
+      try {
+        const res = await bangLuongApi.getAll(monthStr);
+        list = res.data || [];
+        if (yearVal) {
+          list = list.filter((b) => b.thoiGian && b.thoiGian.endsWith('/' + yearVal));
+        }
+      } catch {
+        list = [];
+      }
+    }
+    if (list.length === 0) {
+      list = data.filter((item) => {
+        if (monthStr) return item.thoiGian === monthStr;
+        if (yearVal) return item.thoiGian && item.thoiGian.endsWith('/' + yearVal);
+        return true;
+      });
+    }
+    return list;
+  };
+
+  const handleExportMonthExcel = async () => {
     const monthStr = exportMonth.format('MM/YYYY');
     try {
-      const res = await exportApi.exportBangLuong(monthStr);
-      downloadFile(res.data, 'BangLuong_Thang_' + monthStr.replace('/', '_') + '.csv');
-      message.success('Đã tải bảng lương tháng ' + monthStr);
+      const records = await getRecords(monthStr, undefined);
+      if (records.length === 0) {
+        message.warning('Không có dữ liệu bảng lương tháng ' + monthStr);
+        return;
+      }
+      exportBangLuongToExcel(records, 'Tháng ' + monthStr, 'BangLuong_Thang_' + monthStr.replace('/', '_'));
+      message.success('Đã tải bảng lương Excel tháng ' + monthStr);
     } catch {
       message.error('Không thể xuất bảng lương tháng.');
     }
   };
 
-  const handleExportYear = async () => {
+  const handlePrintMonth = async () => {
+    const monthStr = exportMonth.format('MM/YYYY');
+    try {
+      const records = await getRecords(monthStr, undefined);
+      if (records.length === 0) {
+        message.warning('Không có dữ liệu bảng lương tháng ' + monthStr);
+        return;
+      }
+      printPayrollTable(records, 'Tháng ' + monthStr);
+    } catch {
+      message.error('Không thể in bảng lương tháng.');
+    }
+  };
+
+  const handleExportYearExcel = async () => {
     const yearVal = exportYear.year();
     try {
-      const res = await exportApi.exportBangLuong(undefined, yearVal);
-      downloadFile(res.data, 'BangLuong_Nam_' + yearVal + '.csv');
-      message.success('Đã tải bảng lương cả năm ' + yearVal);
+      const records = await getRecords(undefined, yearVal);
+      if (records.length === 0) {
+        message.warning('Không có dữ liệu bảng lương năm ' + yearVal);
+        return;
+      }
+      exportBangLuongToExcel(records, 'Cả năm ' + yearVal, 'BangLuong_Nam_' + yearVal);
+      message.success('Đã tải bảng lương Excel cả năm ' + yearVal);
     } catch {
       message.error('Không thể xuất bảng lương năm.');
     }
   };
 
-  const downloadFile = (blobData: any, filename: string) => {
-    const url = window.URL.createObjectURL(new Blob([blobData]));
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', filename);
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-  };
-
-  const handlePrint = () => {
-    window.print();
+  const handlePrintYear = async () => {
+    const yearVal = exportYear.year();
+    try {
+      const records = await getRecords(undefined, yearVal);
+      if (records.length === 0) {
+        message.warning('Không có dữ liệu bảng lương năm ' + yearVal);
+        return;
+      }
+      printPayrollTable(records, 'Cả năm ' + yearVal);
+    } catch {
+      message.error('Không thể in bảng lương năm.');
+    }
   };
 
   const columns = [
@@ -176,21 +227,40 @@ export const BangLuongPage: React.FC = () => {
     <div>
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={12}>
-          <Card size="small" title="In / Tải bảng lương THEO THÁNG">
-            <Space>
+          <Card size="small" title="In / Xuất bảng lương THEO THÁNG">
+            <Space wrap>
               <DatePicker picker="month" value={exportMonth} onChange={(v) => v && setExportMonth(v)} format="MM/YYYY" />
-              <Button type="primary" icon={<DownloadOutlined />} onClick={handleExportMonth}>
-                Tải bảng lương tháng
+              <Button
+                icon={<FileExcelOutlined style={{ color: '#52c41a' }} />}
+                onClick={handleExportMonthExcel}
+              >
+                Xuất Excel (.xlsx)
+              </Button>
+              <Button
+                type="primary"
+                icon={<PrinterOutlined />}
+                onClick={handlePrintMonth}
+              >
+                In bảng lương (PDF)
               </Button>
             </Space>
           </Card>
         </Col>
         <Col span={12}>
-          <Card size="small" title="In / Tải bảng lương THEO NĂM">
-            <Space>
+          <Card size="small" title="In / Xuất bảng lương THEO NĂM">
+            <Space wrap>
               <DatePicker picker="year" value={exportYear} onChange={(v) => v && setExportYear(v)} format="YYYY" />
-              <Button icon={<DownloadOutlined />} onClick={handleExportYear}>
-                Tải bảng lương năm
+              <Button
+                icon={<FileExcelOutlined style={{ color: '#52c41a' }} />}
+                onClick={handleExportYearExcel}
+              >
+                Xuất Excel (.xlsx)
+              </Button>
+              <Button
+                icon={<PrinterOutlined />}
+                onClick={handlePrintYear}
+              >
+                In bảng lương (PDF)
               </Button>
             </Space>
           </Card>
@@ -224,10 +294,22 @@ export const BangLuongPage: React.FC = () => {
         open={detailModal}
         onCancel={() => setDetailModal(false)}
         footer={[
-          <Button key="print" icon={<PrinterOutlined />} onClick={handlePrint}>
-            In phiếu lương này
+          <Button
+            key="excel"
+            icon={<FileExcelOutlined style={{ color: '#52c41a' }} />}
+            onClick={() => selectedSlip && exportBangLuongToExcel([selectedSlip], selectedSlip.thoiGian, `PhieuLuong_${selectedSlip.hoTen}_${selectedSlip.thoiGian.replace('/', '_')}`)}
+          >
+            Tải Excel
           </Button>,
-          <Button key="close" type="primary" onClick={() => setDetailModal(false)}>
+          <Button
+            key="print"
+            type="primary"
+            icon={<PrinterOutlined />}
+            onClick={() => selectedSlip && printSinglePaySlip(selectedSlip)}
+          >
+            In phiếu lương (PDF / A4)
+          </Button>,
+          <Button key="close" onClick={() => setDetailModal(false)}>
             Đóng
           </Button>,
         ]}

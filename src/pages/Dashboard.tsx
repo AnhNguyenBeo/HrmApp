@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { Card, Row, Col, Statistic, Spin, Table, Tag, Tabs, Badge, Progress, DatePicker, Space, Input, Button, Avatar } from 'antd';
+import { Card, Row, Col, Statistic, Spin, Table, Tag, Tabs, Badge, Progress, DatePicker, Space, Input, Button, Avatar, message } from 'antd';
+import * as XLSX from 'xlsx';
 import {
   TeamOutlined,
   UserAddOutlined,
@@ -114,6 +115,13 @@ export const DashboardPage: React.FC = () => {
 
   const handleExportQuarterlySalary = () => {
     if (!filteredLuongTheoQuy || filteredLuongTheoQuy.length === 0) return;
+    const wb = XLSX.utils.book_new();
+    const titleRows = [
+      ['CÔNG TY CỔ PHẦN THỰC PHẨM XIMIFOOD'],
+      ['BÁO CÁO TỔNG HỢP QUỸ LƯƠNG THEO QUÝ'],
+      [`Năm: ${selectedMonth.format('YYYY')} | Ngày xuất: ${dayjs().format('DD/MM/YYYY HH:mm')}`],
+      [],
+    ];
     const headers = [
       'STT',
       'Họ và tên',
@@ -126,8 +134,8 @@ export const DashboardPage: React.FC = () => {
     ];
     const rows = filteredLuongTheoQuy.map((item, idx) => [
       idx + 1,
-      `"${item.hoTen}"`,
-      `"${item.tenPhongBan}"`,
+      item.hoTen,
+      item.tenPhongBan,
       item.luongQuy1,
       item.luongQuy2,
       item.luongQuy3,
@@ -136,7 +144,7 @@ export const DashboardPage: React.FC = () => {
     ]);
     const summaryRow = [
       '',
-      '"TỔNG QUỸ LƯƠNG TOÀN DOANH NGHIỆP"',
+      'TỔNG QUỸ LƯƠNG TOÀN DOANH NGHIỆP',
       '',
       salaryTotals.q1,
       salaryTotals.q2,
@@ -144,17 +152,20 @@ export const DashboardPage: React.FC = () => {
       salaryTotals.q4,
       salaryTotals.totalYear,
     ];
-    const csvContent =
-      '\uFEFF' +
-      [headers.join(','), ...rows.map((r) => r.join(',')), summaryRow.join(',')].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `BaoCao_LuongTheoQuy_${selectedMonth.format('YYYY')}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const ws = XLSX.utils.aoa_to_sheet([...titleRows, headers, ...rows, summaryRow]);
+    ws['!cols'] = [
+      { wch: 6 },
+      { wch: 26 },
+      { wch: 22 },
+      { wch: 20 },
+      { wch: 20 },
+      { wch: 20 },
+      { wch: 20 },
+      { wch: 24 },
+    ];
+    XLSX.utils.book_append_sheet(wb, ws, 'LuongTheoQuy');
+    XLSX.writeFile(wb, `BaoCao_LuongTheoQuy_${selectedMonth.format('YYYY')}.xlsx`);
+    message.success('Đã tải báo cáo lương theo quý (.xlsx)');
   };
 
   const getInitials = (name: string) => {
