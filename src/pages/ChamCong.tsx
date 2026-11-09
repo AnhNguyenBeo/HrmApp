@@ -283,7 +283,7 @@ export const ChamCongPage: React.FC = () => {
               ĐIỂM DANH CHECK-IN / CHECK-OUT
             </Button>
             <div style={{ marginTop: 8, fontSize: 13, color: '#666' }}>
-              Quy định ca: Vào trước <strong>08:30</strong> • Tan ca từ <strong>17:00</strong> (Dưới 2h: Bỏ ca - 0 công • 2h-5h: Nửa công)
+              Quy định ca: Vào trước <strong>08:30</strong> • Tan ca từ <strong>17:00</strong> (&lt;2h: Bỏ ca 0 công • 2h-5h: Nửa công). Giờ OT phải nộp đơn được duyệt, không tự động tính khi ở lại muộn.
             </div>
           </Card>
         </Col>

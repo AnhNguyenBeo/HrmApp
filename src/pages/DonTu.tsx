@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Card, Table, Button, Modal, Form, Select, DatePicker, Input, Tag, message, Popconfirm, Alert, Space, Typography, Row, Col, Descriptions, Divider } from 'antd';
+import { Card, Table, Button, Modal, Form, Select, DatePicker, Input, Tag, message, Popconfirm, Alert, Space, Typography, Row, Col, Descriptions, Divider, InputNumber } from 'antd';
 import { PlusOutlined, DeleteOutlined, InfoCircleOutlined, CalendarOutlined, SearchOutlined, EyeOutlined, CheckCircleOutlined, CloseCircleOutlined, ClockCircleOutlined, SafetyCertificateOutlined, FileTextOutlined } from '@ant-design/icons';
 import dayjs, { Dayjs } from 'dayjs';
 import { donTuApi } from '../api/donTuApi';
@@ -30,6 +30,7 @@ export const DonTuPage: React.FC = () => {
   const isResign = selectedLoaiDon === 'Nghỉ việc' || selectedLoaiDon === 'Thôi việc';
   const isMaternity = selectedLoaiDon === 'Thai sản' || selectedLoaiDon === 'Nghỉ thai sản';
   const isAttendanceAdjustment = selectedLoaiDon === 'Giải trình chấm công';
+  const isOt = selectedLoaiDon === 'Làm thêm giờ' || selectedLoaiDon === 'Đăng ký tăng ca' || selectedLoaiDon === 'Tăng ca' || selectedLoaiDon === 'Đơn tăng ca';
 
   const currentYear = dayjs().year();
 
@@ -97,12 +98,13 @@ export const DonTuPage: React.FC = () => {
       const isResignation = values.loaiDon === 'Nghỉ việc' || values.loaiDon === 'Thôi việc';
       const isAttendanceAdjustment = values.loaiDon === 'Giải trình chấm công';
       const isMaternityLeave = values.loaiDon === 'Thai sản' || values.loaiDon === 'Nghỉ thai sản';
+      const isOvertime = values.loaiDon === 'Làm thêm giờ' || values.loaiDon === 'Đăng ký tăng ca' || values.loaiDon === 'Tăng ca' || values.loaiDon === 'Đơn tăng ca';
       let startDate: string;
       let endDate: string;
 
-      if (isResignation || isAttendanceAdjustment) {
+      if (isResignation || isAttendanceAdjustment || isOvertime) {
         if (!values.singleDate) {
-          message.error(isAttendanceAdjustment ? 'Vui lòng chọn ngày cần xác nhận chấm công!' : 'Vui lòng chọn ngày nghỉ việc!');
+          message.error(isOvertime ? 'Vui lòng chọn ngày làm thêm giờ!' : isAttendanceAdjustment ? 'Vui lòng chọn ngày cần xác nhận chấm công!' : 'Vui lòng chọn ngày nghỉ việc!');
           return;
         }
         startDate = values.singleDate.format('YYYY-MM-DD');
@@ -128,6 +130,7 @@ export const DonTuPage: React.FC = () => {
         loaiNghi: values.loaiDon,
         ngayBatDau: startDate,
         ngayKetThuc: endDate,
+        soGio: isOvertime ? Number(values.soGio) || 1 : undefined,
         lyDo: values.lyDo,
       };
       await donTuApi.create(payload);
@@ -172,21 +175,24 @@ export const DonTuPage: React.FC = () => {
       width: 120,
       render: (val: string, record: DonTu) => (
         <span style={{ whiteSpace: 'nowrap' }}>
-          {record.loaiDon === 'Nghỉ việc' || record.loaiDon === 'Thôi việc' || record.loaiDon === 'Giải trình chấm công' ? '-' : val}
+          {record.loaiDon === 'Nghỉ việc' || record.loaiDon === 'Thôi việc' || record.loaiDon === 'Giải trình chấm công' || record.loaiDon === 'Làm thêm giờ' || record.loaiDon === 'Đăng ký tăng ca' ? '-' : val}
         </span>
       ),
     },
     {
-      title: 'Số ngày',
+      title: 'Số ngày / Giờ',
       dataIndex: 'soNgayNghi',
       key: 'soNgayNghi',
-      width: 100,
-      render: (val: number, record: DonTu) =>
-        record.loaiDon === 'Nghỉ việc' || record.loaiDon === 'Thôi việc' || record.loaiDon === 'Giải trình chấm công' ? (
-          <span style={{ color: '#888' }}>-</span>
-        ) : (
-          <strong>{val} ngày</strong>
-        ),
+      width: 120,
+      render: (val: number, record: DonTu) => {
+        if (record.loaiDon === 'Nghỉ việc' || record.loaiDon === 'Thôi việc' || record.loaiDon === 'Giải trình chấm công') {
+          return <span style={{ color: '#888' }}>-</span>;
+        }
+        if (record.loaiDon === 'Làm thêm giờ' || record.loaiDon === 'Đăng ký tăng ca' || record.loaiDon === 'Tăng ca' || record.loaiDon === 'Đơn tăng ca') {
+          return <Tag color="orange"><strong>{record.soGio ?? record.soNgayNghi} giờ OT</strong></Tag>;
+        }
+        return <strong>{val} ngày</strong>;
+      },
     },
     { title: 'Lý do', dataIndex: 'lyDo', key: 'lyDo', ellipsis: true },
     {
@@ -344,10 +350,11 @@ export const DonTuPage: React.FC = () => {
           >
             <Select
               placeholder="Chọn loại đơn"
-              onChange={() => form.setFieldsValue({ dates: undefined, singleDate: undefined, maternityStartDate: undefined })}
+              onChange={() => form.setFieldsValue({ dates: undefined, singleDate: undefined, maternityStartDate: undefined, soGio: 2 })}
             >
               <Select.Option value="Nghỉ phép">Nghỉ phép thường niên (Hạn mức 12 ngày/năm)</Select.Option>
               <Select.Option value="Nghỉ ốm">Nghỉ ốm đau / Khám bệnh</Select.Option>
+              <Select.Option value="Làm thêm giờ">Đăng ký làm thêm giờ (Tăng ca / OT)</Select.Option>
               <Select.Option value="Giải trình chấm công">Giải trình / Xác nhận quên check-out</Select.Option>
               {userGender !== 'Nam' && (
                 <Select.Option value="Thai sản">Nghỉ thai sản (180 ngày)</Select.Option>
@@ -374,6 +381,29 @@ export const DonTuPage: React.FC = () => {
             >
               <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" placeholder="Chọn ngày cần xác nhận chấm công" />
             </Form.Item>
+          ) : isOt ? (
+            <div>
+              <Form.Item
+                name="singleDate"
+                label="Ngày làm thêm giờ (OT)"
+                rules={[{ required: true, message: 'Vui lòng chọn ngày làm thêm giờ!' }]}
+                extra={<Text type="secondary">Đơn sau khi được phê duyệt sẽ cộng trực tiếp vào giờ OT trên bảng chấm công.</Text>}
+              >
+                <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" placeholder="Chọn ngày làm thêm giờ" />
+              </Form.Item>
+              <Form.Item
+                name="soGio"
+                label="Số giờ tăng ca đăng ký"
+                rules={[
+                  { required: true, message: 'Vui lòng nhập số giờ tăng ca!' },
+                  { type: 'number', min: 0.5, max: 12, message: 'Số giờ tăng ca từ 0.5 đến 12 giờ!' }
+                ]}
+                initialValue={2}
+                extra={<Text type="secondary">Nhập số giờ OT dự kiến làm thêm (tối thiểu 0.5 giờ, bước nhảy 0.5 giờ).</Text>}
+              >
+                <InputNumber style={{ width: '100%' }} min={0.5} max={12} step={0.5} addonAfter="giờ OT" placeholder="Ví dụ: 2, 2.5, 3" />
+              </Form.Item>
+            </div>
           ) : isMaternity ? (
             <div>
               <Row gutter={16}>
@@ -487,7 +517,9 @@ export const DonTuPage: React.FC = () => {
                 icon={<CheckCircleOutlined style={{ fontSize: 20 }} />}
                 message={<span style={{ fontWeight: 600 }}>ĐƠN ĐÃ ĐƯỢC PHÊ DUYỆT</span>}
                 description={
-                  selectedDetailDon.loaiDon === 'Giải trình chấm công'
+                  selectedDetailDon.loaiDon === 'Làm thêm giờ' || selectedDetailDon.loaiDon === 'Đăng ký tăng ca' || selectedDetailDon.loaiDon === 'Tăng ca' || selectedDetailDon.loaiDon === 'Đơn tăng ca'
+                    ? `Đơn tăng ca đã được cấp trên phê duyệt. Hệ thống đã cộng trực tiếp ${selectedDetailDon.soGio ?? selectedDetailDon.soNgayNghi} giờ OT vào dữ liệu chấm công ngày ${dayjs(selectedDetailDon.ngayBatDau).format('DD/MM/YYYY')}.`
+                    : selectedDetailDon.loaiDon === 'Giải trình chấm công'
                     ? 'Đơn giải trình đã được cấp trên chấp thuận. Giờ ra đã cập nhật thành 17:00 và khôi phục 1.0 ngày công.'
                     : selectedDetailDon.loaiDon === 'Nghỉ việc' || selectedDetailDon.loaiDon === 'Thôi việc'
                     ? 'Đơn thôi việc đã được phê duyệt. Hợp đồng lao động đã thanh lý theo quy định.'
@@ -541,6 +573,11 @@ export const DonTuPage: React.FC = () => {
                   <span>Ngày chính thức thôi việc: <strong>{dayjs(selectedDetailDon.ngayBatDau).format('DD/MM/YYYY')}</strong></span>
                 ) : selectedDetailDon.loaiDon === 'Giải trình chấm công' ? (
                   <span>Ngày xác nhận chấm công: <strong>{dayjs(selectedDetailDon.ngayBatDau).format('DD/MM/YYYY')}</strong></span>
+                ) : selectedDetailDon.loaiDon === 'Làm thêm giờ' || selectedDetailDon.loaiDon === 'Đăng ký tăng ca' || selectedDetailDon.loaiDon === 'Tăng ca' || selectedDetailDon.loaiDon === 'Đơn tăng ca' ? (
+                  <span>
+                    Ngày làm thêm giờ: <strong>{dayjs(selectedDetailDon.ngayBatDau).format('DD/MM/YYYY')}</strong> • Số giờ đăng ký OT:{' '}
+                    <Tag color="orange"><strong>{selectedDetailDon.soGio ?? selectedDetailDon.soNgayNghi} giờ OT</strong></Tag>
+                  </span>
                 ) : (
                   <span>
                     Từ <strong>{dayjs(selectedDetailDon.ngayBatDau).format('DD/MM/YYYY')}</strong> đến{' '}

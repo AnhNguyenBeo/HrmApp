@@ -74,6 +74,7 @@ export interface DonTu {
   ngayBatDau: string;
   ngayKetThuc: string;
   soNgayNghi: number;
+  soGio?: number;
   lyDo: string;
   trangThai: string;
   tenNguoiDuyet?: string;

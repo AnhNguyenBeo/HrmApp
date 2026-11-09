@@ -154,6 +154,7 @@ export const DuyetDonTuPage: React.FC = () => {
         let color = 'blue';
         if (val === 'Nghỉ việc') color = 'red';
         if (val === 'Thai sản') color = 'purple';
+        if (val === 'Làm thêm giờ' || val === 'Đăng ký tăng ca' || val === 'Tăng ca' || val === 'Đơn tăng ca') color = 'orange';
         return <Tag color={color}>{val}</Tag>;
       },
     },
@@ -171,21 +172,24 @@ export const DuyetDonTuPage: React.FC = () => {
       width: 110,
       render: (val: string, record: DonTu) => (
         <span style={{ whiteSpace: 'nowrap' }}>
-          {record.loaiDon === 'Nghỉ việc' || record.loaiDon === 'Thôi việc' ? '-' : val}
+          {record.loaiDon === 'Nghỉ việc' || record.loaiDon === 'Thôi việc' || record.loaiDon === 'Giải trình chấm công' || record.loaiDon === 'Làm thêm giờ' || record.loaiDon === 'Đăng ký tăng ca' || record.loaiDon === 'Tăng ca' || record.loaiDon === 'Đơn tăng ca' ? '-' : val}
         </span>
       ),
     },
     {
-      title: 'Số ngày',
+      title: 'Số ngày / Giờ',
       dataIndex: 'soNgayNghi',
       key: 'soNgayNghi',
-      width: 100,
-      render: (val: number, record: DonTu) =>
-        record.loaiDon === 'Nghỉ việc' || record.loaiDon === 'Thôi việc' ? (
-          <span style={{ color: '#888' }}>-</span>
-        ) : (
-          <strong>{val} ngày</strong>
-        ),
+      width: 120,
+      render: (val: number, record: DonTu) => {
+        if (record.loaiDon === 'Nghỉ việc' || record.loaiDon === 'Thôi việc' || record.loaiDon === 'Giải trình chấm công') {
+          return <span style={{ color: '#888' }}>-</span>;
+        }
+        if (record.loaiDon === 'Làm thêm giờ' || record.loaiDon === 'Đăng ký tăng ca' || record.loaiDon === 'Tăng ca' || record.loaiDon === 'Đơn tăng ca') {
+          return <Tag color="orange"><strong>{record.soGio ?? record.soNgayNghi} giờ OT</strong></Tag>;
+        }
+        return <strong>{val} ngày</strong>;
+      },
     },
     { title: 'Lý do', dataIndex: 'lyDo', key: 'lyDo', width: 180, ellipsis: true },
     {
@@ -443,6 +447,10 @@ export const DuyetDonTuPage: React.FC = () => {
             Loại đơn: <strong>{selectedDon?.loaiDon}</strong>
             {selectedDon?.loaiDon === 'Nghỉ việc' || selectedDon?.loaiDon === 'Thôi việc' ? (
               <span> - Ngày thôi việc: <strong>{selectedDon?.ngayBatDau}</strong></span>
+            ) : selectedDon?.loaiDon === 'Giải trình chấm công' ? (
+              <span> - Ngày xác nhận công: <strong>{selectedDon?.ngayBatDau}</strong></span>
+            ) : selectedDon?.loaiDon === 'Làm thêm giờ' || selectedDon?.loaiDon === 'Đăng ký tăng ca' || selectedDon?.loaiDon === 'Tăng ca' || selectedDon?.loaiDon === 'Đơn tăng ca' ? (
+              <span> (Ngày: <strong>{selectedDon?.ngayBatDau}</strong> - Đăng ký: <Tag color="orange"><strong>{selectedDon?.soGio ?? selectedDon?.soNgayNghi} giờ OT</strong></Tag>)</span>
             ) : (
               <span> ({selectedDon?.soNgayNghi} ngày: từ {selectedDon?.ngayBatDau} đến {selectedDon?.ngayKetThuc})</span>
             )}.
@@ -500,7 +508,9 @@ export const DuyetDonTuPage: React.FC = () => {
                 icon={<CheckCircleOutlined style={{ fontSize: 20 }} />}
                 message={<span style={{ fontWeight: 600 }}>ĐƠN ĐÃ ĐƯỢC PHÊ DUYỆT</span>}
                 description={
-                  selectedDetailDon.loaiDon === 'Giải trình chấm công'
+                  selectedDetailDon.loaiDon === 'Làm thêm giờ' || selectedDetailDon.loaiDon === 'Đăng ký tăng ca' || selectedDetailDon.loaiDon === 'Tăng ca' || selectedDetailDon.loaiDon === 'Đơn tăng ca'
+                    ? `Đơn tăng ca đã được cấp trên phê duyệt. Hệ thống đã cộng trực tiếp ${selectedDetailDon.soGio ?? selectedDetailDon.soNgayNghi} giờ OT vào dữ liệu chấm công ngày ${dayjs(selectedDetailDon.ngayBatDau).format('DD/MM/YYYY')}.`
+                    : selectedDetailDon.loaiDon === 'Giải trình chấm công'
                     ? 'Đơn giải trình đã được cấp trên chấp thuận. Giờ ra đã cập nhật thành 17:00 và khôi phục 1.0 ngày công.'
                     : selectedDetailDon.loaiDon === 'Nghỉ việc' || selectedDetailDon.loaiDon === 'Thôi việc'
                     ? 'Đơn thôi việc đã được phê duyệt. Hợp đồng lao động đã thanh lý theo quy định.'
@@ -554,6 +564,11 @@ export const DuyetDonTuPage: React.FC = () => {
                   <span>Ngày chính thức thôi việc: <strong>{dayjs(selectedDetailDon.ngayBatDau).format('DD/MM/YYYY')}</strong></span>
                 ) : selectedDetailDon.loaiDon === 'Giải trình chấm công' ? (
                   <span>Ngày xác nhận chấm công: <strong>{dayjs(selectedDetailDon.ngayBatDau).format('DD/MM/YYYY')}</strong></span>
+                ) : selectedDetailDon.loaiDon === 'Làm thêm giờ' || selectedDetailDon.loaiDon === 'Đăng ký tăng ca' || selectedDetailDon.loaiDon === 'Tăng ca' || selectedDetailDon.loaiDon === 'Đơn tăng ca' ? (
+                  <span>
+                    Ngày làm thêm giờ: <strong>{dayjs(selectedDetailDon.ngayBatDau).format('DD/MM/YYYY')}</strong> • Số giờ đăng ký OT:{' '}
+                    <Tag color="orange"><strong>{selectedDetailDon.soGio ?? selectedDetailDon.soNgayNghi} giờ OT</strong></Tag>
+                  </span>
                 ) : (
                   <span>
                     Từ <strong>{dayjs(selectedDetailDon.ngayBatDau).format('DD/MM/YYYY')}</strong> đến{' '}
