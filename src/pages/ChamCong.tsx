@@ -53,17 +53,53 @@ export const ChamCongPage: React.FC = () => {
     const nowHour = dayjs().hour();
     const isCheckingOut = todayRecord && todayRecord.gioVao && (!todayRecord.gioRa || todayRecord.gioRa === '00:00:00' || todayRecord.gioRa.startsWith('00:00:00'));
 
-    if (isCheckingOut && nowHour < 17) {
-      Modal.confirm({
-        title: 'CẢNH BÁO: BẠN ĐANG CHECK-OUT VỀ SỚM!',
-        icon: <ExclamationCircleOutlined style={{ color: '#faad14' }} />,
-        content: `Giờ tan ca tiêu chuẩn là 17:00. Bạn đang thực hiện Check-out lúc ${dayjs().format('HH:mm:ss')} (sớm hơn quy định). Bạn có chắc chắn muốn Check-out về sớm không?`,
-        okText: 'Xác nhận về sớm',
-        okType: 'danger',
-        cancelText: 'Tiếp tục làm việc',
-        onOk: () => executeCheckInOut(today),
-      });
-      return;
+    if (isCheckingOut) {
+      const parts = (todayRecord.gioVao || '').split(':');
+      let workedHours = 0;
+      if (parts.length >= 2) {
+        const inTime = dayjs().hour(Number(parts[0])).minute(Number(parts[1])).second(Number(parts[2] || 0));
+        workedHours = dayjs().diff(inTime, 'hour', true);
+      }
+
+      if (workedHours < 2.0) {
+        const workedMins = Math.max(1, Math.round(workedHours * 60));
+        Modal.confirm({
+          title: 'CẢNH BÁO: THỜI GIAN LÀM VIỆC DƯỚI 2 GIỜ (BỎ CA)!',
+          icon: <ExclamationCircleOutlined style={{ color: '#ff4d4f' }} />,
+          content: `Bạn mới làm việc được ${workedMins} phút (chưa đạt tối thiểu 2 giờ). Nếu Check-out bây giờ, hệ thống sẽ xác định là "BỎ CA" và tính 0 NGÀY CÔNG (không có lương ngày hôm nay). Bạn có chắc chắn muốn kết thúc ca không?`,
+          okText: 'Xác nhận Bỏ ca (0 công)',
+          okType: 'danger',
+          cancelText: 'Tiếp tục làm việc',
+          onOk: () => executeCheckInOut(today),
+        });
+        return;
+      }
+
+      if (workedHours < 5.0) {
+        Modal.confirm({
+          title: 'CẢNH BÁO: CHECK-OUT VỀ SỚM (NỬA CÔNG)!',
+          icon: <ExclamationCircleOutlined style={{ color: '#faad14' }} />,
+          content: `Thời gian làm việc hiện tại là ${workedHours.toFixed(1)} giờ (từ 2 đến dưới 5 giờ). Nếu Check-out lúc này, ca làm việc hôm nay chỉ được tính NỬA NGÀY CÔNG (0.5 công). Bạn có chắc chắn muốn Check-out không?`,
+          okText: 'Xác nhận (0.5 công)',
+          okType: 'danger',
+          cancelText: 'Tiếp tục làm việc',
+          onOk: () => executeCheckInOut(today),
+        });
+        return;
+      }
+
+      if (nowHour < 17) {
+        Modal.confirm({
+          title: 'CẢNH BÁO: CHECK-OUT TRƯỚC 17:00 (VỀ SỚM)!',
+          icon: <ExclamationCircleOutlined style={{ color: '#faad14' }} />,
+          content: `Giờ tan ca tiêu chuẩn là 17:00. Bạn đang thực hiện Check-out lúc ${dayjs().format('HH:mm:ss')} (sớm hơn quy định). Bạn có chắc chắn muốn Check-out về sớm không?`,
+          okText: 'Xác nhận về sớm',
+          okType: 'danger',
+          cancelText: 'Tiếp tục làm việc',
+          onOk: () => executeCheckInOut(today),
+        });
+        return;
+      }
     }
 
     await executeCheckInOut(today);
@@ -90,12 +126,30 @@ export const ChamCongPage: React.FC = () => {
       key: 'trangThai',
       render: (val: string) => {
         let color = 'default';
-        if (val.includes('Hoàn thành') || val === 'Đã check-in') color = 'green';
-        else if (val.includes('Thiếu')) color = 'volcano';
+        if (val.includes('Bỏ ca') || val.includes('Không đủ công')) color = 'error';
+        else if (val.includes('Nửa công')) color = 'purple';
         else if (val.includes('Đi muộn') && val.includes('Về sớm')) color = 'red';
         else if (val.includes('Về sớm')) color = 'orange';
         else if (val.includes('Đi muộn')) color = 'gold';
+        else if (val.includes('Thiếu')) color = 'volcano';
+        else if (val.includes('Hoàn thành') || val === 'Đã check-in') color = 'green';
         return <Tag color={color}>{val}</Tag>;
+      },
+    },
+    {
+      title: 'Công ghi nhận',
+      key: 'congQuyDoi',
+      align: 'center' as const,
+      width: 120,
+      render: (_: any, record: ChamCong) => {
+        const st = record.trangThai || '';
+        if (st.includes('Bỏ ca') || st === 'Vắng mặt' || st.includes('Thiếu giờ vào')) {
+          return <Tag color="default">0 công</Tag>;
+        }
+        if (st.includes('Nửa công')) {
+          return <Tag color="purple">0.5 công</Tag>;
+        }
+        return <Tag color="blue">1.0 công</Tag>;
       },
     },
   ];
@@ -135,8 +189,8 @@ export const ChamCongPage: React.FC = () => {
             >
               ĐIỂM DANH CHECK-IN / CHECK-OUT
             </Button>
-            <div style={{ marginTop: 8, fontSize: 13, color: '#888' }}>
-              Quy định ca: Vào trước <strong>08:30</strong> • Tan ca từ <strong>17:00</strong> (Trước 17:00: Cảnh báo về sớm)
+            <div style={{ marginTop: 8, fontSize: 13, color: '#666' }}>
+              Quy định ca: Vào trước <strong>08:30</strong> • Tan ca từ <strong>17:00</strong> (Dưới 2h: Bỏ ca - 0 công • 2h-5h: Nửa công)
             </div>
           </Card>
         </Col>

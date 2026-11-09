@@ -135,15 +135,33 @@ export const ChamCongQuanLyPage: React.FC = () => {
       title: 'Trạng thái',
       dataIndex: 'trangThai',
       key: 'trangThai',
-      width: 140,
+      width: 170,
       render: (val: string) => {
         let color = 'default';
-        if (val?.includes('Hoàn thành') || val === 'Đã check-in') color = 'green';
-        else if (val?.includes('Thiếu')) color = 'volcano';
+        if (val?.includes('Bỏ ca') || val?.includes('Không đủ công')) color = 'error';
+        else if (val?.includes('Nửa công')) color = 'purple';
         else if (val?.includes('Đi muộn') && val?.includes('Về sớm')) color = 'red';
         else if (val?.includes('Về sớm')) color = 'orange';
         else if (val?.includes('Đi muộn')) color = 'gold';
+        else if (val?.includes('Thiếu')) color = 'volcano';
+        else if (val?.includes('Hoàn thành') || val === 'Đã check-in') color = 'green';
         return <Tag color={color}>{val}</Tag>;
+      },
+    },
+    {
+      title: 'Công ghi nhận',
+      key: 'congQuyDoi',
+      align: 'center' as const,
+      width: 120,
+      render: (_: any, record: ChamCong) => {
+        const st = record.trangThai || '';
+        if (st.includes('Bỏ ca') || st === 'Vắng mặt' || st.includes('Thiếu giờ vào')) {
+          return <Tag color="default">0 công</Tag>;
+        }
+        if (st.includes('Nửa công')) {
+          return <Tag color="purple">0.5 công</Tag>;
+        }
+        return <Tag color="blue">1.0 công</Tag>;
       },
     },
   ];
