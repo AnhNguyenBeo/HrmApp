@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Card, Table, Button, DatePicker, Space, message, Tag, Alert, Popconfirm, Input, Select, Row, Col, Progress, Statistic } from 'antd';
+import { Card, Table, Button, DatePicker, Space, message, Tag, Alert, Popconfirm, Input, Select, Row, Col, Progress, Statistic, Tooltip } from 'antd';
 import { CalculatorOutlined, DownloadOutlined, DollarCircleOutlined, CheckCircleOutlined, CheckOutlined, SearchOutlined, ClockCircleOutlined, FileExcelOutlined, PrinterOutlined } from '@ant-design/icons';
 import { bangLuongApi } from '../api/bangLuongApi';
 import { exportApi } from '../api/exportApi';
 import { nhanVienApi } from '../api/nhanVienApi';
 import { BangLuong } from '../types';
 import { formatVND, formatDeductionVND, formatNumberVND } from '../utils/format';
-import { exportBangLuongToExcel, printPayrollTable } from '../utils/salaryPrintExport';
+import { exportBangLuongToExcel, printPayrollTable, printSinglePaySlip } from '../utils/salaryPrintExport';
 import dayjs from 'dayjs';
 
 export const TinhLuongPage: React.FC = () => {
@@ -259,17 +259,39 @@ export const TinhLuongPage: React.FC = () => {
     {
       title: 'Thao tác',
       key: 'action',
-      width: 150,
+      width: 190,
       align: 'center' as const,
       fixed: 'right' as const,
       render: (_: any, record: BangLuong) => {
+        const printBtn = (
+          <Tooltip title="In phiếu lương cá nhân (PDF / A4)">
+            <Button
+              size="small"
+              icon={<PrinterOutlined />}
+              onClick={() => printSinglePaySlip(record)}
+            >
+              In phiếu
+            </Button>
+          </Tooltip>
+        );
+
         if (record.trangThaiChiTra === 'Đã chi trả') {
-          return <Tag color="green">Đã hoàn tất</Tag>;
+          return (
+            <Space size="small">
+              <Tag color="green">Đã hoàn tất</Tag>
+              {printBtn}
+            </Space>
+          );
         }
 
         const isSelf = Boolean(currentUser?.maNhanVien && record.maNhanVien === currentUser.maNhanVien);
         if (isSelf) {
-          return <Tag color="default">Không thể tự duyệt</Tag>;
+          return (
+            <Space size="small">
+              <Tag color="default">Không thể tự duyệt</Tag>
+              {printBtn}
+            </Space>
+          );
         }
 
         const targetDept = (record.tenPhongBan || '').toLowerCase();
@@ -281,28 +303,41 @@ export const TinhLuongPage: React.FC = () => {
 
         if (isTargetAccountingManager) {
           if (!isOwner) {
-            return <Tag color="orange">Cần Chủ DN duyệt</Tag>;
+            return (
+              <Space size="small">
+                <Tag color="orange">Cần Chủ DN duyệt</Tag>
+                {printBtn}
+              </Space>
+            );
           }
         } else if (isTargetAccountingStaff) {
           if (!isOwner && !isAccountingManager) {
-            return <Tag color="orange">Cần Quản lý KT duyệt</Tag>;
+            return (
+              <Space size="small">
+                <Tag color="orange">Cần Quản lý KT duyệt</Tag>
+                {printBtn}
+              </Space>
+            );
           }
         }
 
         return (
-          <Popconfirm
-            title={`Xác nhận chi trả lương cho ${record.hoTen}?`}
-            onConfirm={() => handleApproveSingle(record.maBangLuong)}
-          >
-            <Button
-              size="small"
-              type="primary"
-              icon={<CheckOutlined />}
-              style={{ background: '#52c41a', borderColor: '#52c41a' }}
+          <Space size="small">
+            <Popconfirm
+              title={`Xác nhận chi trả lương cho ${record.hoTen}?`}
+              onConfirm={() => handleApproveSingle(record.maBangLuong)}
             >
-              Chi trả
-            </Button>
-          </Popconfirm>
+              <Button
+                size="small"
+                type="primary"
+                icon={<CheckOutlined />}
+                style={{ background: '#52c41a', borderColor: '#52c41a' }}
+              >
+                Chi trả
+              </Button>
+            </Popconfirm>
+            {printBtn}
+          </Space>
         );
       },
     },

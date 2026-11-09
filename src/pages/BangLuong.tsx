@@ -36,88 +36,49 @@ export const BangLuongPage: React.FC = () => {
 
   const userStr = localStorage.getItem('user');
   const currentUser = userStr ? JSON.parse(userStr) : null;
-  const isOwner = currentUser?.vaiTro === 'Chủ doanh nghiệp';
-  const isAccounting = (currentUser?.vaiTro === 'Quản lý' && (currentUser?.tenPhongBan || '').toLowerCase().includes('kế toán')) || isOwner;
 
-  const getRecords = async (monthStr?: string, yearVal?: number) => {
-    let list: BangLuong[] = [];
-    if (isAccounting) {
-      try {
-        const res = await bangLuongApi.getAll(monthStr);
-        list = res.data || [];
-        if (yearVal) {
-          list = list.filter((b) => b.thoiGian && b.thoiGian.endsWith('/' + yearVal));
-        }
-      } catch {
-        list = [];
-      }
-    }
-    if (list.length === 0) {
-      list = data.filter((item) => {
-        if (monthStr) return item.thoiGian === monthStr;
-        if (yearVal) return item.thoiGian && item.thoiGian.endsWith('/' + yearVal);
-        return true;
-      });
-    }
-    return list;
-  };
-
-  const handleExportMonthExcel = async () => {
+  const handleExportMonthExcel = () => {
     const monthStr = exportMonth.format('MM/YYYY');
-    try {
-      const records = await getRecords(monthStr, undefined);
-      if (records.length === 0) {
-        message.warning('Không có dữ liệu bảng lương tháng ' + monthStr);
-        return;
-      }
-      exportBangLuongToExcel(records, 'Tháng ' + monthStr, 'BangLuong_Thang_' + monthStr.replace('/', '_'));
-      message.success('Đã tải bảng lương Excel tháng ' + monthStr);
-    } catch {
-      message.error('Không thể xuất bảng lương tháng.');
+    const myRecord = data.find((item) => item.thoiGian === monthStr);
+    if (!myRecord) {
+      message.warning('Bạn chưa có phiếu lương cá nhân kỳ ' + monthStr);
+      return;
     }
+    const safeName = (myRecord.hoTen || currentUser?.hoTen || 'CaNhan').replace(/\s+/g, '_');
+    exportBangLuongToExcel([myRecord], 'Kỳ ' + monthStr, `PhieuLuong_${safeName}_${monthStr.replace('/', '_')}`);
+    message.success('Đã tải phiếu lương Excel tháng ' + monthStr);
   };
 
-  const handlePrintMonth = async () => {
+  const handlePrintMonth = () => {
     const monthStr = exportMonth.format('MM/YYYY');
-    try {
-      const records = await getRecords(monthStr, undefined);
-      if (records.length === 0) {
-        message.warning('Không có dữ liệu bảng lương tháng ' + monthStr);
-        return;
-      }
-      printPayrollTable(records, 'Tháng ' + monthStr);
-    } catch {
-      message.error('Không thể in bảng lương tháng.');
+    const myRecord = data.find((item) => item.thoiGian === monthStr);
+    if (!myRecord) {
+      message.warning('Bạn chưa có phiếu lương cá nhân kỳ ' + monthStr);
+      return;
     }
+    printSinglePaySlip(myRecord);
   };
 
-  const handleExportYearExcel = async () => {
+  const handleExportYearExcel = () => {
     const yearVal = exportYear.year();
-    try {
-      const records = await getRecords(undefined, yearVal);
-      if (records.length === 0) {
-        message.warning('Không có dữ liệu bảng lương năm ' + yearVal);
-        return;
-      }
-      exportBangLuongToExcel(records, 'Cả năm ' + yearVal, 'BangLuong_Nam_' + yearVal);
-      message.success('Đã tải bảng lương Excel cả năm ' + yearVal);
-    } catch {
-      message.error('Không thể xuất bảng lương năm.');
+    const myYearRecords = data.filter((item) => item.thoiGian && item.thoiGian.endsWith('/' + yearVal));
+    if (myYearRecords.length === 0) {
+      message.warning('Bạn chưa có dữ liệu lương cá nhân năm ' + yearVal);
+      return;
     }
+    const safeName = (currentUser?.hoTen || 'CaNhan').replace(/\s+/g, '_');
+    exportBangLuongToExcel(myYearRecords, 'Năm ' + yearVal, `BangLuong_${safeName}_Nam_${yearVal}`);
+    message.success('Đã tải bảng lương cá nhân năm ' + yearVal);
   };
 
-  const handlePrintYear = async () => {
+  const handlePrintYear = () => {
     const yearVal = exportYear.year();
-    try {
-      const records = await getRecords(undefined, yearVal);
-      if (records.length === 0) {
-        message.warning('Không có dữ liệu bảng lương năm ' + yearVal);
-        return;
-      }
-      printPayrollTable(records, 'Cả năm ' + yearVal);
-    } catch {
-      message.error('Không thể in bảng lương năm.');
+    const myYearRecords = data.filter((item) => item.thoiGian && item.thoiGian.endsWith('/' + yearVal));
+    if (myYearRecords.length === 0) {
+      message.warning('Bạn chưa có dữ liệu lương cá nhân năm ' + yearVal);
+      return;
     }
+    printPayrollTable(myYearRecords, 'Lịch sử lương cá nhân năm ' + yearVal);
   };
 
   const columns = [
@@ -195,21 +156,31 @@ export const BangLuongPage: React.FC = () => {
       render: (val: string) => <Tag color={val === 'Đã chi trả' ? 'green' : 'blue'}>{val || 'Chờ duyệt'}</Tag>,
     },
     {
-      title: 'Chi tiết',
+      title: 'Thao tác',
       key: 'action',
-      width: 110,
+      width: 190,
       fixed: 'right' as const,
       render: (_: any, record: BangLuong) => (
-        <Button
-          size="small"
-          icon={<EyeOutlined />}
-          onClick={() => {
-            setSelectedSlip(record);
-            setDetailModal(true);
-          }}
-        >
-          Cách tính
-        </Button>
+        <Space size="small">
+          <Button
+            size="small"
+            icon={<EyeOutlined />}
+            onClick={() => {
+              setSelectedSlip(record);
+              setDetailModal(true);
+            }}
+          >
+            Cách tính
+          </Button>
+          <Button
+            size="small"
+            type="primary"
+            icon={<PrinterOutlined />}
+            onClick={() => printSinglePaySlip(record)}
+          >
+            In phiếu
+          </Button>
+        </Space>
       ),
     },
   ];
@@ -227,7 +198,7 @@ export const BangLuongPage: React.FC = () => {
     <div>
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={12}>
-          <Card size="small" title="In / Xuất bảng lương THEO THÁNG">
+          <Card size="small" title="In / Xuất phiếu lương cá nhân THEO THÁNG">
             <Space wrap>
               <DatePicker picker="month" value={exportMonth} onChange={(v) => v && setExportMonth(v)} format="MM/YYYY" />
               <Button
@@ -241,13 +212,13 @@ export const BangLuongPage: React.FC = () => {
                 icon={<PrinterOutlined />}
                 onClick={handlePrintMonth}
               >
-                In bảng lương (PDF)
+                In phiếu lương (PDF)
               </Button>
             </Space>
           </Card>
         </Col>
         <Col span={12}>
-          <Card size="small" title="In / Xuất bảng lương THEO NĂM">
+          <Card size="small" title="In / Xuất lịch sử lương cá nhân THEO NĂM">
             <Space wrap>
               <DatePicker picker="year" value={exportYear} onChange={(v) => v && setExportYear(v)} format="YYYY" />
               <Button
@@ -260,7 +231,7 @@ export const BangLuongPage: React.FC = () => {
                 icon={<PrinterOutlined />}
                 onClick={handlePrintYear}
               >
-                In bảng lương (PDF)
+                In bảng lương năm (PDF)
               </Button>
             </Space>
           </Card>
