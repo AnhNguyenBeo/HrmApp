@@ -53,7 +53,7 @@ export const NhanVienPage: React.FC = () => {
   const isHR = (myDeptName || currentUser?.tenPhongBan || '').includes('Nhân sự');
   const isHRManager = isManager && isHR;
   const canManageHR = isOwner || isHRManager;
-  const canViewAllDepts = isOwner || isHRManager || (isEmployee && isHR);
+  const canViewAllDepts = isOwner || isHRManager;
 
   const [selectedPhongBan, setSelectedPhongBan] = useState<string>('ALL');
 
@@ -280,21 +280,25 @@ export const NhanVienPage: React.FC = () => {
       width: 120,
       render: (val: string) => <span style={{ whiteSpace: 'nowrap' }}>{val || '-'}</span>,
     },
-    {
-      title: 'Lương cơ bản',
-      dataIndex: 'luongCoBan',
-      key: 'luongCoBan',
-      width: 140,
-      align: 'right' as const,
-      render: (val?: number) =>
-        val ? (
-          <span style={{ fontWeight: 500, color: '#1677ff' }}>
-            {val.toLocaleString('vi-VN')} đ
-          </span>
-        ) : (
-          <span style={{ color: '#8c8c8c' }}>Chưa có HĐ</span>
-        ),
-    },
+    ...(canManageHR
+      ? [
+          {
+            title: 'Lương cơ bản',
+            dataIndex: 'luongCoBan',
+            key: 'luongCoBan',
+            width: 140,
+            align: 'right' as const,
+            render: (val?: number) =>
+              val ? (
+                <span style={{ fontWeight: 500, color: '#1677ff' }}>
+                  {val.toLocaleString('vi-VN')} đ
+                </span>
+              ) : (
+                <span style={{ color: '#8c8c8c' }}>Chưa có HĐ</span>
+              ),
+          },
+        ]
+      : []),
     {
       title: 'Trạng thái',
       dataIndex: 'trangThaiLamViec',
@@ -470,9 +474,9 @@ export const NhanVienPage: React.FC = () => {
             <TeamOutlined style={{ marginRight: 8, color: '#1890ff' }} />
             {isOwner
               ? 'QUẢN LÝ THÔNG TIN NHÂN SỰ TOÀN CÔNG TY (CHỦ DOANH NGHIỆP)'
-              : isHR
+              : isHRManager
               ? 'QUẢN LÝ THÔNG TIN NHÂN SỰ TOÀN CÔNG TY (PHÒNG NHÂN SỰ)'
-              : `THÔNG TIN NHÂN SỰ - ${myDeptName ? myDeptName.toUpperCase() : 'PHÒNG BAN QUẢN LÝ'}`}
+              : `THÔNG TIN NHÂN SỰ CƠ BẢN - ${myDeptName ? myDeptName.toUpperCase() : 'PHÒNG BAN QUẢN LÝ'}`}
           </span>
         }
       >
@@ -1093,7 +1097,7 @@ export const NhanVienPage: React.FC = () => {
           <Descriptions.Item label="Ngày sinh">
             {selectedNv?.ngaySinh ? dayjs(selectedNv.ngaySinh).format('DD/MM/YYYY') : '---'}
           </Descriptions.Item>
-          <Descriptions.Item label="Số CCCD">{selectedNv?.cccd || '---'}</Descriptions.Item>
+          <Descriptions.Item label="Số CCCD">{canManageHR ? (selectedNv?.cccd || '---') : '******'}</Descriptions.Item>
           <Descriptions.Item label="Số điện thoại">{selectedNv?.soDienThoai || '---'}</Descriptions.Item>
           <Descriptions.Item label="Email" span={2}>{selectedNv?.email || '---'}</Descriptions.Item>
           <Descriptions.Item label="Địa chỉ" span={2}>{selectedNv?.diaChi || '---'}</Descriptions.Item>
@@ -1111,19 +1115,23 @@ export const NhanVienPage: React.FC = () => {
           <Descriptions.Item label="Ngày thôi việc">
             {selectedNv?.ngayNghiViec ? dayjs(selectedNv.ngayNghiViec).format('DD/MM/YYYY') : '---'}
           </Descriptions.Item>
-          <Descriptions.Item label="Lương cơ bản">
-            {selectedNv?.luongCoBan ? (
-              <strong style={{ color: '#1677ff' }}>
-                {selectedNv.luongCoBan.toLocaleString('vi-VN')} đ
-              </strong>
-            ) : (
-              'Chưa có HĐ'
-            )}
-          </Descriptions.Item>
-          <Descriptions.Item label="Loại hợp đồng">
-            {selectedNv?.loaiHopDong || 'Chưa thiết lập'}
-          </Descriptions.Item>
-          <Descriptions.Item label="Ghi chú" span={2}>{selectedNv?.ghiChu || 'Không có'}</Descriptions.Item>
+          {canManageHR && (
+            <>
+              <Descriptions.Item label="Lương cơ bản">
+                {selectedNv?.luongCoBan ? (
+                  <strong style={{ color: '#1677ff' }}>
+                    {selectedNv.luongCoBan.toLocaleString('vi-VN')} đ
+                  </strong>
+                ) : (
+                  'Chưa có HĐ'
+                )}
+              </Descriptions.Item>
+              <Descriptions.Item label="Loại hợp đồng">
+                {selectedNv?.loaiHopDong || 'Chưa thiết lập'}
+              </Descriptions.Item>
+              <Descriptions.Item label="Ghi chú" span={2}>{selectedNv?.ghiChu || 'Không có'}</Descriptions.Item>
+            </>
+          )}
         </Descriptions>
       </Modal>
     </div>

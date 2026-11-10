@@ -109,7 +109,7 @@ export const AppLayout: React.FC = () => {
     ];
   } else {
     menuItems = [
-      ...(isHR ? [{ key: '/nhan-vien', icon: <TeamOutlined />, label: 'Quản lý nhân sự' }] : []),
+      ...(isHR ? [{ key: '/nhan-vien', icon: <TeamOutlined />, label: 'Nhân sự phòng ban' }] : []),
       { key: '/profile', icon: <UserOutlined />, label: 'Hồ sơ của tôi' },
       { key: '/cham-cong', icon: <ClockCircleOutlined />, label: 'Chấm công cá nhân' },
       { key: '/don-tu', icon: <FileTextOutlined />, label: 'Đơn từ của tôi' },
