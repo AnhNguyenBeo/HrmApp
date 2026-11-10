@@ -129,6 +129,9 @@ export const ChamCongQuanLyPage: React.FC = () => {
         if (record.trangThai === 'Chưa check-out' || (isPast && noOut && hasIn && record.trangThai !== 'Vắng mặt')) {
           return <Tag color="error">Chưa check-out</Tag>;
         }
+        if (!isPast && noOut && hasIn) {
+          return <Tag color="processing">Chờ check-out</Tag>;
+        }
         return formatTime(val);
       },
     },
@@ -151,6 +154,12 @@ export const ChamCongQuanLyPage: React.FC = () => {
         if (val === 'Chưa check-out' || (isPast && noOut && hasIn && val !== 'Vắng mặt')) {
           return <Tag color="error">Chưa check-out</Tag>;
         }
+        if (!isPast && noOut && hasIn) {
+          if (val === 'Đi muộn') {
+            return <Tag color="gold">Đi muộn (Đang làm việc)</Tag>;
+          }
+          return <Tag color="processing">Đang trong ca</Tag>;
+        }
         let color = 'default';
         if (val?.includes('Bỏ ca') || val?.includes('Không đủ công')) color = 'error';
         else if (val?.includes('Nửa công')) color = 'purple';
@@ -166,15 +175,23 @@ export const ChamCongQuanLyPage: React.FC = () => {
       title: 'Công ghi nhận',
       key: 'congQuyDoi',
       align: 'center' as const,
-      width: 120,
+      width: 160,
       render: (_: any, record: ChamCong) => {
         const st = record.trangThai || '';
         const isPast = dayjs(record.ngay, 'YYYY-MM-DD').isBefore(dayjs(), 'day');
         const noOut = !record.gioRa || record.gioRa === '00:00:00' || record.gioRa.startsWith('00:00:00') || record.gioRa === '-';
         const hasIn = record.gioVao && record.gioVao !== '00:00:00' && !record.gioVao.startsWith('00:00:00') && record.gioVao !== '-';
         const isMissedCheckOut = st === 'Chưa check-out' || (isPast && noOut && hasIn && st !== 'Vắng mặt');
+        const isOngoingShift = !isPast && hasIn && noOut;
 
-        if (st.includes('Bỏ ca') || st === 'Vắng mặt' || st.includes('Thiếu giờ vào') || isMissedCheckOut) {
+        if (isOngoingShift) {
+          return (
+            <Tooltip title="Nhân viên đang trong ca làm việc. Chưa tính công chính thức cho đến khi check-out.">
+              <Tag color="processing">0 công (Đang trong ca)</Tag>
+            </Tooltip>
+          );
+        }
+        if (st.includes('Bỏ ca') || st === 'Vắng mặt' || st.includes('Thiếu giờ vào') || isMissedCheckOut || noOut) {
           return (
             <Tooltip title={isMissedCheckOut ? "Chưa check-out (0 công). Đang chờ nộp đơn giải trình." : undefined}>
               <Tag color="default">0 công</Tag>
