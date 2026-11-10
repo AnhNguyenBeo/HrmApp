@@ -46,6 +46,8 @@ export interface NhanVien {
   trangThaiLamViec: string;
   ngayNghiViec?: string;
   ghiChu?: string;
+  luongCoBan?: number;
+  loaiHopDong?: string;
 }
 
 export interface ChamCong {

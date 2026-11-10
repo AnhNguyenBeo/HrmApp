@@ -15,6 +15,8 @@ import {
   Row,
   Col,
   Descriptions,
+  InputNumber,
+  Divider,
 } from 'antd';
 import {
   UserAddOutlined,
@@ -139,6 +141,8 @@ export const NhanVienPage: React.FC = () => {
         ngaySinh: values.ngaySinh.format('YYYY-MM-DD'),
         ngayVaoLam: values.ngayVaoLam.format('YYYY-MM-DD'),
         trangThaiLamViec: 'Đang làm việc',
+        luongCoBan: values.luongCoBan,
+        loaiHopDong: values.loaiHopDong,
       };
       await nhanVienApi.create(payload);
       message.success('Thêm nhân sự mới thành công!');
@@ -171,6 +175,8 @@ export const NhanVienPage: React.FC = () => {
         trangThaiLamViec: selectedNv.trangThaiLamViec,
         ngaySinh: values.ngaySinh ? values.ngaySinh.format('YYYY-MM-DD') : selectedNv.ngaySinh,
         ngayVaoLam: values.ngayVaoLam ? values.ngayVaoLam.format('YYYY-MM-DD') : selectedNv.ngayVaoLam,
+        luongCoBan: values.luongCoBan,
+        loaiHopDong: values.loaiHopDong,
       };
       await nhanVienApi.update(selectedNv.maNhanVien, payload);
       message.success('Cập nhật nhân sự thành công!');
@@ -273,6 +279,21 @@ export const NhanVienPage: React.FC = () => {
       key: 'trinhDoHocVan',
       width: 120,
       render: (val: string) => <span style={{ whiteSpace: 'nowrap' }}>{val || '-'}</span>,
+    },
+    {
+      title: 'Lương cơ bản',
+      dataIndex: 'luongCoBan',
+      key: 'luongCoBan',
+      width: 140,
+      align: 'right' as const,
+      render: (val?: number) =>
+        val ? (
+          <span style={{ fontWeight: 500, color: '#1677ff' }}>
+            {val.toLocaleString('vi-VN')} đ
+          </span>
+        ) : (
+          <span style={{ color: '#8c8c8c' }}>Chưa có HĐ</span>
+        ),
     },
     {
       title: 'Trạng thái',
@@ -411,6 +432,8 @@ export const NhanVienPage: React.FC = () => {
                     ...record,
                     ngaySinh: record.ngaySinh ? dayjs(record.ngaySinh) : undefined,
                     ngayVaoLam: record.ngayVaoLam ? dayjs(record.ngayVaoLam) : undefined,
+                    luongCoBan: record.luongCoBan || 5000000,
+                    loaiHopDong: record.loaiHopDong || 'Hợp đồng xác định thời hạn (1 năm)',
                   });
                   setEditModal(true);
                 }}
@@ -726,6 +749,45 @@ export const NhanVienPage: React.FC = () => {
             </Col>
           </Row>
 
+          <Divider titlePlacement="start" style={{ margin: '12px 0', fontSize: 13, color: '#1677ff' }}>
+            Thông tin hợp đồng & Mức lương
+          </Divider>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="luongCoBan"
+                label="Lương cơ bản (VNĐ)"
+                rules={[{ required: true, message: 'Nhập lương cơ bản!' }]}
+                initialValue={5000000}
+              >
+                <InputNumber
+                  style={{ width: '100%' }}
+                  formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                  parser={(value) => (value ? value.replace(/,/g, '') : '') as any}
+                  min={0}
+                  step={500000}
+                  placeholder="Ví dụ: 10,000,000"
+                />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="loaiHopDong"
+                label="Loại hợp đồng lao động"
+                rules={[{ required: true, message: 'Chọn loại hợp đồng!' }]}
+                initialValue="Hợp đồng xác định thời hạn (1 năm)"
+              >
+                <Select placeholder="Chọn loại hợp đồng">
+                  <Select.Option value="Hợp đồng thử việc (2 tháng)">Hợp đồng thử việc (2 tháng)</Select.Option>
+                  <Select.Option value="Hợp đồng xác định thời hạn (1 năm)">Hợp đồng xác định thời hạn (1 năm)</Select.Option>
+                  <Select.Option value="Hợp đồng xác định thời hạn (3 năm)">Hợp đồng xác định thời hạn (3 năm)</Select.Option>
+                  <Select.Option value="Hợp đồng không xác định thời hạn">Hợp đồng không xác định thời hạn</Select.Option>
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+
           <Form.Item style={{ textAlign: 'right', marginBottom: 0 }}>
             <Button style={{ marginRight: 8 }} onClick={() => setCreateModal(false)}>
               Hủy
@@ -932,6 +994,43 @@ export const NhanVienPage: React.FC = () => {
             </Col>
           </Row>
 
+          <Divider titlePlacement="start" style={{ margin: '12px 0', fontSize: 13, color: '#1677ff' }}>
+            Thông tin hợp đồng & Mức lương
+          </Divider>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="luongCoBan"
+                label="Lương cơ bản (VNĐ)"
+                rules={[{ required: true, message: 'Nhập lương cơ bản!' }]}
+              >
+                <InputNumber
+                  style={{ width: '100%' }}
+                  formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                  parser={(value) => (value ? value.replace(/,/g, '') : '') as any}
+                  min={0}
+                  step={500000}
+                  placeholder="Ví dụ: 10,000,000"
+                />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="loaiHopDong"
+                label="Loại hợp đồng lao động"
+                rules={[{ required: true, message: 'Chọn loại hợp đồng!' }]}
+              >
+                <Select placeholder="Chọn loại hợp đồng">
+                  <Select.Option value="Hợp đồng thử việc (2 tháng)">Hợp đồng thử việc (2 tháng)</Select.Option>
+                  <Select.Option value="Hợp đồng xác định thời hạn (1 năm)">Hợp đồng xác định thời hạn (1 năm)</Select.Option>
+                  <Select.Option value="Hợp đồng xác định thời hạn (3 năm)">Hợp đồng xác định thời hạn (3 năm)</Select.Option>
+                  <Select.Option value="Hợp đồng không xác định thời hạn">Hợp đồng không xác định thời hạn</Select.Option>
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+
           <Form.Item style={{ textAlign: 'right', marginBottom: 0 }}>
             <Button style={{ marginRight: 8 }} onClick={() => setEditModal(false)}>
               Hủy
@@ -1011,6 +1110,18 @@ export const NhanVienPage: React.FC = () => {
           </Descriptions.Item>
           <Descriptions.Item label="Ngày thôi việc">
             {selectedNv?.ngayNghiViec ? dayjs(selectedNv.ngayNghiViec).format('DD/MM/YYYY') : '---'}
+          </Descriptions.Item>
+          <Descriptions.Item label="Lương cơ bản">
+            {selectedNv?.luongCoBan ? (
+              <strong style={{ color: '#1677ff' }}>
+                {selectedNv.luongCoBan.toLocaleString('vi-VN')} đ
+              </strong>
+            ) : (
+              'Chưa có HĐ'
+            )}
+          </Descriptions.Item>
+          <Descriptions.Item label="Loại hợp đồng">
+            {selectedNv?.loaiHopDong || 'Chưa thiết lập'}
           </Descriptions.Item>
           <Descriptions.Item label="Ghi chú" span={2}>{selectedNv?.ghiChu || 'Không có'}</Descriptions.Item>
         </Descriptions>

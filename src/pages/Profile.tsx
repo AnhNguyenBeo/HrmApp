@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Card, Descriptions, Button, Modal, Form, Input, message, Spin, Tag } from 'antd';
-import { EditOutlined, UserOutlined } from '@ant-design/icons';
+import { Card, Descriptions, Button, Modal, Form, Input, message, Spin, Tag, Space } from 'antd';
+import { EditOutlined, UserOutlined, KeyOutlined } from '@ant-design/icons';
 import { nhanVienApi } from '../api/nhanVienApi';
+import { taiKhoanApi } from '../api/taiKhoanApi';
 import { NhanVien } from '../types';
 
 export const Profile: React.FC = () => {
@@ -9,7 +10,10 @@ export const Profile: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isPassModalOpen, setIsPassModalOpen] = useState(false);
+  const [passSubmitting, setPassSubmitting] = useState(false);
   const [form] = Form.useForm();
+  const [passForm] = Form.useForm();
 
   const userStr = localStorage.getItem('user');
   const user = userStr ? JSON.parse(userStr) : null;
@@ -49,6 +53,30 @@ export const Profile: React.FC = () => {
     }
   };
 
+  const handleChangePassword = async (values: any) => {
+    if (!user?.maTaiKhoan) {
+      message.error('Không tìm thấy thông tin tài khoản để đổi mật khẩu.');
+      return;
+    }
+    try {
+      setPassSubmitting(true);
+      await taiKhoanApi.changePassword(user.maTaiKhoan, {
+        matKhauCu: values.matKhauCu,
+        matKhauMoi: values.matKhauMoi,
+      });
+      message.success('Đổi mật khẩu thành công!');
+      setIsPassModalOpen(false);
+      passForm.resetFields();
+    } catch (err: any) {
+      const errMsg =
+        err?.response?.data?.message ||
+        (typeof err?.response?.data === 'string' ? err?.response?.data : 'Đổi mật khẩu thất bại.');
+      message.error(errMsg);
+    } finally {
+      setPassSubmitting(false);
+    }
+  };
+
   if (loading) return <div style={{ textAlign: 'center', padding: 50 }}><Spin size="large" /></div>;
 
   return (
@@ -61,20 +89,31 @@ export const Profile: React.FC = () => {
           </span>
         }
         extra={
-          <Button
-            type="primary"
-            icon={<EditOutlined />}
-            onClick={() => {
-              form.setFieldsValue({
-                soDienThoai: profile?.soDienThoai,
-                email: profile?.email,
-                diaChi: profile?.diaChi,
-              });
-              setIsModalOpen(true);
-            }}
-          >
-            Chỉnh sửa thông tin
-          </Button>
+          <Space>
+            <Button
+              icon={<KeyOutlined />}
+              onClick={() => {
+                passForm.resetFields();
+                setIsPassModalOpen(true);
+              }}
+            >
+              Đổi mật khẩu
+            </Button>
+            <Button
+              type="primary"
+              icon={<EditOutlined />}
+              onClick={() => {
+                form.setFieldsValue({
+                  soDienThoai: profile?.soDienThoai,
+                  email: profile?.email,
+                  diaChi: profile?.diaChi,
+                });
+                setIsModalOpen(true);
+              }}
+            >
+              Chỉnh sửa thông tin
+            </Button>
+          </Space>
         }
       >
         <Descriptions bordered column={{ xxl: 2, xl: 2, lg: 2, md: 1, sm: 1, xs: 1 }}>
@@ -160,6 +199,67 @@ export const Profile: React.FC = () => {
             </Button>
             <Button type="primary" htmlType="submit" loading={submitting}>
               Lưu thay đổi
+            </Button>
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title="Đổi mật khẩu tài khoản"
+        open={isPassModalOpen}
+        onCancel={() => setIsPassModalOpen(false)}
+        footer={null}
+      >
+        <Form form={passForm} layout="vertical" onFinish={handleChangePassword}>
+          <Form.Item
+            name="matKhauCu"
+            label="Mật khẩu hiện tại"
+            rules={[{ required: true, message: 'Vui lòng nhập mật khẩu hiện tại!' }]}
+          >
+            <Input.Password placeholder="Nhập mật khẩu hiện tại" />
+          </Form.Item>
+          <Form.Item
+            name="matKhauMoi"
+            label="Mật khẩu mới"
+            rules={[
+              { required: true, message: 'Vui lòng nhập mật khẩu mới!' },
+              { min: 8, message: 'Mật khẩu mới phải có ít nhất 8 ký tự!' },
+              {
+                validator: (_, value) => {
+                  if (value && value.includes(' ')) {
+                    return Promise.reject(new Error('Mật khẩu mới không được chứa khoảng trắng!'));
+                  }
+                  return Promise.resolve();
+                },
+              },
+            ]}
+          >
+            <Input.Password placeholder="Ít nhất 8 ký tự, không chứa khoảng trắng" />
+          </Form.Item>
+          <Form.Item
+            name="xacNhanMatKhau"
+            label="Xác nhận mật khẩu mới"
+            dependencies={['matKhauMoi']}
+            rules={[
+              { required: true, message: 'Vui lòng xác nhận lại mật khẩu mới!' },
+              ({ getFieldValue }) => ({
+                validator(_, value) {
+                  if (!value || getFieldValue('matKhauMoi') === value) {
+                    return Promise.resolve();
+                  }
+                  return Promise.reject(new Error('Xác nhận mật khẩu mới không khớp!'));
+                },
+              }),
+            ]}
+          >
+            <Input.Password placeholder="Nhập lại mật khẩu mới" />
+          </Form.Item>
+          <Form.Item style={{ textAlign: 'right', marginBottom: 0 }}>
+            <Button style={{ marginRight: 8 }} onClick={() => setIsPassModalOpen(false)} disabled={passSubmitting}>
+              Hủy
+            </Button>
+            <Button type="primary" htmlType="submit" loading={passSubmitting}>
+              Cập nhật mật khẩu
             </Button>
           </Form.Item>
         </Form>
