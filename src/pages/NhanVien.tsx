@@ -542,6 +542,22 @@ export const NhanVienPage: React.FC = () => {
             showSizeChanger: false,
             showTotal: (total) => `Tổng cộng ${total} nhân sự`,
           }}
+          onRow={(record) => ({
+            onClick: (e) => {
+              const target = e.target as HTMLElement;
+              if (
+                target.closest('button') ||
+                target.closest('.ant-btn') ||
+                target.closest('.ant-popover') ||
+                target.closest('.ant-popconfirm')
+              ) {
+                return;
+              }
+              setSelectedNv(record);
+              setViewModal(true);
+            },
+            style: { cursor: 'pointer' },
+          })}
         />
       </Card>
 
