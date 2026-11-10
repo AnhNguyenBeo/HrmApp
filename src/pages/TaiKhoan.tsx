@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import dayjs from 'dayjs';
 import { Card, Table, Button, Modal, Form, Input, Select, Tag, Space, message, Popconfirm, Row, Col } from 'antd';
-import { UserAddOutlined, LockOutlined, UnlockOutlined, SafetyCertificateOutlined, SearchOutlined, KeyOutlined } from '@ant-design/icons';
+import { UserAddOutlined, LockOutlined, UnlockOutlined, SafetyCertificateOutlined, SearchOutlined, KeyOutlined, DeleteOutlined } from '@ant-design/icons';
 import { taiKhoanApi } from '../api/taiKhoanApi';
 import { nhanVienApi } from '../api/nhanVienApi';
 import { danhMucApi, VaiTro, PhongBan } from '../api/danhMucApi';
@@ -129,6 +129,19 @@ export const TaiKhoanPage: React.FC = () => {
     }
   };
 
+  const handleDeletePermanent = async (record: TaiKhoan) => {
+    try {
+      const res = await taiKhoanApi.deletePermanent(record.maTaiKhoan);
+      message.success(res.data?.message || 'Đã xóa vĩnh viễn tài khoản thành công!');
+      fetchData();
+    } catch (err: any) {
+      const errMsg =
+        err.response?.data?.message ||
+        (typeof err.response?.data === 'string' ? err.response?.data : 'Xóa tài khoản thất bại.');
+      message.error(errMsg);
+    }
+  };
+
   const filteredData = data.filter((item) => {
     const matchSearch =
       !searchText ||
@@ -234,9 +247,12 @@ export const TaiKhoanPage: React.FC = () => {
     {
       title: 'Thao tác (Admin)',
       key: 'action',
-      width: 220,
+      width: 270,
       fixed: 'right' as const,
       render: (_: any, record: TaiKhoan) => {
+        const userStr = localStorage.getItem('user');
+        const currentUser = userStr ? JSON.parse(userStr) : null;
+        const isSelf = record.maTaiKhoan === currentUser?.maTaiKhoan || record.tenDangNhap === currentUser?.tenDangNhap;
         const isPastNotice = record.ngayNghiViec ? dayjs(record.ngayNghiViec).isBefore(dayjs(), 'day') : false;
         const isResigned =
           record.trangThaiLamViec === 'Đã nghỉ việc' ||
@@ -266,6 +282,23 @@ export const TaiKhoanPage: React.FC = () => {
                   </Button>
                 </Popconfirm>
               )}
+              <Popconfirm
+                title="Xác nhận xóa vĩnh viễn tài khoản?"
+                description="Tài khoản này sẽ bị xóa hoàn toàn khỏi hệ thống và không thể khôi phục. Bạn có chắc chắn muốn xóa không?"
+                okText="Xóa vĩnh viễn"
+                cancelText="Hủy"
+                okButtonProps={{ danger: true }}
+                onConfirm={() => handleDeletePermanent(record)}
+              >
+                <Button
+                  size="small"
+                  danger
+                  icon={<DeleteOutlined />}
+                  disabled={isSelf}
+                >
+                  Xóa
+                </Button>
+              </Popconfirm>
             </Space>
           );
         }
@@ -293,8 +326,27 @@ export const TaiKhoanPage: React.FC = () => {
                 size="small"
                 danger
                 icon={<LockOutlined />}
+                disabled={isSelf}
               >
                 Khóa
+              </Button>
+            </Popconfirm>
+
+            <Popconfirm
+              title="Xác nhận xóa vĩnh viễn tài khoản?"
+              description="Tài khoản này sẽ bị xóa hoàn toàn khỏi hệ thống và không thể khôi phục. Bạn có chắc chắn muốn xóa không?"
+              okText="Xóa vĩnh viễn"
+              cancelText="Hủy"
+              okButtonProps={{ danger: true }}
+              onConfirm={() => handleDeletePermanent(record)}
+            >
+              <Button
+                size="small"
+                danger
+                icon={<DeleteOutlined />}
+                disabled={isSelf}
+              >
+                Xóa
               </Button>
             </Popconfirm>
           </Space>
