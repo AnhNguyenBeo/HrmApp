@@ -7,10 +7,8 @@ import {
   SearchOutlined,
   ExclamationCircleOutlined,
   FileDoneOutlined,
-  ThunderboltOutlined,
   LoginOutlined,
   LogoutOutlined,
-  CalendarOutlined,
 } from '@ant-design/icons';
 import { chamCongApi } from '../api/chamCongApi';
 import { donTuApi } from '../api/donTuApi';
@@ -488,20 +486,20 @@ export const ChamCongPage: React.FC = () => {
 
       <Card
         title={
-          <span style={{ fontSize: 16, fontWeight: 600 }}>
-            <CalendarOutlined style={{ marginRight: 8, color: '#1890ff' }} />
+          <span style={{ fontSize: 16, fontWeight: 600, color: '#1f1f1f' }}>
             THỐNG KÊ CÔNG THÁNG {selectedMonth.format('MM/YYYY')}
           </span>
         }
         extra={
-          <Space>
-            <span>Chọn tháng:</span>
+          <Space size={8}>
+            <span style={{ fontSize: 13, color: '#8c8c8c' }}>Chọn tháng:</span>
             <DatePicker
               picker="month"
               value={selectedMonth}
               onChange={(val) => val && setSelectedMonth(val)}
               format="MM/YYYY"
               allowClear={false}
+              style={{ width: 120 }}
             />
           </Space>
         }
@@ -509,71 +507,189 @@ export const ChamCongPage: React.FC = () => {
       >
         <Row gutter={[16, 16]}>
           <Col xs={24} sm={12} md={6}>
-            <Card bordered hoverable style={{ borderRadius: 8, background: '#f6ffed', borderColor: '#b7eb8f' }}>
-              <Statistic
-                title={<span style={{ fontWeight: 600, color: '#389e0d' }}>TỔNG CÔNG TRONG THÁNG</span>}
-                value={stats.tongCongThang}
-                precision={1}
-                suffix="công"
-                valueStyle={{ color: '#237804', fontWeight: 700, fontSize: 28 }}
-                prefix={<FileDoneOutlined />}
-              />
-              <div style={{ marginTop: 6, fontSize: 12, color: '#555' }}>
-                Đi làm: <strong>{stats.congDiLam}</strong> công{stats.congNghiPhep > 0 ? ` • Nghỉ phép: ${stats.congNghiPhep} công` : ''}
+            <div
+              style={{
+                background: '#fafafa',
+                border: '1px solid #f0f0f0',
+                borderRadius: 8,
+                padding: '16px 20px',
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div>
+                <div style={{ fontSize: 13, color: '#8c8c8c', fontWeight: 500, marginBottom: 8 }}>
+                  TỔNG CÔNG TRONG THÁNG
+                </div>
+                <div style={{ fontSize: 28, fontWeight: 600, color: '#1f1f1f', lineHeight: 1.2 }}>
+                  {stats.tongCongThang.toFixed(1)}{' '}
+                  <span style={{ fontSize: 14, fontWeight: 400, color: '#8c8c8c' }}>công</span>
+                </div>
+              </div>
+              <div
+                style={{
+                  marginTop: 12,
+                  paddingTop: 10,
+                  borderTop: '1px solid #f0f0f0',
+                  fontSize: 12,
+                  color: '#8c8c8c',
+                }}
+              >
+                Đi làm: <strong style={{ color: '#262626' }}>{stats.congDiLam}</strong>
+                {stats.congNghiPhep > 0 && (
+                  <> • Nghỉ phép: <strong style={{ color: '#262626' }}>{stats.congNghiPhep}</strong></>
+                )}
                 {stats.hasOngoingToday && (
-                  <div style={{ color: '#1890ff', fontWeight: 500, marginTop: 2 }}>
+                  <div style={{ color: '#1890ff', marginTop: 3 }}>
                     (Hôm nay đang trong ca làm việc)
                   </div>
                 )}
               </div>
-            </Card>
+            </div>
           </Col>
+
           <Col xs={24} sm={12} md={6}>
-            <Card bordered hoverable style={{ borderRadius: 8, background: '#e6f7ff', borderColor: '#91d5ff' }}>
-              <Statistic
-                title={<span style={{ fontWeight: 600, color: '#096dd9' }}>CA ĐỦ CÔNG (1.0 CÔNG)</span>}
-                value={stats.soCaDu}
-                suffix="ca"
-                valueStyle={{ color: '#0958d9', fontWeight: 700, fontSize: 28 }}
-                prefix={<CheckCircleOutlined />}
-              />
-              <div style={{ marginTop: 6, fontSize: 12, color: '#555' }}>
-                {stats.soCaNua > 0 ? `Có ${stats.soCaNua} ca nửa công (0.5 công)` : 'Không có ca nửa công'}
+            <div
+              style={{
+                background: '#fafafa',
+                border: '1px solid #f0f0f0',
+                borderRadius: 8,
+                padding: '16px 20px',
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div>
+                <div style={{ fontSize: 13, color: '#8c8c8c', fontWeight: 500, marginBottom: 8 }}>
+                  CA ĐỦ CÔNG (1.0 CÔNG)
+                </div>
+                <div style={{ fontSize: 28, fontWeight: 600, color: '#1f1f1f', lineHeight: 1.2 }}>
+                  {stats.soCaDu}{' '}
+                  <span style={{ fontSize: 14, fontWeight: 400, color: '#8c8c8c' }}>ca</span>
+                </div>
               </div>
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} md={6}>
-            <Card bordered hoverable style={{ borderRadius: 8, background: '#fff7e6', borderColor: '#ffd591' }}>
-              <Statistic
-                title={<span style={{ fontWeight: 600, color: '#d46b08' }}>TĂNG CA (OT) ĐÃ DUYỆT</span>}
-                value={stats.tongGioOt}
-                precision={1}
-                suffix="giờ"
-                valueStyle={{ color: '#d4380d', fontWeight: 700, fontSize: 28 }}
-                prefix={<ThunderboltOutlined />}
-              />
-              <div style={{ marginTop: 6, fontSize: 12, color: '#555' }}>
-                Đi muộn / Về sớm: <strong>{stats.soLanDiMuon + stats.soLanVeSom}</strong> lần
-              </div>
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} md={6}>
-            <Card bordered hoverable style={{ borderRadius: 8, background: missedCheckOutDays.length > 0 ? '#fff1f0' : '#fafafa', borderColor: missedCheckOutDays.length > 0 ? '#ffa39e' : '#d9d9d9' }}>
-              <Statistic
-                title={<span style={{ fontWeight: 600, color: missedCheckOutDays.length > 0 ? '#cf1322' : '#595959' }}>CHƯA CHECK-OUT (0 CÔNG)</span>}
-                value={missedCheckOutDays.length}
-                suffix="ngày"
-                valueStyle={{ color: missedCheckOutDays.length > 0 ? '#cf1322' : '#595959', fontWeight: 700, fontSize: 28 }}
-                prefix={<ExclamationCircleOutlined />}
-              />
-              <div style={{ marginTop: 6, fontSize: 12, color: '#555' }}>
-                {missedCheckOutDays.length > 0 ? (
-                  <span style={{ color: '#cf1322', fontWeight: 500 }}>Cần nộp đơn giải trình cho cấp trên</span>
+              <div
+                style={{
+                  marginTop: 12,
+                  paddingTop: 10,
+                  borderTop: '1px solid #f0f0f0',
+                  fontSize: 12,
+                  color: '#8c8c8c',
+                }}
+              >
+                {stats.soCaNua > 0 ? (
+                  <span>
+                    Ca nửa công (0.5): <strong style={{ color: '#262626' }}>{stats.soCaNua}</strong>
+                  </span>
                 ) : (
-                  <span style={{ color: '#52c41a' }}>Không có ngày lỗi check-out</span>
+                  <span>100% ca hoàn thành tiêu chuẩn</span>
                 )}
               </div>
-            </Card>
+            </div>
+          </Col>
+
+          <Col xs={24} sm={12} md={6}>
+            <div
+              style={{
+                background: '#fafafa',
+                border: '1px solid #f0f0f0',
+                borderRadius: 8,
+                padding: '16px 20px',
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div>
+                <div style={{ fontSize: 13, color: '#8c8c8c', fontWeight: 500, marginBottom: 8 }}>
+                  TĂNG CA (OT) ĐÃ DUYỆT
+                </div>
+                <div style={{ fontSize: 28, fontWeight: 600, color: '#1f1f1f', lineHeight: 1.2 }}>
+                  {stats.tongGioOt.toFixed(1)}{' '}
+                  <span style={{ fontSize: 14, fontWeight: 400, color: '#8c8c8c' }}>giờ</span>
+                </div>
+              </div>
+              <div
+                style={{
+                  marginTop: 12,
+                  paddingTop: 10,
+                  borderTop: '1px solid #f0f0f0',
+                  fontSize: 12,
+                  color: '#8c8c8c',
+                }}
+              >
+                Đi muộn / Về sớm:{' '}
+                <strong style={{ color: stats.soLanDiMuon + stats.soLanVeSom > 0 ? '#faad14' : '#262626' }}>
+                  {stats.soLanDiMuon + stats.soLanVeSom}
+                </strong>{' '}
+                lần
+              </div>
+            </div>
+          </Col>
+
+          <Col xs={24} sm={12} md={6}>
+            <div
+              style={{
+                background: missedCheckOutDays.length > 0 ? '#fff2f0' : '#fafafa',
+                border: missedCheckOutDays.length > 0 ? '1px solid #ffccc7' : '1px solid #f0f0f0',
+                borderRadius: 8,
+                padding: '16px 20px',
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div>
+                <div
+                  style={{
+                    fontSize: 13,
+                    color: missedCheckOutDays.length > 0 ? '#cf1322' : '#8c8c8c',
+                    fontWeight: 500,
+                    marginBottom: 8,
+                  }}
+                >
+                  CHƯA CHECK-OUT (0 CÔNG)
+                </div>
+                <div
+                  style={{
+                    fontSize: 28,
+                    fontWeight: 600,
+                    color: missedCheckOutDays.length > 0 ? '#cf1322' : '#1f1f1f',
+                    lineHeight: 1.2,
+                  }}
+                >
+                  {missedCheckOutDays.length}{' '}
+                  <span
+                    style={{
+                      fontSize: 14,
+                      fontWeight: 400,
+                      color: missedCheckOutDays.length > 0 ? '#cf1322' : '#8c8c8c',
+                    }}
+                  >
+                    ngày
+                  </span>
+                </div>
+              </div>
+              <div
+                style={{
+                  marginTop: 12,
+                  paddingTop: 10,
+                  borderTop: missedCheckOutDays.length > 0 ? '1px solid #ffccc7' : '1px solid #f0f0f0',
+                  fontSize: 12,
+                  color: missedCheckOutDays.length > 0 ? '#cf1322' : '#8c8c8c',
+                }}
+              >
+                {missedCheckOutDays.length > 0
+                  ? 'Cần nộp đơn giải trình cho cấp trên'
+                  : 'Không có ngày lỗi check-out'}
+              </div>
+            </div>
           </Col>
         </Row>
       </Card>
